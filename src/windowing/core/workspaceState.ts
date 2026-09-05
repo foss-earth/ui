@@ -155,6 +155,20 @@ export function selectTabInWorkspace<TabId extends string>(
   return next;
 }
 
+/**
+ * Explicit action that preserves existing select semantics while also
+ * restoring a collapsed slot for consumers that opt in to browser-style
+ * tab click behavior.
+ */
+export function selectTabAndExpandWorkspaceSlot<TabId extends string>(
+  state: WindowWorkspaceState<TabId>,
+  slotId: WindowSlotId,
+  tabId: TabId,
+): WindowWorkspaceState<TabId> {
+  const next = selectTabInWorkspace(state, slotId, tabId);
+  return setWorkspaceSlotCollapsed(next, slotId, false);
+}
+
 export function setWorkspaceSlotCollapsed<TabId extends string>(
   state: WindowWorkspaceState<TabId>,
   slotId: WindowSlotId,
@@ -163,6 +177,19 @@ export function setWorkspaceSlotCollapsed<TabId extends string>(
   const next = cloneWorkspaceState(state);
   next[slotId].collapsed = collapsed;
   return next;
+}
+
+/**
+ * Explicit action that opens a tab and restores the target slot.
+ */
+export function openTabAndExpandWorkspaceSlot<TabId extends string>(
+  state: WindowWorkspaceState<TabId>,
+  targetSlotId: WindowSlotId,
+  tabId: TabId,
+  definitions: readonly WindowTabDefinition<TabId>[],
+): WindowWorkspaceState<TabId> {
+  const next = openTabInWorkspace(state, targetSlotId, tabId, definitions);
+  return setWorkspaceSlotCollapsed(next, targetSlotId, false);
 }
 
 export function setWorkspaceSlotSize<TabId extends string>(

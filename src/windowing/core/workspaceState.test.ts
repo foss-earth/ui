@@ -3,7 +3,9 @@ import {
   allWorkspaceOpenTabs,
   closeTabInWorkspace,
   createWindowWorkspaceState,
+  openTabAndExpandWorkspaceSlot,
   openTabInWorkspace,
+  selectTabAndExpandWorkspaceSlot,
   setWorkspaceSlotCollapsed,
 } from "./workspaceState";
 import type { WindowTabDefinition } from "./types";
@@ -69,5 +71,56 @@ describe("window workspace state", () => {
     expect(next.primary.collapsed).toBe(true);
     expect(next.primary.tabs).toEqual(["layers", "stats"]);
     expect(next.primary.activeTab).toBe("stats");
+  });
+
+  it("restores a collapsed slot when selecting the already active tab", () => {
+    const state = createWindowWorkspaceState<TabId>({
+      primary: {
+        tabs: ["layers", "stats", "reach"],
+        activeTab: "stats",
+        collapsed: true,
+        width: 380,
+      },
+      secondary: { tabs: [], activeTab: null },
+    });
+
+    const next = selectTabAndExpandWorkspaceSlot(state, "primary", "stats");
+
+    expect(next.primary.collapsed).toBe(false);
+    expect(next.primary.activeTab).toBe("stats");
+    expect(next.primary.tabs).toEqual(["layers", "stats", "reach"]);
+    expect(next.primary.width).toBe(380);
+  });
+
+  it("restores a collapsed slot and switches to the clicked tab", () => {
+    const state = createWindowWorkspaceState<TabId>({
+      primary: {
+        tabs: ["layers", "stats", "reach"],
+        activeTab: "stats",
+        collapsed: true,
+      },
+      secondary: { tabs: [], activeTab: null },
+    });
+
+    const next = selectTabAndExpandWorkspaceSlot(state, "primary", "layers");
+
+    expect(next.primary.collapsed).toBe(false);
+    expect(next.primary.activeTab).toBe("layers");
+    expect(next.primary.tabs).toEqual(["layers", "stats", "reach"]);
+  });
+
+  it("plus-menu workflow opens in tab order and restores collapsed slot", () => {
+    const state = createWindowWorkspaceState<TabId>({
+      primary: { tabs: ["layers"], activeTab: "layers", collapsed: true, width: 320 },
+      secondary: { tabs: ["stats"], activeTab: "stats" },
+    });
+
+    const next = openTabAndExpandWorkspaceSlot(state, "primary", "reach", TAB_DEFINITIONS);
+
+    expect(next.primary.collapsed).toBe(false);
+    expect(next.primary.tabs).toEqual(["layers", "reach"]);
+    expect(next.primary.activeTab).toBe("reach");
+    expect(next.primary.width).toBe(320);
+    expect(allWorkspaceOpenTabs(next)).toEqual(["layers", "reach", "stats"]);
   });
 });

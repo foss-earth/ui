@@ -9,3 +9,19 @@
 .foss-earth-window-menu-align-right {
   right: 0;
 }
+
+.foss-earth-workspace-slot-launcher {
+  pointer-events: auto;
+  position: absolute;
+  z-index: 10;
+}
+
+.foss-earth-workspace-slot-launcher-left {
+  top: 56px;
+  left: 12px;
+}
+
+.foss-earth-workspace-slot-launcher-right {
+  top: 12px;
+  right: 12px;
+}
