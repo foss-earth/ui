@@ -25,3 +25,13 @@
   top: 12px;
   right: 12px;
 }
+
+.foss-earth-location-panel { display: grid; gap: 16px; padding: 16px; }
+.foss-earth-location-panel form, .foss-earth-location-panel label { display: grid; gap: 8px; }
+.foss-earth-location-panel input, .foss-earth-location-panel button {
+  min-width: 0; padding: 8px; border: 1px solid currentColor;
+  border-radius: 4px; color: inherit; background: transparent; font: inherit;
+}
+.foss-earth-location-panel button { cursor: pointer; }
+.foss-earth-location-panel :disabled { opacity: 0.5; cursor: default; }
+.foss-earth-location-panel p { margin: 0; font-size: 12px; }
