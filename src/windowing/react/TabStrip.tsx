@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
 function cx(...parts: Array<string | null | undefined | false>): string {
   return parts.filter(Boolean).join(" ");
@@ -39,6 +39,7 @@ export interface TabStripProps<TabId extends string> {
   onSelectTab: (tabId: TabId) => void;
   onCloseTab: (tabId: TabId) => void;
   onOpenTab: (tabId: TabId) => void;
+  onMoveTab?: (tabId: TabId) => void;
   onAddMenuOpenChange: (open: boolean) => void;
   getLabel: (tabId: TabId) => string;
   classNames?: TabStripClassNames;
@@ -58,6 +59,7 @@ export function TabStrip<TabId extends string>(props: TabStripProps<TabId>) {
     onSelectTab,
     onCloseTab,
     onOpenTab,
+    onMoveTab,
     onAddMenuOpenChange,
     getLabel,
     classNames,
@@ -65,14 +67,52 @@ export function TabStrip<TabId extends string>(props: TabStripProps<TabId>) {
     renderAddButtonContent,
     renderCloseButtonContent,
   } = props;
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const [menuAlignsRight, setMenuAlignsRight] = useState(false);
 
   const closeAriaLabel = strings?.closeTabAriaLabel ?? ((tabLabel: string) => `Close ${tabLabel} tab`);
-  const alignClassName = side === "right"
+  useEffect(() => {
+    if (!addMenuOpen) return;
+
+    const handleOutsidePointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        onAddMenuOpenChange(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handleOutsidePointerDown);
+    return () => document.removeEventListener("pointerdown", handleOutsidePointerDown);
+  }, [addMenuOpen, onAddMenuOpenChange]);
+
+  useLayoutEffect(() => {
+    if (!addMenuOpen || !menuRef.current) return;
+
+    const menu = menuRef.current;
+    const anchor = menu.parentElement?.getBoundingClientRect();
+    if (!anchor) return;
+
+    setMenuAlignsRight(anchor.left + menu.offsetWidth > window.innerWidth - 8);
+  }, [addMenuOpen, openTabs.length, availableTabs.length]);
+
+  const alignClassName = menuAlignsRight
     ? (classNames?.addMenuAlignRight ?? "foss-earth-window-menu-align-right")
     : (classNames?.addMenuAlignLeft ?? "foss-earth-window-menu-align-left");
 
   return (
-    <div className={cx("foss-earth-tab-strip", classNames?.root)}>
+    <div
+      ref={rootRef}
+      className={cx("foss-earth-tab-strip", classNames?.root)}
+      onDragOver={onMoveTab ? (event) => event.preventDefault() : undefined}
+      onDrop={onMoveTab ? (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const tabId = event.dataTransfer.getData("text/plain") as TabId;
+        window.dispatchEvent(new Event("foss-earth-tab-drag-end"));
+        if (tabId && openTabs.includes(tabId)) return;
+        if (tabId) onMoveTab(tabId);
+      } : undefined}
+    >
       <div className={cx("foss-earth-tab-strip-list", classNames?.tabList)}>
         {openTabs.map((tabId) => {
           const selected = tabId === activeTab;
@@ -81,8 +121,20 @@ export function TabStrip<TabId extends string>(props: TabStripProps<TabId>) {
           return (
             <div
               key={tabId}
+              draggable={Boolean(onMoveTab)}
+              onDragStart={onMoveTab ? (event) => {
+                event.dataTransfer.effectAllowed = "move";
+                event.dataTransfer.setData("text/plain", tabId);
+                window.dispatchEvent(new CustomEvent("foss-earth-tab-drag-start", {
+                  detail: { side },
+                }));
+              } : undefined}
+              onDragEnd={onMoveTab ? () => {
+                window.dispatchEvent(new Event("foss-earth-tab-drag-end"));
+              } : undefined}
               className={cx(
                 "foss-earth-tab-shell",
+                selected ? "foss-earth-tab-shell-selected" : "foss-earth-tab-shell-unselected",
                 classNames?.tabShell,
                 selected ? classNames?.tabShellSelected : classNames?.tabShellUnselected,
               )}
@@ -125,6 +177,7 @@ export function TabStrip<TabId extends string>(props: TabStripProps<TabId>) {
         {addMenuOpen ? (
           <div
             role="menu"
+            ref={menuRef}
             className={cx("foss-earth-window-menu", classNames?.addMenu, alignClassName)}
             onPointerDown={(event) => event.stopPropagation()}
           >

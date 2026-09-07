@@ -192,6 +192,41 @@ export function openTabAndExpandWorkspaceSlot<TabId extends string>(
   return setWorkspaceSlotCollapsed(next, targetSlotId, false);
 }
 
+export function moveTabsBetweenWorkspaceSlots<TabId extends string>(
+  state: WindowWorkspaceState<TabId>,
+  sourceSlotId: WindowSlotId,
+  targetSlotId: WindowSlotId,
+): WindowWorkspaceState<TabId> {
+  if (sourceSlotId === targetSlotId || state[sourceSlotId].tabs.length === 0) {
+    return state;
+  }
+
+  const next = cloneWorkspaceState(state);
+  const source = next[sourceSlotId];
+  const target = next[targetSlotId];
+  const existingTargetActiveTab = target.activeTab;
+  const targetTabs = new Set(target.tabs);
+
+  for (const tabId of source.tabs) {
+    if (!targetTabs.has(tabId)) {
+      target.tabs.push(tabId);
+      targetTabs.add(tabId);
+    }
+  }
+  target.activeTab = existingTargetActiveTab && target.tabs.includes(existingTargetActiveTab)
+    ? existingTargetActiveTab
+    : source.activeTab && target.tabs.includes(source.activeTab)
+      ? source.activeTab
+      : target.tabs[target.tabs.length - 1] ?? null;
+  source.tabs = [];
+  source.activeTab = null;
+
+  return {
+    primary: normalizeSlot(next.primary),
+    secondary: normalizeSlot(next.secondary),
+  };
+}
+
 export function setWorkspaceSlotSize<TabId extends string>(
   state: WindowWorkspaceState<TabId>,
   slotId: WindowSlotId,

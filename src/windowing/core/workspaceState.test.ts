@@ -3,6 +3,7 @@ import {
   allWorkspaceOpenTabs,
   closeTabInWorkspace,
   createWindowWorkspaceState,
+  moveTabsBetweenWorkspaceSlots,
   openTabAndExpandWorkspaceSlot,
   openTabInWorkspace,
   selectTabAndExpandWorkspaceSlot,
@@ -122,5 +123,19 @@ describe("window workspace state", () => {
     expect(next.primary.activeTab).toBe("reach");
     expect(next.primary.width).toBe(320);
     expect(allWorkspaceOpenTabs(next)).toEqual(["layers", "reach", "stats"]);
+  });
+
+  it("moves tabs while preserving the destination active tab", () => {
+    const state = createWindowWorkspaceState<TabId>({
+      primary: { tabs: ["stats"], activeTab: "stats" },
+      secondary: { tabs: ["layers", "reach"], activeTab: "reach" },
+    });
+
+    const next = moveTabsBetweenWorkspaceSlots(state, "secondary", "primary");
+
+    expect(next.primary.tabs).toEqual(["stats", "layers", "reach"]);
+    expect(next.primary.activeTab).toBe("stats");
+    expect(next.secondary.tabs).toEqual([]);
+    expect(next.secondary.activeTab).toBeNull();
   });
 });

@@ -1,4 +1,4 @@
-import { useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type DragEventHandler, type ReactNode } from "react";
 
 function cx(...parts: Array<string | null | undefined | false>): string {
   return parts.filter(Boolean).join(" ");
@@ -50,6 +50,8 @@ export interface DockPanelProps {
   resizeClickThresholdPx?: number;
   resizeAriaLabel?: string;
   resizeTitle?: string;
+  onDragOver?: DragEventHandler<HTMLDivElement>;
+  onDrop?: DragEventHandler<HTMLDivElement>;
 }
 
 export function DockPanel(props: DockPanelProps) {
@@ -74,6 +76,8 @@ export function DockPanel(props: DockPanelProps) {
     resizeClickThresholdPx = 6,
     resizeAriaLabel = "Resize panel, click to minimize",
     resizeTitle = "Drag to resize, click to minimize",
+    onDragOver,
+    onDrop,
   } = props;
 
   const isRightPanel = side === "right";
@@ -83,6 +87,22 @@ export function DockPanel(props: DockPanelProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<ResizeDragState | null>(null);
   const [panelHeight, setPanelHeight] = useState(initialHeight);
+  const [dragActive, setDragActive] = useState(false);
+
+  useEffect(() => {
+    const handleDragStart = (event: Event) => {
+      const sourceSide = (event as CustomEvent<{ side?: "left" | "right" }>).detail?.side;
+      setDragActive(sourceSide !== side);
+    };
+    const handleDragEnd = () => setDragActive(false);
+
+    window.addEventListener("foss-earth-tab-drag-start", handleDragStart);
+    window.addEventListener("foss-earth-tab-drag-end", handleDragEnd);
+    return () => {
+      window.removeEventListener("foss-earth-tab-drag-start", handleDragStart);
+      window.removeEventListener("foss-earth-tab-drag-end", handleDragEnd);
+    };
+  }, [side]);
 
   const onHandlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
@@ -167,6 +187,7 @@ export function DockPanel(props: DockPanelProps) {
       ref={containerRef}
       className={cx(
         "foss-earth-dock-panel",
+        dragActive && "foss-earth-dock-panel-drop-active",
         classNames?.container,
         addMenuOpen ? classNames?.raisedZ : classNames?.defaultZ,
         collapsed ? classNames?.collapsed : classNames?.expanded,
@@ -175,6 +196,8 @@ export function DockPanel(props: DockPanelProps) {
         ...positionStyle,
         ...expandedStyle,
       }}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
       data-side={side}
       data-collapsed={collapsed ? "true" : "false"}
     >

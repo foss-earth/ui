@@ -1,9 +1,24 @@
 import { describe, expect, it } from "vitest";
 import {
+  canFitSecondarySlot,
   DEFAULT_MIN_SECONDARY_ASPECT_RATIO,
   DEFAULT_MIN_SECONDARY_WIDTH,
   resolveWindowViewportPolicy,
 } from "./viewportPolicy";
+
+describe("canFitSecondarySlot", () => {
+  const layout = {
+    primaryMinWidth: 260,
+    secondaryMinWidth: 240,
+    centerGap: 220,
+    edgeGap: 12,
+  };
+
+  it("uses the available panel budget instead of the browser aspect ratio", () => {
+    expect(canFitSecondarySlot({ ...layout, availableWidth: 744 })).toBe(true);
+    expect(canFitSecondarySlot({ ...layout, availableWidth: 743 })).toBe(false);
+  });
+});
 
 describe("resolveWindowViewportPolicy", () => {
   it("returns compact mode for narrow phone-like viewports", () => {

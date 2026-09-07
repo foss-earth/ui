@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 
 function cx(...parts: Array<string | null | undefined | false>): string {
   return parts.filter(Boolean).join(" ");
@@ -24,6 +24,10 @@ export interface PanelLauncherProps<TabId extends string> {
   availableTabs: readonly TabId[];
   onOpenChange: (open: boolean) => void;
   onOpenTab: (tabId: TabId) => void;
+  onMoveTab?: (tabId: TabId) => void;
+  dropWidth?: number;
+  dropMaxWidth?: number;
+  dropHeight?: number;
   getLabel: (tabId: TabId) => string;
   classNames?: PanelLauncherClassNames;
   strings?: PanelLauncherStrings;
@@ -39,6 +43,10 @@ export function PanelLauncher<TabId extends string>(props: PanelLauncherProps<Ta
     availableTabs,
     onOpenChange,
     onOpenTab,
+    onMoveTab,
+    dropWidth,
+    dropMaxWidth,
+    dropHeight,
     getLabel,
     classNames,
     strings,
@@ -46,13 +54,86 @@ export function PanelLauncher<TabId extends string>(props: PanelLauncherProps<Ta
     buttonAriaLabel = "Open panel tab",
     buttonTitle = "Open panel tab",
   } = props;
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+  const dragDepthRef = useRef(0);
+
+  useEffect(() => {
+    if (!onMoveTab) return;
+
+    const handleDragStart = (event: Event) => {
+      const sourceSide = (event as CustomEvent<{ side?: "left" | "right" }>).detail?.side;
+      if (sourceSide !== side) setDragActive(true);
+    };
+    const handleDragEnd = () => {
+      dragDepthRef.current = 0;
+      setDragActive(false);
+    };
+
+    window.addEventListener("foss-earth-tab-drag-start", handleDragStart);
+    window.addEventListener("foss-earth-tab-drag-end", handleDragEnd);
+    return () => {
+      window.removeEventListener("foss-earth-tab-drag-start", handleDragStart);
+      window.removeEventListener("foss-earth-tab-drag-end", handleDragEnd);
+    };
+  }, [onMoveTab, side]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const handleOutsidePointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        onOpenChange(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handleOutsidePointerDown);
+    return () => document.removeEventListener("pointerdown", handleOutsidePointerDown);
+  }, [onOpenChange, open]);
 
   const alignClassName = side === "right"
     ? (classNames?.menuAlignRight ?? "foss-earth-window-menu-align-right")
     : (classNames?.menuAlignLeft ?? "foss-earth-window-menu-align-left");
 
+  const dropStyle: CSSProperties | undefined = dragActive
+    ? {
+        width: dropWidth,
+        maxWidth: dropMaxWidth,
+        height: dropHeight,
+      }
+    : undefined;
+
   return (
-    <div className={cx("foss-earth-panel-launcher", classNames?.root)}>
+    <div
+      ref={rootRef}
+      className={cx(
+        "foss-earth-panel-launcher",
+        dragActive && "foss-earth-panel-launcher-drop-active",
+        classNames?.root,
+      )}
+      style={dropStyle}
+      onDragEnter={onMoveTab ? () => {
+        dragDepthRef.current += 1;
+        setDragActive(true);
+      } : undefined}
+      onDragLeave={onMoveTab ? () => {
+        dragDepthRef.current -= 1;
+        if (dragDepthRef.current <= 0) {
+          dragDepthRef.current = 0;
+          setDragActive(false);
+        }
+      } : undefined}
+      onDragOver={onMoveTab ? (event) => event.preventDefault() : undefined}
+      onDrop={onMoveTab ? (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        dragDepthRef.current = 0;
+        setDragActive(false);
+        window.dispatchEvent(new Event("foss-earth-tab-drag-end"));
+        const tabId = event.dataTransfer.getData("text/plain") as TabId;
+        if (tabId) onMoveTab(tabId);
+      } : undefined}
+    >
       <button
         type="button"
         onClick={() => onOpenChange(!open)}

@@ -1,5 +1,6 @@
 .foss-earth-window-menu {
   position: absolute;
+  top: 0;
 }
 
 .foss-earth-window-menu-align-left {
@@ -15,26 +16,28 @@
   overflow: hidden;
   border: 1px solid rgba(148, 163, 184, 0.28);
   border-radius: 10px;
-  background: rgba(8, 15, 27, 0.9);
+  background: rgba(8, 15, 27, 0.94);
+  font-family: "Segoe UI", sans-serif;
   color: rgba(241, 245, 249, 0.94);
   box-shadow: 0 14px 36px rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(14px);
 }
 
 .foss-earth-dock-panel-header {
-  min-height: 38px;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+  min-height: 30px;
 }
 
 .foss-earth-tab-strip {
   display: flex;
-  align-items: center;
-  min-height: 38px;
-  padding: 4px;
+  align-items: flex-end;
+  min-height: 30px;
+  padding: 0;
   gap: 4px;
+  background: rgba(148, 163, 184, 0.18);
 }
 
 .foss-earth-tab-strip-list {
+  flex: 0 1 auto;
   display: flex;
   min-width: 0;
   gap: 4px;
@@ -42,11 +45,22 @@
 }
 
 .foss-earth-tab-shell {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
-  min-width: 0;
   border-radius: 5px;
-  background: rgba(148, 163, 184, 0.12);
+  background: transparent;
+}
+
+.foss-earth-tab-shell-selected {
+  align-self: stretch;
+  border-radius: 5px 5px 0 0;
+  background: rgba(8, 15, 27, 0.94);
+}
+
+.foss-earth-tab-shell-selected .foss-earth-tab-button,
+.foss-earth-tab-shell-selected .foss-earth-tab-close {
+  align-self: center;
 }
 
 .foss-earth-tab-shell:has(.foss-earth-tab-button:focus-visible),
@@ -67,14 +81,11 @@
 }
 
 .foss-earth-tab-button {
-  max-width: 180px;
-  overflow: hidden;
-  padding: 6px 8px;
-  text-overflow: ellipsis;
+  flex: 0 0 auto;
+  padding: 6px;
   white-space: nowrap;
 }
 
-.foss-earth-tab-close,
 .foss-earth-tab-add,
 .foss-earth-panel-launcher-button {
   display: grid;
@@ -85,6 +96,22 @@
   font-size: 18px;
 }
 
+.foss-earth-tab-close {
+  display: grid;
+  width: 16px;
+  height: 30px;
+  margin-right: 4px;
+  box-sizing: border-box;
+  padding: 0 2px;
+  place-items: center;
+  border-radius: 5px;
+  font-size: 16px;
+}
+
+.foss-earth-tab-add {
+  background: rgba(148, 163, 184, 0.28);
+}
+
 .foss-earth-tab-close:hover,
 .foss-earth-tab-add:hover,
 .foss-earth-panel-launcher-button:hover {
@@ -93,7 +120,32 @@
 
 .foss-earth-tab-add-wrap,
 .foss-earth-panel-launcher {
+  display: flex;
+  align-items: flex-end;
   position: relative;
+}
+
+.foss-earth-tab-add-wrap {
+  align-self: center;
+  height: 30px;
+}
+
+.foss-earth-empty-tab-drop-target {
+  display: grid;
+  width: 134px;
+  height: 30px;
+  margin-right: 4px;
+  place-items: center;
+  border: 1px dashed rgba(148, 163, 184, 0.65);
+  border-radius: 5px;
+  color: rgba(148, 163, 184, 0.9);
+  background: rgba(148, 163, 184, 0.08);
+  font: 12px "Segoe UI", sans-serif;
+  pointer-events: auto;
+}
+
+.foss-earth-empty-tab-drop-target:hover {
+  border-color: rgba(56, 189, 248, 0.8);
 }
 
 .foss-earth-panel-launcher-button {
@@ -107,7 +159,7 @@
   z-index: 20;
   display: grid;
   min-width: 150px;
-  margin-top: 4px;
+  margin-top: 0;
   padding: 4px;
   border: 1px solid rgba(148, 163, 184, 0.3);
   border-radius: 7px;
@@ -126,7 +178,7 @@
 }
 
 .foss-earth-dock-panel-body {
-  height: calc(100% - 38px);
+  height: calc(100% - 30px);
   overflow: auto;
 }
 
@@ -140,10 +192,41 @@
   cursor: nwse-resize;
 }
 
+.foss-earth-dock-panel[data-side="right"] .foss-earth-dock-panel-resize-handle {
+  right: auto;
+  left: 4px;
+}
+
+.foss-earth-dock-panel-drop-active::after {
+  position: absolute;
+  z-index: 30;
+  inset: 0;
+  border: 2px dashed rgba(56, 189, 248, 0.8);
+  border-radius: 10px;
+  background: rgba(56, 189, 248, 0.12);
+  content: "";
+  pointer-events: none;
+}
+
 .foss-earth-workspace-slot-launcher {
   pointer-events: auto;
   position: absolute;
   z-index: 10;
+}
+
+.foss-earth-panel-launcher-drop-active {
+  display: grid;
+  align-items: start;
+  justify-items: stretch;
+  padding: 0;
+  border: 2px dashed rgba(56, 189, 248, 0.8);
+  border-radius: 10px;
+  background: rgba(56, 189, 248, 0.12);
+  box-sizing: border-box;
+}
+
+.foss-earth-panel-launcher-drop-active .foss-earth-panel-launcher-button {
+  display: none;
 }
 
 .foss-earth-workspace-slot-launcher-left {
@@ -178,10 +261,34 @@
 .foss-earth-location-panel :disabled { opacity: 0.5; cursor: default; }
 .foss-earth-location-panel p { margin: 0; font-size: 12px; }
 
+:root[data-theme="dark"] .foss-earth-dock-panel,
+:root[data-theme="dark"] .foss-earth-panel-launcher-button,
+:root[data-theme="dark"] .foss-earth-window-menu {
+  border-color: rgba(71, 85, 105, 0.3);
+  background: rgba(8, 15, 27, 0.94);
+  color: rgba(241, 245, 249, 0.94);
+}
+
 :root[data-theme="light"] .foss-earth-dock-panel,
 :root[data-theme="light"] .foss-earth-panel-launcher-button,
 :root[data-theme="light"] .foss-earth-window-menu {
   border-color: rgba(71, 85, 105, 0.3);
-  background: rgba(248, 250, 252, 0.94);
+  background: #fff;
+  color: #0f172a;
+}
+
+:root[data-theme="light"] .foss-earth-tab-shell-selected {
+  background: #fff;
+}
+
+:root[data-theme="light"] .foss-earth-dock-panel-body {
+  background: #fff;
+}
+
+:root[data-theme="light"] .foss-earth-tab-button,
+:root[data-theme="light"] .foss-earth-tab-close,
+:root[data-theme="light"] .foss-earth-tab-add,
+:root[data-theme="light"] .foss-earth-panel-launcher-button,
+:root[data-theme="light"] .foss-earth-window-menu-item {
   color: #0f172a;
 }

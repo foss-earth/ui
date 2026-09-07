@@ -4,8 +4,8 @@ import {
   closeTabInWorkspace,
   openTabAndExpandWorkspaceSlot,
   openTabInWorkspace,
-  selectTabAndExpandWorkspaceSlot,
   selectTabInWorkspace,
+  selectTabAndExpandWorkspaceSlot,
   setWorkspaceSlotCollapsed,
   setWorkspaceSlotSize,
 } from "../core/workspaceState";
@@ -149,6 +149,22 @@ export function WorkspaceDockSlot<TabId extends string>(props: WorkspaceDockSlot
     onWorkspaceStateChange(closeTabInWorkspace(workspaceState, slotId, tabId));
   };
 
+  const handleMoveTab = (tabId: TabId) => {
+    onWorkspaceStateChange(openTabAndExpandWorkspaceSlot(workspaceState, slotId, tabId, tabDefinitions));
+  };
+
+  const handleTabDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+  };
+
+  const handleTabDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    window.dispatchEvent(new Event("foss-earth-tab-drag-end"));
+    const tabId = event.dataTransfer.getData("text/plain") as TabId;
+    if (tabId && !openTabs.includes(tabId)) handleMoveTab(tabId);
+  };
+
   const hasCustomLauncherRoot = Boolean(
     classNames?.launcherRoot || classNames?.panelLauncher?.root,
   );
@@ -177,6 +193,10 @@ export function WorkspaceDockSlot<TabId extends string>(props: WorkspaceDockSlot
         availableTabs={availableTabs}
         onOpenChange={onAddMenuOpenChange}
         onOpenTab={handleOpenTab}
+        onMoveTab={handleMoveTab}
+        dropWidth={width}
+        dropMaxWidth={maxWidth}
+        dropHeight={dockPanelProps?.initialHeight ?? 512}
         getLabel={getTabLabel}
         classNames={launcherClassNames}
         strings={{
@@ -204,6 +224,8 @@ export function WorkspaceDockSlot<TabId extends string>(props: WorkspaceDockSlot
         onWorkspaceStateChange(setWorkspaceSlotCollapsed(workspaceState, slotId, collapsed));
       }}
       addMenuOpen={addMenuOpen}
+      onDragOver={handleTabDragOver}
+      onDrop={handleTabDrop}
       classNames={classNames?.dockPanel}
       header={(
         <TabStrip<TabId>
@@ -216,6 +238,7 @@ export function WorkspaceDockSlot<TabId extends string>(props: WorkspaceDockSlot
           onSelectTab={handleSelectTab}
           onCloseTab={handleCloseTab}
           onOpenTab={handleOpenTab}
+          onMoveTab={handleMoveTab}
           onAddMenuOpenChange={onAddMenuOpenChange}
           getLabel={getTabLabel}
           classNames={classNames?.tabStrip}
