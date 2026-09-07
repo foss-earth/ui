@@ -10,6 +10,136 @@
   right: 0;
 }
 
+.foss-earth-dock-panel {
+  z-index: 10;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 10px;
+  background: rgba(8, 15, 27, 0.9);
+  color: rgba(241, 245, 249, 0.94);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(14px);
+}
+
+.foss-earth-dock-panel-header {
+  min-height: 38px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.foss-earth-tab-strip {
+  display: flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.foss-earth-tab-strip-list {
+  display: flex;
+  min-width: 0;
+  gap: 4px;
+  overflow-x: auto;
+}
+
+.foss-earth-tab-shell {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  border-radius: 5px;
+  background: rgba(148, 163, 184, 0.12);
+}
+
+.foss-earth-tab-shell:has(.foss-earth-tab-button:focus-visible),
+.foss-earth-tab-shell:hover {
+  background: rgba(56, 189, 248, 0.18);
+}
+
+.foss-earth-tab-button,
+.foss-earth-tab-close,
+.foss-earth-tab-add,
+.foss-earth-panel-launcher-button,
+.foss-earth-window-menu-item {
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.foss-earth-tab-button {
+  max-width: 180px;
+  overflow: hidden;
+  padding: 6px 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.foss-earth-tab-close,
+.foss-earth-tab-add,
+.foss-earth-panel-launcher-button {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 5px;
+  font-size: 18px;
+}
+
+.foss-earth-tab-close:hover,
+.foss-earth-tab-add:hover,
+.foss-earth-panel-launcher-button:hover {
+  background: rgba(56, 189, 248, 0.22);
+}
+
+.foss-earth-tab-add-wrap,
+.foss-earth-panel-launcher {
+  position: relative;
+}
+
+.foss-earth-panel-launcher-button {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(8, 15, 27, 0.88);
+  color: rgba(241, 245, 249, 0.94);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.24);
+}
+
+.foss-earth-window-menu {
+  z-index: 20;
+  display: grid;
+  min-width: 150px;
+  margin-top: 4px;
+  padding: 4px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 7px;
+  background: rgba(8, 15, 27, 0.98);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
+}
+
+.foss-earth-window-menu-item {
+  padding: 8px 10px;
+  text-align: left;
+  border-radius: 4px;
+}
+
+.foss-earth-window-menu-item:hover {
+  background: rgba(56, 189, 248, 0.2);
+}
+
+.foss-earth-dock-panel-body {
+  height: calc(100% - 38px);
+  overflow: auto;
+}
+
+.foss-earth-dock-panel-resize-handle {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 20px;
+  height: 20px;
+  color: rgba(148, 163, 184, 0.7);
+  cursor: nwse-resize;
+}
+
 .foss-earth-workspace-slot-launcher {
   pointer-events: auto;
   position: absolute;
@@ -28,10 +158,30 @@
 
 .foss-earth-location-panel { display: grid; gap: 16px; padding: 16px; }
 .foss-earth-location-panel form, .foss-earth-location-panel label { display: grid; gap: 8px; }
+.foss-earth-location-panel form:first-child { gap: 10px; }
+.foss-earth-location-panel form:first-child > button { justify-self: start; }
 .foss-earth-location-panel input, .foss-earth-location-panel button {
   min-width: 0; padding: 8px; border: 1px solid currentColor;
   border-radius: 4px; color: inherit; background: transparent; font: inherit;
 }
 .foss-earth-location-panel button { cursor: pointer; }
+.foss-earth-location-panel form:first-child > button:not([disabled]),
+.foss-earth-location-panel form:last-of-type > button {
+  border-color: rgba(56, 189, 248, 0.65);
+  background: rgba(14, 165, 233, 0.16);
+}
+.foss-earth-location-panel form:first-child > button[type="button"] {
+  text-align: left;
+  border-color: rgba(148, 163, 184, 0.28);
+  background: rgba(148, 163, 184, 0.1);
+}
 .foss-earth-location-panel :disabled { opacity: 0.5; cursor: default; }
 .foss-earth-location-panel p { margin: 0; font-size: 12px; }
+
+:root[data-theme="light"] .foss-earth-dock-panel,
+:root[data-theme="light"] .foss-earth-panel-launcher-button,
+:root[data-theme="light"] .foss-earth-window-menu {
+  border-color: rgba(71, 85, 105, 0.3);
+  background: rgba(248, 250, 252, 0.94);
+  color: #0f172a;
+}
