@@ -5,7 +5,7 @@ import {
   openTabAndExpandWorkspaceSlot,
   openTabInWorkspace,
   selectTabInWorkspace,
-  selectTabAndExpandWorkspaceSlot,
+  selectTabAndToggleWorkspaceSlot,
   setWorkspaceSlotCollapsed,
   setWorkspaceSlotSize,
 } from "../core/workspaceState";
@@ -140,7 +140,7 @@ export function WorkspaceDockSlot<TabId extends string>(props: WorkspaceDockSlot
 
   const handleSelectTab = (tabId: TabId) => {
     const next = restoreOnTabSelect
-      ? selectTabAndExpandWorkspaceSlot(workspaceState, slotId, tabId)
+      ? selectTabAndToggleWorkspaceSlot(workspaceState, slotId, tabId)
       : selectTabInWorkspace(workspaceState, slotId, tabId);
     onWorkspaceStateChange(next);
   };

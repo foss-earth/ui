@@ -7,6 +7,7 @@ import {
   openTabAndExpandWorkspaceSlot,
   openTabInWorkspace,
   selectTabAndExpandWorkspaceSlot,
+  selectTabAndToggleWorkspaceSlot,
   setWorkspaceSlotCollapsed,
 } from "./workspaceState";
 import type { WindowTabDefinition } from "./types";
@@ -108,6 +109,30 @@ describe("window workspace state", () => {
     expect(next.primary.collapsed).toBe(false);
     expect(next.primary.activeTab).toBe("layers");
     expect(next.primary.tabs).toEqual(["layers", "stats", "reach"]);
+  });
+
+  it("collapses an expanded slot when its selected tab is clicked", () => {
+    const state = createWindowWorkspaceState<TabId>({
+      primary: { tabs: ["layers", "stats"], activeTab: "stats", collapsed: false },
+      secondary: { tabs: [], activeTab: null },
+    });
+
+    const next = selectTabAndToggleWorkspaceSlot(state, "primary", "stats");
+
+    expect(next.primary.collapsed).toBe(true);
+    expect(next.primary.activeTab).toBe("stats");
+  });
+
+  it("expands a collapsed slot when a tab is clicked", () => {
+    const state = createWindowWorkspaceState<TabId>({
+      primary: { tabs: ["layers", "stats"], activeTab: "stats", collapsed: true },
+      secondary: { tabs: [], activeTab: null },
+    });
+
+    const next = selectTabAndToggleWorkspaceSlot(state, "primary", "layers");
+
+    expect(next.primary.collapsed).toBe(false);
+    expect(next.primary.activeTab).toBe("layers");
   });
 
   it("plus-menu workflow opens in tab order and restores collapsed slot", () => {

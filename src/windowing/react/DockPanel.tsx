@@ -81,8 +81,8 @@ export function DockPanel(props: DockPanelProps) {
   } = props;
 
   const isRightPanel = side === "right";
-  const resolvedTop = topOffsetPx ?? (isRightPanel ? 12 : 56);
-  const resolvedMaxHeight = expandedMaxHeightCss ?? (isRightPanel ? "calc(100vh - 1.5rem)" : "calc(100vh - 5rem)");
+  const resolvedTop = topOffsetPx ?? 12;
+  const resolvedMaxHeight = expandedMaxHeightCss ?? "calc(100vh - 1.5rem)";
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<ResizeDragState | null>(null);

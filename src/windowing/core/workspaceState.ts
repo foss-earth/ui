@@ -169,6 +169,19 @@ export function selectTabAndExpandWorkspaceSlot<TabId extends string>(
   return setWorkspaceSlotCollapsed(next, slotId, false);
 }
 
+export function selectTabAndToggleWorkspaceSlot<TabId extends string>(
+  state: WindowWorkspaceState<TabId>,
+  slotId: WindowSlotId,
+  tabId: TabId,
+): WindowWorkspaceState<TabId> {
+  const slot = state[slotId];
+  if (!slot.tabs.includes(tabId)) return state;
+  if (slot.activeTab === tabId && !slot.collapsed) {
+    return setWorkspaceSlotCollapsed(state, slotId, true);
+  }
+  return selectTabAndExpandWorkspaceSlot(state, slotId, tabId);
+}
+
 export function setWorkspaceSlotCollapsed<TabId extends string>(
   state: WindowWorkspaceState<TabId>,
   slotId: WindowSlotId,
