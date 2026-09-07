@@ -1,3 +1,13 @@
+.foss-earth-window-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.foss-earth-window-overlay > * {
+  pointer-events: auto;
+}
+
 .foss-earth-window-menu {
   position: absolute;
   top: 0;
