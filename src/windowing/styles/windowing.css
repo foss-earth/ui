@@ -302,3 +302,84 @@
 :root[data-theme="light"] .foss-earth-window-menu-item {
   color: #0f172a;
 }
+
+.foss-earth-location-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.foss-earth-location-coordinates label {
+  grid-template-columns: 24px max-content;
+  justify-self: start;
+  align-items: center;
+}
+.foss-earth-location-play {
+  display: grid;
+  place-items: center;
+  justify-self: center;
+  min-width: 64px;
+  height: 36px;
+}
+
+.foss-earth-location-coordinates input::placeholder {
+  color: #9ca3af;
+  opacity: 1;
+}
+
+.foss-earth-location-search-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+.foss-earth-location-search-row input {
+  flex: 1 1 auto;
+  box-sizing: border-box;
+  font-family: monospace;
+  min-width: calc(15ch + 18px);
+  width: 0;
+}
+.foss-earth-location-search-row button {
+  display: grid;
+  place-items: center;
+  flex: 0 0 36px;
+  border-color: rgba(56, 189, 248, 0.65);
+  background: rgba(14, 165, 233, 0.16);
+}
+
+.foss-earth-location-coordinates input {
+  box-sizing: border-box;
+  font-family: monospace;
+  appearance: textfield;
+}
+.foss-earth-location-coordinates input::-webkit-inner-spin-button,
+.foss-earth-location-coordinates input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.foss-earth-location-fields[hidden] { display: none; }
+.foss-earth-airport-controls { display: grid; gap: 10px; min-width: 0; }
+.foss-earth-location-coordinates .foss-earth-airport-controls label {
+  grid-template-columns: 60px minmax(0, 1fr);
+  justify-self: stretch;
+}
+.foss-earth-airport-controls select {
+  min-width: 0; width: 100%; padding: 8px; border: 1px solid currentColor;
+  border-radius: 4px; color: inherit; background: var(--panel-bg, #18202e); font: inherit;
+}
+.foss-earth-airport-controls a { color: inherit; }
+
+.foss-earth-location-results { display: grid; gap: 10px; }
+.foss-earth-location-result { border: 1px solid rgba(148, 163, 184, 0.28); border-radius: 6px; overflow: hidden; }
+.foss-earth-location-panel .foss-earth-location-result button {
+  text-align: left; border: 0; border-radius: 0; white-space: normal; overflow-wrap: anywhere;
+}
+.foss-earth-location-result-title { width: 100%; font-weight: 600 !important; background: rgba(148, 163, 184, 0.1) !important; }
+.foss-earth-location-result-group { padding: 0 8px 8px; }
+.foss-earth-location-result-children { display: grid; gap: 4px; margin-left: 12px; border-left: 1px solid rgba(148, 163, 184, 0.3); padding-left: 8px; }
+.foss-earth-location-result button:hover { background: rgba(148, 163, 184, 0.16); }
+.foss-earth-location-attribution a { color: inherit; }
+
+.foss-earth-location-result-kind { display: block; margin-top: 3px; font-size: 11px; font-weight: normal; opacity: 0.65; }
+
+.foss-earth-location-result-subtitle { display: block; margin-top: 3px; font-size: 11px; font-weight: normal; opacity: 0.75; }
