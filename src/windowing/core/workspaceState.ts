@@ -51,6 +51,16 @@ export function allWorkspaceOpenTabs<TabId extends string>(
   return openTabs;
 }
 
+export function slotIdForOpenTab<TabId extends string>(
+  state: WindowWorkspaceState<TabId>,
+  tabId: TabId,
+): WindowSlotId | null {
+  for (const slotId of SLOT_IDS) {
+    if (state[slotId].tabs.includes(tabId)) return slotId;
+  }
+  return null;
+}
+
 function cloneSlotState<TabId extends string>(slot: WindowSlotState<TabId>): WindowSlotState<TabId> {
   return {
     ...slot,
@@ -203,6 +213,24 @@ export function openTabAndExpandWorkspaceSlot<TabId extends string>(
 ): WindowWorkspaceState<TabId> {
   const next = openTabInWorkspace(state, targetSlotId, tabId, definitions);
   return setWorkspaceSlotCollapsed(next, targetSlotId, false);
+}
+
+/**
+ * Selects an already-open tab wherever it lives, or opens it in the preferred
+ * slot. Existing tabs are never moved, and a selected tab is expanded rather
+ * than toggled closed.
+ */
+export function openOrSelectTabInWorkspace<TabId extends string>(
+  state: WindowWorkspaceState<TabId>,
+  tabId: TabId,
+  preferredSlotId: WindowSlotId,
+  definitions: readonly WindowTabDefinition<TabId>[],
+): WindowWorkspaceState<TabId> {
+  const existingSlotId = slotIdForOpenTab(state, tabId);
+  if (existingSlotId) {
+    return selectTabAndExpandWorkspaceSlot(state, existingSlotId, tabId);
+  }
+  return openTabAndExpandWorkspaceSlot(state, preferredSlotId, tabId, definitions);
 }
 
 export function moveTabsBetweenWorkspaceSlots<TabId extends string>(
