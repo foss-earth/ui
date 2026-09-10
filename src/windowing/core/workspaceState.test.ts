@@ -4,6 +4,7 @@ import {
   closeTabInWorkspace,
   createWindowWorkspaceState,
   moveTabsBetweenWorkspaceSlots,
+  openOrSelectTabInWorkspace,
   openTabAndExpandWorkspaceSlot,
   openTabInWorkspace,
   selectTabAndExpandWorkspaceSlot,
@@ -148,6 +149,24 @@ describe("window workspace state", () => {
     expect(next.primary.activeTab).toBe("reach");
     expect(next.primary.width).toBe(320);
     expect(allWorkspaceOpenTabs(next)).toEqual(["layers", "reach", "stats"]);
+  });
+
+  it("selects an already-open tab without moving it, and opens missing tabs in the preferred slot", () => {
+    const state = createWindowWorkspaceState<TabId>({
+      primary: { tabs: ["stats"], activeTab: "stats", collapsed: true },
+      secondary: { tabs: ["layers"], activeTab: "layers" },
+    });
+
+    const selected = openOrSelectTabInWorkspace(state, "stats", "secondary", TAB_DEFINITIONS);
+    expect(selected.primary.tabs).toEqual(["stats"]);
+    expect(selected.primary.activeTab).toBe("stats");
+    expect(selected.primary.collapsed).toBe(false);
+    expect(selected.secondary.tabs).toEqual(["layers"]);
+
+    const opened = openOrSelectTabInWorkspace(state, "reach", "primary", TAB_DEFINITIONS);
+    expect(opened.primary.tabs).toEqual(["stats", "reach"]);
+    expect(opened.primary.activeTab).toBe("reach");
+    expect(opened.primary.collapsed).toBe(false);
   });
 
   it("moves tabs while preserving the destination active tab", () => {
