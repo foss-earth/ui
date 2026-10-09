@@ -2,6 +2,14 @@ import { addressWithoutReport } from "../diagnostics/reportAddress.js";
 import { createDiagnosticsSection, type DiagnosticsSource } from "./diagnosticsSection.js";
 import { createBugReportPanel, type BugReportPanelOptions } from "./bugReportPanel.js";
 
+function runAll(actions: readonly (() => void)[]): void {
+  const errors: unknown[] = [];
+  for (const action of actions) {
+    try { action(); } catch (error) { errors.push(error); }
+  }
+  if (errors.length > 0) throw new AggregateError(errors, "Report view cleanup failed.");
+}
+
 /** Report-only presentation; the host decides whether to start its application. */
 export function createReportView(source: DiagnosticsSource, options: BugReportPanelOptions & { href: string; document: Document }) {
   const document = options.document;
@@ -18,6 +26,10 @@ export function createReportView(source: DiagnosticsSource, options: BugReportPa
   return {
     element: page,
     show() { if (disposed) return; section.element.querySelector("button")?.click(); bugReport.show(); },
-    destroy() { if (disposed) return; disposed = true; section.destroy(); bugReport.destroy(); page.remove(); },
+    destroy() {
+      if (disposed) return;
+      disposed = true;
+      runAll([() => section.destroy(), () => bugReport.destroy(), () => page.remove()]);
+    },
   };
 }

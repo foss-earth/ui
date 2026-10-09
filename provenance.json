@@ -1057,10 +1057,11 @@
       "sourceBlob": "7a961ca37cf184b165080135cc9d5edcbfa33192",
       "sourceSha256": "a2fe5693924ab665d41e4f5a42530e8c041f97935a123ea2225eea0c2f8a34a4",
       "transformations": [
-        "Retain report-only presentation using injected diagnostics/clock/download/identity/document ports; host decides startup and mounts returned element."
+        "Retain report-only presentation using injected diagnostics/clock/download/identity/document ports; host decides startup and mounts returned element.",
+        "Idempotent report-view destruction attempts Diagnostics, Bug report and DOM release before aggregating all failures; source-only causal fixture uses actual widget listener-cleanup failures, including reentrant/second destroy and three failures. UNRUN."
       ],
-      "destinationSha256": "599e7fd8b94d4fc890f132d553cc6dbddfaefa57f99b35b135bae3f2e7c5e4a7",
-      "destinationBytes": 1560
+      "destinationSha256": "81758bf52f1a09e348b41d774e3283eda830226246e65823183c440d3b0aad99",
+      "destinationBytes": 1891
     },
     {
       "source": "src/shell/WindowOverlay.test.tsx",
@@ -1287,8 +1288,10 @@
     ".attribution.json",
     ".gitignore",
     "AGENTS.md",
+    "CODE_OF_CONDUCT.md",
     "CONTRIBUTING.md",
     "README.md",
+    "SECURITY.md",
     "SOURCE_LINEAGE.json",
     "SOURCE_SELECTION.json",
     "eslint.config.js",
@@ -1331,6 +1334,7 @@
     "src/settings/index.ts",
     "src/shell/WindowOverlay.ports.test.tsx",
     "src/shell/hostViews.test.ts",
+    "src/shell/reportView.lifecycle.test.ts",
     "src/windowing/index.ts",
     "tests/browser.test.ts",
     "tests/contracts.test.ts",
@@ -1401,21 +1405,33 @@
     {
       "destination": "AGENTS.md",
       "purpose": "Primary source-only Document contract documentation/causal fixture or existing scaffold; no check/qualification.",
-      "sha256": "d817df11ab701745755948588ad612d461371e7d977135828c87fc39a8bc3b08",
+      "sha256": "08f94bf16f5f58bb92f34fb1ccfd0c83525b1ea0bf4cd89067816fae8b4a6dfa",
       "bytes": 1197
+    },
+    {
+      "destination": "CODE_OF_CONDUCT.md",
+      "status": "prepared source only; authored adapter/fixture/manifest/scaffold",
+      "sha256": "c3a907b9e659a0f5a4c701be1b34a7d416526c3a99f129bf4d3b9db09c7ffa9d",
+      "bytes": 3442
     },
     {
       "destination": "CONTRIBUTING.md",
       "purpose": "Primary source-only Document contract documentation/causal fixture or existing scaffold; no check/qualification.",
-      "sha256": "8651392d79f3a2ff52ce2baed0f12d850eedaf9ebfdc9e993b9d1f472c66554a",
-      "bytes": 630
+      "sha256": "0f826785a2fdba755c5769d1b6c14de4a8043e9bda9d0e64c2161792fa1755e5",
+      "bytes": 2578
     },
     {
       "destination": "README.md",
-      "sha256": "8f2fb3594f8d4c42a048172aab4cac7a40b233f71cff7d22f45e689929568643",
-      "bytes": 24729,
+      "sha256": "868673564c2a72d96a0d79d8a9cbd8a0d623df6e60a8abae6ecfcefa85d91b41",
+      "bytes": 25204,
       "status": "prepared source only; authored adapter/fixture/manifest/scaffold",
       "purpose": "Source-only exact external archive qualifier/config/docs or retained public fixture; all checks UNRUN."
+    },
+    {
+      "destination": "SECURITY.md",
+      "status": "prepared source only; authored adapter/fixture/manifest/scaffold",
+      "sha256": "6baf6d3c1755360f5d902275c893074fd17af2fc10c140fe932b8a90d77d9942",
+      "bytes": 791
     },
     {
       "destination": "SOURCE_LINEAGE.json",
@@ -1428,6 +1444,12 @@
       "purpose": "Authored extraction/scaffold/fixture; no immutable original analogue.",
       "sha256": "7929e62f19e98fd22629bb341bde234ff91b807a520924722fd0c05ce9648281",
       "bytes": 108965
+    },
+    {
+      "destination": "docs/consumer-dependency-inputs.md",
+      "status": "prepared source only; authored adapter/fixture/manifest/scaffold",
+      "sha256": "18701172155424243fce272565daddc3d22dfd6931a6c50c937727bcd2cec2b3",
+      "bytes": 3732
     },
     {
       "destination": "docs/document-ports.md",
@@ -1556,8 +1578,8 @@
     },
     {
       "destination": "package.json",
-      "sha256": "05afb18d0f7173142028ff0df74eca61714bdfa92efdb895b216120ab97646cb",
-      "bytes": 3126,
+      "sha256": "a7660eb94607a6878fd3c81b1f7e8d0e621e63890d9b386653ed694dba6fea8f",
+      "bytes": 3211,
       "status": "prepared source only; authored adapter/fixture/manifest/scaffold",
       "purpose": "Source-only exact external archive qualifier/config/docs or retained public fixture; all checks UNRUN."
     },
@@ -1652,6 +1674,13 @@
       "status": "prepared source only; authored adapter/fixture/manifest/scaffold"
     },
     {
+      "destination": "src/shell/reportView.lifecycle.test.ts",
+      "status": "prepared source only; authored adapter/fixture/manifest/scaffold",
+      "sha256": "2c49eed9b378cdabab6da9b60483a7c55982feb72e80e4c4919d8b36444db6c5",
+      "bytes": 3500,
+      "purpose": "Causal real-widget cleanup failure fixture; all-attempt cleanup, retained failures, DOM detach, reentrant/second destruction and inert show. Source-only UNRUN."
+    },
+    {
       "destination": "src/windowing/index.ts",
       "sha256": "adf58a09546b5cd2522bdb09c50787ce37e6c96c9833a8084caad058dbb7ea6e",
       "bytes": 409,
@@ -1736,7 +1765,7 @@
     "sourceLimits": "No actual installed/runtime/declaration qualification. Canonical old app and consumers unchanged. Other browser subsystems retain documented separate ports/limits."
   },
   "primarySourceSnapshot": {
-    "createdAtUtc": "2026-10-09T18-31-09Z",
+    "createdAtUtc": "2026-10-09T21-24-42Z",
     "status": "source-only; no qualification or artifact seal",
     "authoredFiles": [
       {
@@ -1759,20 +1788,32 @@
       },
       {
         "path": "AGENTS.md",
-        "sha256": "d817df11ab701745755948588ad612d461371e7d977135828c87fc39a8bc3b08",
+        "sha256": "08f94bf16f5f58bb92f34fb1ccfd0c83525b1ea0bf4cd89067816fae8b4a6dfa",
         "bytes": 1197,
         "status": "authored source/scaffold/adapter/fixture; UNRUN"
       },
       {
+        "path": "CODE_OF_CONDUCT.md",
+        "sha256": "c3a907b9e659a0f5a4c701be1b34a7d416526c3a99f129bf4d3b9db09c7ffa9d",
+        "bytes": 3442,
+        "status": "authored source/scaffold/adapter/fixture; UNRUN"
+      },
+      {
         "path": "CONTRIBUTING.md",
-        "sha256": "8651392d79f3a2ff52ce2baed0f12d850eedaf9ebfdc9e993b9d1f472c66554a",
-        "bytes": 630,
+        "sha256": "0f826785a2fdba755c5769d1b6c14de4a8043e9bda9d0e64c2161792fa1755e5",
+        "bytes": 2578,
         "status": "authored source/scaffold/adapter/fixture; UNRUN"
       },
       {
         "path": "README.md",
-        "sha256": "8f2fb3594f8d4c42a048172aab4cac7a40b233f71cff7d22f45e689929568643",
-        "bytes": 24729,
+        "sha256": "868673564c2a72d96a0d79d8a9cbd8a0d623df6e60a8abae6ecfcefa85d91b41",
+        "bytes": 25204,
+        "status": "authored source/scaffold/adapter/fixture; UNRUN"
+      },
+      {
+        "path": "SECURITY.md",
+        "sha256": "6baf6d3c1755360f5d902275c893074fd17af2fc10c140fe932b8a90d77d9942",
+        "bytes": 791,
         "status": "authored source/scaffold/adapter/fixture; UNRUN"
       },
       {
@@ -1795,8 +1836,8 @@
       },
       {
         "path": "package.json",
-        "sha256": "05afb18d0f7173142028ff0df74eca61714bdfa92efdb895b216120ab97646cb",
-        "bytes": 3126,
+        "sha256": "a7660eb94607a6878fd3c81b1f7e8d0e621e63890d9b386653ed694dba6fea8f",
+        "bytes": 3211,
         "status": "authored source/scaffold/adapter/fixture; UNRUN"
       },
       {
@@ -2025,6 +2066,12 @@
         "path": "src/shell/hostViews.test.ts",
         "sha256": "e40b027dc13bb3362e8c33578a1411ba9a55a69e7c6baa717e25b14cb6ec6d43",
         "bytes": 2477,
+        "status": "authored source/scaffold/adapter/fixture; UNRUN"
+      },
+      {
+        "path": "src/shell/reportView.lifecycle.test.ts",
+        "sha256": "2c49eed9b378cdabab6da9b60483a7c55982feb72e80e4c4919d8b36444db6c5",
+        "bytes": 3500,
         "status": "authored source/scaffold/adapter/fixture; UNRUN"
       },
       {
@@ -2462,5 +2509,17 @@
     "checksExecuted": [],
     "acceptedArtifacts": [],
     "actualConsumerAdoption": null
+  },
+  "reportViewLifecycleIncrement": {
+    "atUtc": "2026-10-09T21-20-30-368284Z",
+    "source": "src/shell/reportView.ts",
+    "causalFixture": "src/shell/reportView.lifecycle.test.ts",
+    "preservedFixture": "src/shell/hostViews.test.ts",
+    "priorSourceBackup": "build/source-only/2026-10-09T21-20-30-368284Z/before",
+    "behavior": "Mark disposed before attempting Diagnostics, Bug report and DOM release. Aggregate failures after every attempt; reentrant/second destroy and later show are inert.",
+    "checksExecuted": [],
+    "artifactResealed": false,
+    "canonicalAppEdited": false,
+    "publicExportsChanged": false
   }
 }

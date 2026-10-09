@@ -1,6 +1,6 @@
 # UI owner instructions
 
-YOU CANNOT HAVE AI AS A CO-AUTHOR, OR YOUR CONTRIBUTIONS WILL BE REJECTED.
+You cannot have AI as a co-author, or your contributions will be rejected.
 
 This repository owns shared settings mechanisms, generic window state, widgets
 and contribution presentation lifecycle. Feature catalogues, concrete panels,

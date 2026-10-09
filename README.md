@@ -8,7 +8,6 @@ views, dial, theme and host-composed overlay. The first foundation slice was
 validated; the added mechanisms remain unchecked until their next reserved
 check window. This is not a publication-approved release.
 
-YOU CANNOT HAVE AI AS A CO-AUTHOR, OR YOUR CONTRIBUTIONS WILL BE REJECTED.
 
 ## Public exports
 
@@ -315,3 +314,16 @@ selects the exact planned versions and records rejected alternatives. This fixes
 the prior root `lru-cache` 5.1.1 selection when the required 11.3.6 is nested under
 jsdom. Its source, archive production and new locator contract remain UNRUN; the
 47-record plan, mandatory qualifier, old fixtures and public exports are unchanged.
+
+`createReportView.destroy()` is idempotent and attempts Diagnostics cleanup,
+Bug report cleanup and page removal before reporting their failures together as
+an `AggregateError`. The new failure fixture uses the real widgets with failing
+listener cleanup and page-removal ports. This lifecycle change and its fixture
+are source-only and UNRUN; earlier passing artifacts do not qualify this change.
+
+## Project policies
+
+- [Code of conduct](CODE_OF_CONDUCT.md)
+- [Contributing](CONTRIBUTING.md)
+- [AGPL-3.0 license](LICENSE)
+- [Security](SECURITY.md)

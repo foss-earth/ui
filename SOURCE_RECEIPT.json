@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
   "owner": "foss-earth/ui",
-  "preparedAtUtc": "2026-10-09T18-31-09Z",
+  "preparedAtUtc": "2026-10-09T21-24-42Z",
   "status": "SOURCE-ONLY current bytes; checks/history/installed consumers/artifacts/adoption/admission UNRUN",
   "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d",
-  "priorSourceReceipt": "build/source-only/2026-10-09T18-31-09Z/SOURCE_RECEIPT.json.before",
-  "sourceManifestPath": "build/source-only/2026-10-09T18-31-09Z/source-manifest.json",
+  "priorSourceReceipt": "build/source-only/2026-10-09T21-24-42Z/SOURCE_RECEIPT.json.before",
+  "sourceManifestPath": "build/source-only/2026-10-09T21-24-42Z/source-manifest.json",
   "sourceManifestEncoding": "UTF-8 sorted path JSON array, indent2, trailing LF; ignored outputs and receipt excluded",
-  "sourceManifestSha256": "9f6c3b0f4165977ffd5b2363cec704b420622fe7744caa2b4a53b4f5512e5380",
-  "sourceFileCount": 168,
+  "sourceManifestSha256": "ecc24ea33a570b43ca3b42ca88316fb75f8c879d7a4452124c364c5439711d22",
+  "sourceFileCount": 171,
   "provenancePath": "provenance.json",
-  "provenanceSha256": "95ef1e57b7d3d5ca124f636ff6021b18a278159d224114b91a2bc7ddf46cd054",
+  "provenanceSha256": "b18d767941ac30a78b19b87b2308a97ace863ffb91f84d54c84cc3e46a110a98",
   "publicExports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -71,13 +71,18 @@
     },
     {
       "path": "AGENTS.md",
-      "sha256": "d817df11ab701745755948588ad612d461371e7d977135828c87fc39a8bc3b08",
+      "sha256": "08f94bf16f5f58bb92f34fb1ccfd0c83525b1ea0bf4cd89067816fae8b4a6dfa",
       "bytes": 1197
     },
     {
+      "path": "CODE_OF_CONDUCT.md",
+      "sha256": "c3a907b9e659a0f5a4c701be1b34a7d416526c3a99f129bf4d3b9db09c7ffa9d",
+      "bytes": 3442
+    },
+    {
       "path": "CONTRIBUTING.md",
-      "sha256": "8651392d79f3a2ff52ce2baed0f12d850eedaf9ebfdc9e993b9d1f472c66554a",
-      "bytes": 630
+      "sha256": "0f826785a2fdba755c5769d1b6c14de4a8043e9bda9d0e64c2161792fa1755e5",
+      "bytes": 2578
     },
     {
       "path": "LICENSE",
@@ -91,8 +96,13 @@
     },
     {
       "path": "README.md",
-      "sha256": "8f2fb3594f8d4c42a048172aab4cac7a40b233f71cff7d22f45e689929568643",
-      "bytes": 24729
+      "sha256": "868673564c2a72d96a0d79d8a9cbd8a0d623df6e60a8abae6ecfcefa85d91b41",
+      "bytes": 25204
+    },
+    {
+      "path": "SECURITY.md",
+      "sha256": "6baf6d3c1755360f5d902275c893074fd17af2fc10c140fe932b8a90d77d9942",
+      "bytes": 791
     },
     {
       "path": "SOURCE_LINEAGE.json",
@@ -226,13 +236,13 @@
     },
     {
       "path": "package.json",
-      "sha256": "05afb18d0f7173142028ff0df74eca61714bdfa92efdb895b216120ab97646cb",
-      "bytes": 3126
+      "sha256": "a7660eb94607a6878fd3c81b1f7e8d0e621e63890d9b386653ed694dba6fea8f",
+      "bytes": 3211
     },
     {
       "path": "provenance.json",
-      "sha256": "95ef1e57b7d3d5ca124f636ff6021b18a278159d224114b91a2bc7ddf46cd054",
-      "bytes": 117697
+      "sha256": "b18d767941ac30a78b19b87b2308a97ace863ffb91f84d54c84cc3e46a110a98",
+      "bytes": 120577
     },
     {
       "path": "scripts/copy-assets.mjs",
@@ -610,9 +620,14 @@
       "bytes": 1191
     },
     {
+      "path": "src/shell/reportView.lifecycle.test.ts",
+      "sha256": "2c49eed9b378cdabab6da9b60483a7c55982feb72e80e4c4919d8b36444db6c5",
+      "bytes": 3500
+    },
+    {
       "path": "src/shell/reportView.ts",
-      "sha256": "599e7fd8b94d4fc890f132d553cc6dbddfaefa57f99b35b135bae3f2e7c5e4a7",
-      "bytes": 1560
+      "sha256": "81758bf52f1a09e348b41d774e3283eda830226246e65823183c440d3b0aad99",
+      "bytes": 1891
     },
     {
       "path": "src/shell/settings/controls.ts",
@@ -920,5 +935,5 @@
     "actual app adoption",
     "coordinator public transport and remote admission"
   ],
-  "policySentence": "YOU CANNOT HAVE AI AS A CO-AUTHOR, OR YOUR CONTRIBUTIONS WILL BE REJECTED."
+  "policySentence": "You cannot have AI as a co-author, or your contributions will be rejected."
 }
