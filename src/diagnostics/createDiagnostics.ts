@@ -20,6 +20,8 @@ export interface DiagnosticsOptions {
   /** Host supplies identity, browser/device/renderer snapshot, clock and feature state. */
   parts(): Omit<ReportParts, "settings" | "settingsComplete" | "steps" | "errors" | "previous">;
   trailEnvironment: TrailEnvironment;
+  /** Preserve the host's visit identity, including its own component credit. */
+  trailIdentity?(): string;
   page?: Parameters<typeof captureErrors>[0];
   console?: Parameters<typeof tapConsole>[0];
 }
@@ -33,7 +35,8 @@ export function createDiagnostics(options: DiagnosticsOptions) {
   const runtimeStops: (() => void)[] = [];
   const stateReaders = new Set<() => Promise<string | null> | string | null>();
   const trail = createSessionTrail({
-    app: () => { const parts = options.parts(); return `${parts.appName}, build ${parts.build}, source ${parts.source}, bundle ${parts.bundle}, renderer ${parts.renderer.mode}.`; },
+    app: () => { if (options.trailIdentity) return options.trailIdentity();
+      const parts = options.parts(); return `${parts.appName}, build ${parts.build}, source ${parts.source}, bundle ${parts.bundle}, renderer ${parts.renderer.mode}.`; },
     kept: () => settings.get(TRAIL_KEPT) !== false,
     limit: () => { const value = settings.get(TRAIL_STEPS); return typeof value === "number" ? value : TRAIL_STEPS_DEFAULT; },
     environment: options.trailEnvironment,

@@ -5,7 +5,7 @@ import { UI_PARAMETERS } from "../settings/uiParameters.js";
 import type { GameLog, GameLogEntry } from "../log/createGameLog.js";
 import { fakeBrowser } from "../../tests/fixtures/trailEnvironment.js";
 
-function fixture() {
+function fixture(trailIdentity?: () => string) {
   const settings = createSettingsRegistry({ storage: null }); settings.register(UI_PARAMETERS);
   const printed: GameLogEntry[] = [];
   const updated: GameLogEntry[] = [];
@@ -16,7 +16,7 @@ function fixture() {
     setBusy() {}, setOpen() {}, isOpen: () => false, minimize() {}, isMinimized: () => false, destroy: hostDestroy,
   };
   const browser = fakeBrowser();
-  const diagnostics = createDiagnostics({ settings, log: hostLog, trailEnvironment: browser.page("a"), parts: () => ({
+  const diagnostics = createDiagnostics({ settings, log: hostLog, trailEnvironment: browser.page("a"), trailIdentity, parts: () => ({
     appName: "Host globe", at: new Date(0), page: "https://host.test/", build: "host-build", source: "host-source", bundle: "host.js",
     userAgent: "Host browser", screen: { width: 800, height: 600, devicePixelRatio: 1, touch: false },
     device: { cores: null, memoryGiB: null }, renderer: { asked: "auto", mode: "webgl2", driver: null, maxTextureSize: null, fallbackReason: null, lost: 0 },
@@ -26,6 +26,16 @@ function fixture() {
 }
 
 describe("injected diagnostics", () => {
+  it("records the injected host identity and refreshes it without owning the host", () => {
+    let identity = "Tour with Earth source a; renderer not started.";
+    const { diagnostics, browser } = fixture(() => identity);
+    diagnostics.trail.refresh();
+    expect(JSON.parse([...browser.items.values()][0]).app).toBe(identity);
+    identity = "Tour with Earth source a; renderer webgl2.";
+    diagnostics.trail.refresh();
+    expect(JSON.parse([...browser.items.values()][0]).app).toBe(identity);
+    diagnostics.destroy();
+  });
   it("keeps host identity, settings and completed progress in one report", async () => {
     const { diagnostics, settings, printed } = fixture();
     const line = diagnostics.log.print({ text: "Loading", tone: "progress", progress: 0.1 });
