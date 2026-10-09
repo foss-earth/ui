@@ -7,12 +7,12 @@ import {
   selectTabInWorkspace,
   setWorkspaceSlotCollapsed,
   setWorkspaceSlotSize,
-} from "../core/workspaceState";
+} from "../core/workspaceState.js";
 import type {
   WindowSlotId,
   WindowTabDefinition,
   WindowWorkspaceState,
-} from "../core/types";
+} from "../core/types.js";
 
 export interface UseWindowWorkspaceOptions<TabId extends string> {
   initialState?: Partial<WindowWorkspaceState<TabId>>;

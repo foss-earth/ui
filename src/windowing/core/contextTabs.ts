@@ -1,4 +1,4 @@
-import type { WindowSlotId, WindowWorkspaceState } from "../windowing/core/types";
+import type { WindowSlotId, WindowWorkspaceState } from "./types.js";
 
 const SLOT_IDS: readonly WindowSlotId[] = ["primary", "secondary"];
 

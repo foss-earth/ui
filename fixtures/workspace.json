@@ -1,0 +1,4 @@
+{
+  "primary": { "tabs": ["location", "map", "about"], "activeTab": "map", "collapsed": false, "width": 360, "height": null },
+  "secondary": { "tabs": ["settings", "scenes", "renderer"], "activeTab": "scenes", "collapsed": true, "width": 380, "height": 520 }
+}

@@ -1,7 +1,6 @@
-import { getAppSettings } from "../../settings/appSettings";
-import type { SettingsRegistry } from "../../settings/registry";
-import type { ParameterSpec, SettingsFilter, SettingsPreset } from "../../settings/types";
-import { formatValue } from "../../settings/values";
+import type { SettingsRegistry } from "../../settings/registry.js";
+import type { ParameterSpec, SettingsFilter, SettingsPreset } from "../../settings/types.js";
+import { formatValue } from "../../settings/values.js";
 
 function paragraph(className: string, text = ""): HTMLParagraphElement {
   const element = document.createElement("p");
@@ -135,7 +134,7 @@ export interface PresetsSectionHandle {
  * Saved presets can be renamed, exported and deleted, and an exported one
  * imported again.
  */
-export function createPresetsSection(settings: SettingsRegistry = getAppSettings()): PresetsSectionHandle {
+export function createPresetsSection(settings: SettingsRegistry): PresetsSectionHandle {
   const element = document.createElement("div");
   element.className = "foss-earth-choices foss-earth-presets";
   const status = createPresetStatus(settings, {});

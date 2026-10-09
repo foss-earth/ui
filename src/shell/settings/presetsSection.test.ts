@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createSettingsRegistry, type SettingsStorage } from "../../settings/registry";
-import type { ParameterSpec, SettingsPreset } from "../../settings/types";
-import { createParameterSection } from "./parameterSection";
-import { createPresetsSection } from "./presetsSection";
+import { createSettingsRegistry, type SettingsStorage } from "../../settings/registry.js";
+import type { ParameterSpec, SettingsPreset } from "../../settings/types.js";
+import { createParameterSection } from "./parameterSection.js";
+import { createPresetsSection } from "./presetsSection.js";
 
 afterEach(() => document.body.replaceChildren());
 

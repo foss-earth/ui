@@ -1,7 +1,6 @@
-import { getAppSettings } from "../../settings/appSettings";
-import type { SettingsRegistry } from "../../settings/registry";
-import { formatValue } from "../../settings/values";
-import { createSettingsTransfer } from "./parameterList";
+import type { SettingsRegistry } from "../../settings/registry.js";
+import { formatValue } from "../../settings/values.js";
+import { createSettingsTransfer } from "./parameterList.js";
 
 export interface SavedSettingsSectionHandle {
   element: HTMLElement;
@@ -13,7 +12,7 @@ export interface SavedSettingsSectionHandle {
  * (with "Keep these values", the only way they are saved), export, import and
  * reset of the whole record, and whether saving works in this browser.
  */
-export function createSavedSettingsSection(settings: SettingsRegistry = getAppSettings()): SavedSettingsSectionHandle {
+export function createSavedSettingsSection(settings: SettingsRegistry): SavedSettingsSectionHandle {
   const element = document.createElement("div");
   element.className = "foss-earth-choices foss-earth-saved-settings";
   const session = document.createElement("div");

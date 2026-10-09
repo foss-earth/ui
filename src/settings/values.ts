@@ -6,7 +6,7 @@ import type {
   ParameterSpec,
   ParameterUnit,
   ParameterValue,
-} from "./types";
+} from "./types.js";
 
 export function isNumberRange(value: unknown): value is NumberRange {
   return typeof value === "object" && value !== null && !Array.isArray(value)

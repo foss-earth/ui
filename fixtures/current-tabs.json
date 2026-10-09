@@ -1,0 +1,6 @@
+{
+  "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d",
+  "registered": ["location", "controls", "interface", "settings", "map", "renderer", "sky", "time", "scenes", "about", "bug-report", "panorama", "panorama-settings"],
+  "globeHidden": ["panorama", "panorama-settings"],
+  "panoramaHidden": ["location", "map", "sky", "time"]
+}

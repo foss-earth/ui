@@ -1,9 +1,8 @@
-import { getAppSettings } from "../../settings/appSettings";
-import type { SettingsRegistry } from "../../settings/registry";
-import { loadPanelSectionsOpen, savePanelSectionsOpen } from "../panelSectionsOpen";
-import { createParameterControl, isStandaloneParameterControl, type ParameterControlHandle } from "./controls";
-import { createParameterList, createSettingsTransfer, type ParameterListHandle, type SettingsTransferHandle } from "./parameterList";
-import { createPresetStatus, createSavePresetControl } from "./presetsSection";
+import type { SettingsRegistry, SettingsStorage } from "../../settings/registry.js";
+import { loadPanelSectionsOpen, savePanelSectionsOpen } from "../panelSectionsOpen.js";
+import { createParameterControl, isStandaloneParameterControl, type ParameterControlHandle } from "./controls.js";
+import { createParameterList, createSettingsTransfer, type ParameterListHandle, type SettingsTransferHandle } from "./parameterList.js";
+import { createPresetStatus, createSavePresetControl } from "./presetsSection.js";
 
 export interface ParameterSectionOptions {
   tab: string;
@@ -16,6 +15,8 @@ export interface ParameterSectionOptions {
   footer?: HTMLElement;
   /** Leave out the Show all parameters toggle, for a section with nothing but main controls. */
   showAll?: boolean;
+  /** Storage for presentation choices, separate from the host settings record. */
+  panelStorage?: SettingsStorage | null;
 }
 
 export interface ParameterSectionHandle {
@@ -32,7 +33,7 @@ let sectionCount = 0;
  * lists every parameter of the section with its value, default, provenance,
  * help and source, and exports, imports and resets the section.
  */
-export function createParameterSection(settings: SettingsRegistry = getAppSettings(), options: ParameterSectionOptions): ParameterSectionHandle {
+export function createParameterSection(settings: SettingsRegistry, options: ParameterSectionOptions): ParameterSectionHandle {
   const { tab, section } = options;
   const covered = new Set(options.covers ?? []);
   const element = document.createElement("div");
@@ -108,13 +109,13 @@ export function createParameterSection(settings: SettingsRegistry = getAppSettin
     }
   };
   const onToggle = (): void => {
-    savePanelSectionsOpen({ ...loadPanelSectionsOpen(), [allKey]: toggle.checked });
+    savePanelSectionsOpen({ ...loadPanelSectionsOpen(options.panelStorage), [allKey]: toggle.checked }, options.panelStorage);
     showAll(toggle.checked);
   };
   toggle.addEventListener("change", onToggle);
 
   syncMain();
-  showAll(loadPanelSectionsOpen()[allKey] ?? false);
+  showAll(loadPanelSectionsOpen(options.panelStorage)[allKey] ?? false);
   // Readings change without the registry knowing: read them again every
   // second, and only while the section can be seen.
   // A reading whose source went away is cleared on the next tick.
@@ -181,7 +182,7 @@ export interface SectionsElementHandle {
  * Collapsible sections as plain DOM, for tabs whose content is an element:
  * the same look and remembered open state as SectionsPanel.
  */
-export function createSectionsElement(entries: readonly SectionsElementEntry[]): SectionsElementHandle {
+export function createSectionsElement(entries: readonly SectionsElementEntry[], options: { storage?: SettingsStorage | null } = {}): SectionsElementHandle {
   const element = document.createElement("div");
   element.className = "foss-earth-panel-sections foss-earth-panel-sections--inline";
   const ids = new Set<string>();
@@ -190,7 +191,7 @@ export function createSectionsElement(entries: readonly SectionsElementEntry[]):
     const details = document.createElement("details");
     details.className = "foss-earth-panel-section";
     details.dataset.section = entry.id;
-    details.open = loadPanelSectionsOpen()[entry.id] ?? entry.defaultOpen ?? false;
+    details.open = loadPanelSectionsOpen(options.storage)[entry.id] ?? entry.defaultOpen ?? false;
     const summary = document.createElement("summary");
     summary.className = "foss-earth-panel-section__title";
     summary.textContent = entry.title;
@@ -199,9 +200,9 @@ export function createSectionsElement(entries: readonly SectionsElementEntry[]):
     body.append(entry.element);
     details.append(summary, body);
     details.addEventListener("toggle", () => {
-      const saved = loadPanelSectionsOpen();
+      const saved = loadPanelSectionsOpen(options.storage);
       if ((saved[entry.id] ?? entry.defaultOpen ?? false) === details.open) return;
-      savePanelSectionsOpen({ ...saved, [entry.id]: details.open });
+      savePanelSectionsOpen({ ...saved, [entry.id]: details.open }, options.storage);
     });
     element.append(details);
   };
@@ -223,13 +224,13 @@ export interface HostSectionsHandle {
  * the tab does not draw itself, so a host's parameters appear in FOSS Earth's
  * tabs: 0sfs's renderer/instruments becomes the Renderer tab's Instruments.
  */
-export function appendHostSections(settings: SettingsRegistry, tab: string, sections: SectionsElementHandle, own: readonly string[]): HostSectionsHandle {
+export function appendHostSections(settings: SettingsRegistry, tab: string, sections: SectionsElementHandle, own: readonly string[], options: { panelStorage?: SettingsStorage | null } = {}): HostSectionsHandle {
   const handles: ParameterSectionHandle[] = [];
   const sync = (): void => {
     for (const section of settings.sections(tab)) {
       const id = `${tab}.${section}`;
       if (own.includes(section) || sections.has(id)) continue;
-      const handle = createParameterSection(settings, { tab, section });
+      const handle = createParameterSection(settings, { tab, section, panelStorage: options.panelStorage });
       handles.push(handle);
       sections.append({ id, title: settings.getSectionTitle(tab, section), element: handle.element, defaultOpen: false });
     }

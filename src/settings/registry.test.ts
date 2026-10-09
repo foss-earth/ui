@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { createSettingsRegistry, SETTINGS_STORAGE_KEY, type SettingsStorage } from "./registry";
-import type { ParameterSpec } from "./types";
+import { createSettingsRegistry, SETTINGS_STORAGE_KEY, type SettingsStorage } from "./registry.js";
+import type { ParameterSpec } from "./types.js";
 
 function memoryStorage(initial: Record<string, string> = {}): SettingsStorage & { data: Map<string, string> } {
   const data = new Map(Object.entries(initial));

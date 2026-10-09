@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { linkParameterGroup } from "./parameterGroup";
-import { createSettingsRegistry } from "./registry";
-import type { ParameterSpec } from "./types";
+import { linkParameterGroup } from "./parameterGroup.js";
+import { createSettingsRegistry } from "./registry.js";
+import type { ParameterSpec } from "./types.js";
 
 const flag = (id: string, label = id): ParameterSpec => ({
   id,

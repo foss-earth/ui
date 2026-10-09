@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "values": {
+    "renderer.backend": "webgl2",
+    "renderer.resolutionScale": 0.75,
+    "sky.time.mode": "fixed",
+    "host.unregistered": 42
+  },
+  "presets": { "renderer.resolutionScale": "Host saved preset" },
+  "migrated": ["fixture.legacy-renderer"]
+}

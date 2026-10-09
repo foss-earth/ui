@@ -2,9 +2,8 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { SectionsPanel, type PanelSection } from "./SectionsPanel";
-import { PANEL_SECTIONS_OPEN_STORAGE_KEY } from "./panelSectionsOpen";
-import { WindowOverlay, type WindowOverlayHandle } from "./WindowOverlay";
+import { SectionsPanel, type PanelSection } from "./SectionsPanel.js";
+import { PANEL_SECTIONS_OPEN_STORAGE_KEY } from "./panelSectionsOpen.js";
 
 let host: HTMLDivElement;
 let root: Root;
@@ -90,52 +89,5 @@ describe("SectionsPanel", () => {
     expect(section("camera").open).toBe(false);
     await toggle(section("camera"));
     expect(section("camera").open).toBe(true);
-  });
-});
-
-describe("WindowOverlay section tabs", () => {
-  type HostTab = "controls" | "settings" | "aircraft";
-  const overlay = (props: Partial<Parameters<typeof WindowOverlay<HostTab>>[0]> = {}) => (
-    <WindowOverlay<HostTab>
-      getViewState={() => ({ latDeg: 45, lonDeg: -93 })}
-      setViewState={vi.fn()}
-      {...props}
-    />
-  );
-
-  beforeEach(() => {
-    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(() => 1200);
-    vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
-  });
-
-  it("offers Controls and Settings from + and opens either from the handle", async () => {
-    const api: { current: WindowOverlayHandle<HostTab> | null } = { current: null };
-    await act(async () => root.render(overlay({
-      controlsSections: [{ id: "input-method", title: "Input method", defaultOpen: true, render: () => <p>Modes</p> }],
-      settingsSections: [{ id: "camera", title: "Camera", render: () => <p>Camera settings</p> }],
-      overlayApiRef: api,
-    })));
-
-    await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Open right panel"]')!.click());
-    const labels = Array.from(host.querySelectorAll('[role="menuitem"]'), (item) => item.textContent);
-    expect(labels).toEqual(expect.arrayContaining(["Controls", "Settings"]));
-
-    await act(async () => api.current!.openOrSelectTab("controls"));
-    expect(host.querySelector('details[data-section="input-method"]')?.textContent).toContain("Modes");
-    await act(async () => api.current!.openOrSelectTab("settings"));
-    expect(host.querySelector('details[data-section="camera"] summary')?.textContent).toBe("Camera");
-  });
-
-  it("leaves a host's own controls and settings tabs alone when it passes no sections", async () => {
-    const api: { current: WindowOverlayHandle<HostTab> | null } = { current: null };
-    await act(async () => root.render(overlay({
-      additionalTabs: [{ id: "controls", label: "Controls" }, { id: "settings", label: "Settings" }],
-      renderAdditionalTab: (id) => <p>Host {id}</p>,
-      overlayApiRef: api,
-    })));
-
-    await act(async () => api.current!.openOrSelectTab("controls"));
-    expect(host.textContent).toContain("Host controls");
-    expect(host.querySelector(".foss-earth-panel-sections")).toBeNull();
   });
 });

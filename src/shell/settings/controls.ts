@@ -1,10 +1,10 @@
-import type { SettingsRegistry } from "../../settings/registry";
-import type { NumberRange, ParameterChoice, ParameterSpec, ParameterState, ParameterValue } from "../../settings/types";
-import { formatNumber, formatQuantity, formatValue, isNumberRange, sameValue } from "../../settings/values";
-import { createExternalLinkIcon } from "../externalLinkIcon";
-import { createTrack, type TrackHandle } from "./track";
-import { createTwoPositionSlider } from "./twoPositionSlider";
-import { createHelpTooltip } from "../helpTooltip";
+import type { SettingsRegistry } from "../../settings/registry.js";
+import type { NumberRange, ParameterChoice, ParameterSpec, ParameterState, ParameterValue } from "../../settings/types.js";
+import { formatNumber, formatQuantity, formatValue, isNumberRange, sameValue } from "../../settings/values.js";
+import { createExternalLinkIcon } from "../externalLinkIcon.js";
+import { createTrack, type TrackHandle } from "./track.js";
+import { createTwoPositionSlider } from "./twoPositionSlider.js";
+import { createHelpTooltip } from "../helpTooltip.js";
 
 export interface ParameterControlHandle {
   /** The control and its compact help and source actions. */

@@ -1,4 +1,4 @@
-import type { WindowTabDefinition } from "./types";
+import type { WindowTabDefinition } from "./types.js";
 
 export function availableWindowTabs<TabId extends string>(
   definitions: readonly WindowTabDefinition<TabId>[],

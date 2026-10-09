@@ -1,4 +1,4 @@
-import { createExternalLinkIcon } from "./externalLinkIcon";
+import { createExternalLinkIcon } from "./externalLinkIcon.js";
 
 export interface Choice {
   id: string;

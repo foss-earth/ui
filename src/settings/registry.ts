@@ -15,8 +15,8 @@ import type {
   SettingsExport,
   SettingsFilter,
   SettingsPreset,
-} from "./types";
-import { copyValue, formatValue, isNumberRange, parseValue, sameValue, validateValue } from "./values";
+} from "./types.js";
+import { copyValue, formatValue, isNumberRange, parseValue, sameValue, validateValue } from "./values.js";
 
 /** One versioned record per application origin, holding saved parameter values. */
 export const SETTINGS_STORAGE_KEY = "foss-earth.settings.v1";
@@ -38,8 +38,8 @@ export interface UrlAliasResult {
 
 export interface SettingsRegistryOptions {
   /**
-   * Where the record persists. Omitted, the browser's localStorage when it can
-   * be reached; null keeps everything in memory.
+   * Explicit persistence supplied by the host. Omitted or null keeps values
+   * in memory. Browser defaults live in the optional browser adapter.
    */
   storage?: SettingsStorage | null;
   /** The page's query: `?set.<id>=` values apply for this session only. Omitted, none. */
@@ -176,14 +176,6 @@ const DEFAULT_CONTEXT: DeviceContext = {
   rendererDevicePixels: null,
 };
 
-function defaultStorage(): SettingsStorage | null {
-  try {
-    return typeof localStorage === "undefined" ? null : localStorage;
-  } catch {
-    return null;
-  }
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -224,10 +216,8 @@ function slug(text: string): string {
 }
 
 export function createSettingsRegistry(options: SettingsRegistryOptions = {}): SettingsRegistry {
-  const storage = options.storage === undefined ? defaultStorage() : options.storage;
-  let storageError: string | null = storage === null && options.storage === undefined
-    ? "Browser storage is unavailable, so settings last only until the page reloads."
-    : null;
+  const storage = options.storage ?? null;
+  let storageError: string | null = null;
   let context: DeviceContext = { ...DEFAULT_CONTEXT, ...options.deviceContext };
 
   const specs = new Map<string, ParameterSpec>();

@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
-import { AdoptedElement } from "./AdoptedElement";
-import { loadPanelSectionsOpen, savePanelSectionsOpen } from "./panelSectionsOpen";
+import { AdoptedElement } from "./AdoptedElement.js";
+import { loadPanelSectionsOpen, savePanelSectionsOpen } from "./panelSectionsOpen.js";
+import type { SettingsStorage } from "../settings/registry.js";
 
 /**
  * One collapsible group in a tab such as Settings or Controls. A host built on
@@ -16,14 +17,20 @@ export interface PanelSection {
   render?: () => ReactNode;
 }
 
-export function SectionsPanel({ sections }: { sections: readonly PanelSection[] }) {
-  const [chosen, setChosen] = useState(loadPanelSectionsOpen);
+export interface SectionsPanelProps {
+  sections: readonly PanelSection[];
+  /** The host's section-state storage. Omitted preserves browser persistence. */
+  storage?: SettingsStorage | null;
+}
+
+export function SectionsPanel({ sections, storage }: SectionsPanelProps) {
+  const [chosen, setChosen] = useState(() => loadPanelSectionsOpen(storage));
   const isOpen = (section: PanelSection): boolean => chosen[section.id] ?? section.defaultOpen ?? false;
   const toggle = (section: PanelSection, open: boolean): void => {
     setChosen((current) => {
       if ((current[section.id] ?? section.defaultOpen ?? false) === open) return current;
       const next = { ...current, [section.id]: open };
-      savePanelSectionsOpen(next);
+      savePanelSectionsOpen(next, storage);
       return next;
     });
   };

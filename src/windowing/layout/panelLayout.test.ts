@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   computeDockPanelLayout,
   DEFAULT_DOCK_PANEL_LAYOUT_OPTIONS,
-} from "./panelLayout";
+} from "./panelLayout.js";
 
 describe("computeDockPanelLayout", () => {
   it("returns independent panel widths when only one panel is visible", () => {

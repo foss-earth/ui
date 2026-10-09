@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createHelpTooltip, closeHelpTooltipWithin, type HelpTooltipHandle } from "./helpTooltip";
-import { createParameterControl, type ParameterControlHandle } from "./settings/controls";
-import { createSettingsRegistry } from "../settings/registry";
+import { createHelpTooltip, closeHelpTooltipWithin, type HelpTooltipHandle } from "./helpTooltip.js";
+import { createParameterControl, type ParameterControlHandle } from "./settings/controls.js";
+import { createSettingsRegistry } from "../settings/registry.js";
 
 const handles: (HelpTooltipHandle | ParameterControlHandle)[] = [];
 afterEach(() => {

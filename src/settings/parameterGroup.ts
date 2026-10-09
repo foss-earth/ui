@@ -1,4 +1,4 @@
-import type { SettingsRegistry } from "./registry";
+import type { SettingsRegistry } from "./registry.js";
 
 /**
  * Holds every boolean member of a group on while the group's own boolean is

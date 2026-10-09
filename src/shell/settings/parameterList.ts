@@ -1,6 +1,6 @@
-import type { SettingsRegistry } from "../../settings/registry";
-import type { SettingsFilter } from "../../settings/types";
-import { createParameterControl, isStandaloneParameterControl, type ParameterControlHandle } from "./controls";
+import type { SettingsRegistry } from "../../settings/registry.js";
+import type { SettingsFilter } from "../../settings/types.js";
+import { createParameterControl, isStandaloneParameterControl, type ParameterControlHandle } from "./controls.js";
 
 export interface ParameterListHandle {
   element: HTMLElement;

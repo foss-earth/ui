@@ -8,25 +8,25 @@ import {
   selectTabAndToggleWorkspaceSlot,
   setWorkspaceSlotCollapsed,
   setWorkspaceSlotSize,
-} from "../core/workspaceState";
+} from "../core/workspaceState.js";
 import type {
   WindowSlotId,
   WindowTabDefinition,
   WindowWorkspaceState,
-} from "../core/types";
+} from "../core/types.js";
 import {
   DockPanel,
   type DockPanelClassNames,
   type DockPanelProps,
-} from "./DockPanel";
+} from "./DockPanel.js";
 import {
   PanelLauncher,
   type PanelLauncherClassNames,
-} from "./PanelLauncher";
+} from "./PanelLauncher.js";
 import {
   TabStrip,
   type TabStripClassNames,
-} from "./TabStrip";
+} from "./TabStrip.js";
 
 function cx(...parts: Array<string | null | undefined | false>): string {
   return parts.filter(Boolean).join(" ");

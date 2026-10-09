@@ -1,5 +1,5 @@
-import { availableWindowTabs, conflictingTabsFor } from "./tabRules";
-import type { WindowSlotId, WindowSlotState, WindowTabDefinition, WindowWorkspaceState } from "./types";
+import { availableWindowTabs, conflictingTabsFor } from "./tabRules.js";
+import type { WindowSlotId, WindowSlotState, WindowTabDefinition, WindowWorkspaceState } from "./types.js";
 
 const SLOT_IDS: readonly WindowSlotId[] = ["primary", "secondary"];
 

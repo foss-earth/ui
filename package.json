@@ -1,0 +1,79 @@
+{
+  "name": "@foss-earth/ui",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Injected settings, window state and feature contribution lifecycle for FOSS Earth hosts.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./settings": {
+      "types": "./dist/settings/index.d.ts",
+      "import": "./dist/settings/index.js"
+    },
+    "./windowing": {
+      "types": "./dist/windowing/index.d.ts",
+      "import": "./dist/windowing/index.js"
+    },
+    "./contributions": {
+      "types": "./dist/contributions.d.ts",
+      "import": "./dist/contributions.js"
+    },
+    "./browser": {
+      "types": "./dist/browser/index.d.ts",
+      "import": "./dist/browser/index.js"
+    },
+    "./react": {
+      "types": "./dist/react.d.ts",
+      "import": "./dist/react.js"
+    },
+    "./styles.css": "./dist/styles/ui.css",
+    "./windowing.css": "./dist/windowing/styles/windowing.css"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "NOTICE",
+    "README.md",
+    "provenance.json",
+    "fixtures",
+    "SOURCE_LINEAGE.json"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/copy-assets.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit --tsBuildInfoFile node_modules/.tmp/typecheck.tsbuildinfo",
+    "lint": "eslint . --cache --cache-strategy content --cache-location node_modules/.cache/eslint/",
+    "test": "vitest run --maxWorkers=50%",
+    "test:consumer": "node tests/package-consumer.mjs",
+    "typecheck:consumer": "tsc -p fixtures/consumer/tsconfig.json",
+    "ci": "npm run typecheck && npm run lint && npm test && npm run build && npm run typecheck:consumer && npm run test:consumer"
+  },
+  "peerDependencies": {
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.4",
+    "eslint": "9.39.4",
+    "globals": "17.6.0",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "jsdom": "29.1.1",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.59.3",
+    "vitest": "4.1.6"
+  }
+}

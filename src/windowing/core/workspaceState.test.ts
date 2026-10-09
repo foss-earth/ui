@@ -10,8 +10,8 @@ import {
   selectTabAndExpandWorkspaceSlot,
   selectTabAndToggleWorkspaceSlot,
   setWorkspaceSlotCollapsed,
-} from "./workspaceState";
-import type { WindowTabDefinition } from "./types";
+} from "./workspaceState.js";
+import type { WindowTabDefinition } from "./types.js";
 
 type TabId = "layers" | "buckets" | "stats" | "reach";
 

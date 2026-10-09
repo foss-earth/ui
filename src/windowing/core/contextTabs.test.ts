@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { createWindowWorkspaceState } from "../windowing/core/workspaceState";
-import { hideWorkspaceTabs, restoreWorkspaceTabs } from "./contextTabs";
+import { createWindowWorkspaceState } from "./workspaceState.js";
+import { hideWorkspaceTabs, restoreWorkspaceTabs } from "./contextTabs.js";
 
 type Tab = "location" | "map" | "scenes" | "settings" | "panorama";
 

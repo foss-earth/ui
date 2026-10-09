@@ -4,7 +4,7 @@ import {
   DEFAULT_MIN_SECONDARY_ASPECT_RATIO,
   DEFAULT_MIN_SECONDARY_WIDTH,
   resolveWindowViewportPolicy,
-} from "./viewportPolicy";
+} from "./viewportPolicy.js";
 
 describe("canFitSecondarySlot", () => {
   const layout = {

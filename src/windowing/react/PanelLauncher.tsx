@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { useEscapeToClose } from "./useEscapeToClose";
-import { fitMenu, menuBottom as menuBottomOf } from "./menuFit";
+import { useEscapeToClose } from "./useEscapeToClose.js";
+import { fitMenu, menuBottom as menuBottomOf } from "./menuFit.js";
 
 function cx(...parts: Array<string | null | undefined | false>): string {
   return parts.filter(Boolean).join(" ");

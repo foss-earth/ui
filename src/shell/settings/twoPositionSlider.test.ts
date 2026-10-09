@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createTwoPositionSlider } from "./twoPositionSlider";
+import { createTwoPositionSlider } from "./twoPositionSlider.js";
 
 afterEach(() => document.body.replaceChildren());
 
