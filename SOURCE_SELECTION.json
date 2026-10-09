@@ -1,0 +1,2044 @@
+{
+  "schemaVersion": 1,
+  "package": "@foss-earth/ui",
+  "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+  "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d",
+  "sourceTree": "c68d1fabd9fce19e255ea89c65502666d0f74a27",
+  "status": "Current source-only selection; foundation lineage frozen; expanded history and all new checks/adoption pending.",
+  "mappedPaths": [
+    {
+      "sourcePath": "LICENSE",
+      "sourceBlob": "be3f7b28e564e7dd05eaf59d64adba1a4065ac0e",
+      "sourceSha256": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "NOTICE",
+      "sourceBlob": "cd6a1d92cce505eaeea37e9726a2f98a0a61a12d",
+      "sourceSha256": "323da85db96d02ed0cf48db889efa184037f538f002e868aeeff396ebb44a993",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "docs/app-files.md",
+      "sourceBlob": "5b9c7c4ad193481a3d73bef626cd3a9b15ce7a9a",
+      "sourceSha256": "6c89f8d3cd0f2e18b9d9e85ff856217bf837f05e6374c246047d50df38e9a61e",
+      "sourceRepository": "foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "docs/bug-reporting.md",
+      "sourceBlob": "b32c222d47746bf6d07f84ac001da7e720d1f621",
+      "sourceSha256": "77c4c6793a2fcb6d1e9c8ec44108eea1a18437f4e5fd6b2ae1185eb3e4197c3b",
+      "sourceRepository": "foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "docs/diagnostics.md",
+      "sourceBlob": "2c8cb39001645d49cb40da32558880cc4a73e737",
+      "sourceSha256": "a6cd5b99d0998c870945b555b4bd083f60ed06255a7a82b535236df7bb7e82f5",
+      "sourceRepository": "foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/app/appDiagnostics.ts",
+      "sourceBlob": "f2871ebe3ec44c42a888d55300a3f97e10e2e2e6",
+      "sourceSha256": "a0c78408845f072b52cd22f5d25829e5391c1e9b2cee1cfd73badaa21fedd6ec",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/app/appFiles.ts",
+      "sourceBlob": "e4824b191fb911c86a51d25a8bf6387f3e66106c",
+      "sourceSha256": "73070cd3ff7694de30a136794b0bcaae92b851298bfde1d0b6bd1c11b5a0cbc6",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/app/publishedVersion.ts",
+      "sourceBlob": "b1ed5fc9436224904191282f1eeaec2203914191",
+      "sourceSha256": "2096abe7184f4b7a79f243d87da7d66fee296686b9f2e7fc478eea1b30fd9e32",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/app/reportOnly.ts",
+      "sourceBlob": "7a961ca37cf184b165080135cc9d5edcbfa33192",
+      "sourceSha256": "a2fe5693924ab665d41e4f5a42530e8c041f97935a123ea2225eea0c2f8a34a4",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/diagnostics/browserDetails.ts",
+      "sourceBlob": "7f5c16ceaec6b31fc4fa52c3415744f3992fa055",
+      "sourceSha256": "d4810144efeb9ac012e08f6ed8756e308210d475686b6d21029513f5fb573411",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/diagnostics/errorCapture.test.ts",
+      "sourceBlob": "d5017c4b87e9222d2a63e3aba61159ac04e68ca6",
+      "sourceSha256": "9e572322e0c4a8c71bdd2ab993271756fccd33fbbb85c2ee38f0011f6e3f7e4c",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/diagnostics/errorCapture.ts",
+      "sourceBlob": "537a911019117a54b35b0e623456cb1228927cc2",
+      "sourceSha256": "b979a4bf4bff4694315e15a34d55ec7525a82cfb53bd069aa164d1c80899079e",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/diagnostics/index.test.ts",
+      "sourceBlob": "cde7b084074362a71935fc473909d7f3404c38e2",
+      "sourceSha256": "1c5ffe4d2c425d50b23018ba80a67cd7217f435b4fd45414b880a1256083020e",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/diagnostics/issueReport.test.ts",
+      "sourceBlob": "f5bd2a3a2f2fc408d829c08f3800e0179e085a47",
+      "sourceSha256": "b69165eec52508e4c181da1229888559a14456cfe94caaeac47d29c223e6e91a",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/diagnostics/issueReport.ts",
+      "sourceBlob": "3cb405f025980a3a7a0aa2e2a2e2df468bbe6a12",
+      "sourceSha256": "4e4dbadd721ea047e53e0b2d237667579ca892d1bbddd0246f579435571130e7",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/diagnostics/report.test.ts",
+      "sourceBlob": "ce75f620676bda953cd2bedc885ecccb14353f10",
+      "sourceSha256": "2332a88d2a888b1b7fb40bc52abbc0fc0da55e460b5efe30d7b4cc1f91c12295",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/diagnostics/report.ts",
+      "sourceBlob": "29781fe4bcccb64f2873c9213806dae38765bd30",
+      "sourceSha256": "1c4d38555f9307569ee4ef8b2c15bbd52b5ee48b5a909f8d8d864b0deb0bb06b",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/diagnostics/sessionTrail.test.ts",
+      "sourceBlob": "014ba422a13f0bab9c639f36db9fc46ff20e825e",
+      "sourceSha256": "80f4b4ce68ea7bcebd33d7e71fa6afbd54d07203f2a46307d1dacad1383dbd72",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/diagnostics/sessionTrail.ts",
+      "sourceBlob": "7f18863838bd67c332a97fea90582a7ea6085773",
+      "sourceSha256": "1352eea06f48329fa0ba97edb7b661a62a3a528695c473ad300522477c0b22ff",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/diagnostics/testEnvironment.ts",
+      "sourceBlob": "ce2148e76d3f9ce4b4d18aa7fe4fb491e4170abd",
+      "sourceSha256": "1a53f9073fee8e5c02e73e6dfad43399d530748ce4367b84a5d7867add90a918",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/log/createGameLog.test.ts",
+      "sourceBlob": "db748e5c8f4762881fdd99893e474e44d77211e6",
+      "sourceSha256": "eb6921b79e149ba568d7c091fbd7fa7ff8184f1e3b0a6f1bad4709652f906df1",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/log/createGameLog.ts",
+      "sourceBlob": "391cf9c22e09156566a4819fde16a813fe15fe9b",
+      "sourceSha256": "4712d6d1bae43ea8165143f06c329a5675493fd3948ef16408a26ee83aed3a5e",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/log/fitLogResize.test.ts",
+      "sourceBlob": "8eb5ef7f3ee5efee69eee6551c1d3dce6d8bf944",
+      "sourceSha256": "0ba811a04fa8911d219a0017e1a5375b7e4e74863f4ee8f0f3c0f8bf100b367a",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/log/fitLogResize.ts",
+      "sourceBlob": "a3b39b7f945cda04a555bf06f2ca1081baead54a",
+      "sourceSha256": "84337bc1fc8a5beda3fe0e4a81ea1b6863105c894580a8ebf12cc12770ecdd47",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/log/gameLog.css",
+      "sourceBlob": "f4b439befb6e3f99ee1cec62376ba63e3cc1a9a2",
+      "sourceSha256": "43583550c19e4f38c8194c41913647de77ca00c47cc1afa068dbb84c65944a2e",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/log/gameLogDefaults.ts",
+      "sourceBlob": "6a0b5aad2d02b2fb507f436d91dded9b447c11a6",
+      "sourceSha256": "34fbaef1060b118e6c9a316c40f704ac986b305d5e167633612ea8deab5d5de1",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/settings/catalogue/index.ts",
+      "sourceBlob": "b801537459f08d65437f22e5e91ddad92f00f652",
+      "sourceSha256": "ad6f0a046826e1925307ede8fad987c4cdb12dedeaca06f08ee8b67076325586",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/settings/catalogue/interface.ts",
+      "sourceBlob": "d4765a9126b7978d19be7fe958022504731881ee",
+      "sourceSha256": "794e4a0546e9e146d323405f40b83f824e6bbac3e79d77c0f7a4e1692448a1ea",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/settings/deviceContext.ts",
+      "sourceBlob": "c711310f76194e59d799aacfb110a9fdd2c28aa3",
+      "sourceSha256": "5a60cd133890a383d49317eb5dd343c1b693443baa24e91502f5b45ce85182fb",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/settings/parameterGroup.test.ts",
+      "sourceBlob": "706acc6e8ce05aebf864005a394c2843de610748",
+      "sourceSha256": "626f700d6b5fd62c582a5da6d0cbffce58d8f4d9ab280769ceb53e417e1c8ac0",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/settings/parameterGroup.ts",
+      "sourceBlob": "0b120b506dee7aea4af2cac1ea314757f72f50a9",
+      "sourceSha256": "5db09d509c941279956ea10a4d7ed23ad2e30f22dd9486f0c45dc694462074bb",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/settings/registry.test.ts",
+      "sourceBlob": "48b2548d57d2c251795cc57381c057034d0bdd2f",
+      "sourceSha256": "98592ac596eda6ea3bb08acab37a5879bac77923e5ebcb15c782d5664c29a2db",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/settings/registry.ts",
+      "sourceBlob": "5d676a465ca2f48b791cb01b9acdde64b87f8487",
+      "sourceSha256": "65e17adb4909b16e85522524fb513cf63afa3512f62a4d6f847e2c794609913c",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/settings/types.ts",
+      "sourceBlob": "23bdb5cd302d5f81bb5bac794cedcd83e97d616b",
+      "sourceSha256": "7d93631ecfff9414b5a821a292166a7bd67b5a2e363f0c2175bd8f758a981e31",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/settings/values.ts",
+      "sourceBlob": "5eeb0a016835a85c1106d20c98d310d38b13e04d",
+      "sourceSha256": "dffe74b3f1961c9aa0e6b60096b9a526b018f593fab06bd80848c9cc552bcc89",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/AdoptedElement.tsx",
+      "sourceBlob": "62624d76ebfd394d574cfed5c6c08bb6f99d41a5",
+      "sourceSha256": "13f0f99b54a434dd2b62c88637ce5aaa921b04b16227969eebcfacc7b3da3c6a",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/MeshInspectorPanel.test.tsx",
+      "sourceBlob": "ed2e013eaaf6e39ecef3a29007279c3b5fe71041",
+      "sourceSha256": "0745b99cdbdd2d6cf7e0509de31353f627e601b62bc2c2b54c7718b84c2350b1",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/MeshInspectorPanel.tsx",
+      "sourceBlob": "6999e682131fc25e73bf53c4d55798fd5027e470",
+      "sourceSha256": "676363de29db80f5ad526937be73b1d61d2992be3c4e38dde1a279e9d2535384",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/SectionsPanel.test.tsx",
+      "sourceBlob": "78a1fd7135caf286c21af4966b69a885fa8570e3",
+      "sourceSha256": "6688111bf46d425d3b30a48bf49eada6ec1a52f1b842aee9d2cf120bffe2dfe4",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/SectionsPanel.tsx",
+      "sourceBlob": "52c3fc34a66cb66021f59663dcfb78ce3e30c6b3",
+      "sourceSha256": "c72d06035f09eb9adf4553012f1a546cb0329507f6f68facfdd01d620a70ce0b",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/WindowOverlay.test.tsx",
+      "sourceBlob": "c6f1c7ac4a97eb224bbd07f52cc35ac05c516c1d",
+      "sourceSha256": "65be1f4d4e1d6d1595ee3c8a7526e1cfadcf3388f67b6d6cdccd360b22787e5e",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/WindowOverlay.tsx",
+      "sourceBlob": "4d147b48013a0c30edb657bb27ec5fa77997f141",
+      "sourceSha256": "6968a18499a0590554726d2bb18d52855121240b074ed6097fcf6b49b9ee47ac",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/appFilesSection.test.ts",
+      "sourceBlob": "7609276396bd002d83c569c95d7f84834ee412a7",
+      "sourceSha256": "cdc7f4711463b6f18cbb4fbeb1d40e4a79169518e5be4999e3786d4578ee5953",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/appFilesSection.ts",
+      "sourceBlob": "4e8011eff134312d877fe8d2bd936e411b06e2ca",
+      "sourceSha256": "bbbe9b28d2e5b2ea657ccdf0a9c3dfe0abb57ffd93af268d9841ab4ce1777b13",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/bugReportPanel.test.ts",
+      "sourceBlob": "8a08655935e3800a715b63a85b5e75f9f2c671fa",
+      "sourceSha256": "65ad79a15a76366918f7e98a5ea97eb6c71aae0c65a4ccdaa9d2ef1c6b534301",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/bugReportPanel.ts",
+      "sourceBlob": "5d6b8a0eb155d4445f42bb7032bbd29d6b84bbc6",
+      "sourceSha256": "6bbe6d3b3ac59d87cdba0347b752164523a275670489595dc0bd434bdf977b31",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/choiceGroup.ts",
+      "sourceBlob": "772b1293a0148b2d60c9f093bb801a50d579e1e0",
+      "sourceSha256": "e4ff0fd7166dba5e2354e184d675ba51e4e3d869edf44f351d083c39220d5723",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/compactWorkspace.test.ts",
+      "sourceBlob": "c1273579139200d113717a8f1aa1706db32f2273",
+      "sourceSha256": "c9424c0f618712bc7c57321d484788e3b2b3316a16cec9e7a2053b6ceda9ed0c",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/compactWorkspace.ts",
+      "sourceBlob": "3f83a752b718d01a26b2d5a63aa400dd7b8bda92",
+      "sourceSha256": "5f2cd10bcd24751a201b7127944e8ed96be1790f824e6a40f8a70a45d0e762af",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/contextTabs.test.ts",
+      "sourceBlob": "781d7595dab0e1103634da70a57c2d28af90456d",
+      "sourceSha256": "dde6caba8f1e2e73e69863cdd8e264b2d31b5c3eacf367d68e17471c3487baa4",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/contextTabs.ts",
+      "sourceBlob": "7e82398934572b0e078f37bca7c30bef6ddd20a7",
+      "sourceSha256": "8f09896ccb255cbc42e886f606139303ab30b8deb6c6174e695112971ba6052e",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/diagnosticsSection.test.ts",
+      "sourceBlob": "054fa4df9da3cbb07425fbbaf1c65ee056f183ab",
+      "sourceSha256": "9dd841c7d756b1c54924ed653beae450690f5d3c895b8c3c1d82c911d548f206",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/diagnosticsSection.ts",
+      "sourceBlob": "b5c5d30d6dc4b373619749911d6fca3cb1251ae8",
+      "sourceSha256": "78963cca1868d184ae705b61f2df7dd0be1bb7727857b4931b44b0edadcc2987",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/dial.test.ts",
+      "sourceBlob": "8033bee0e201437bdcf5564dce893f78de2590cd",
+      "sourceSha256": "0e61fdb29669651e18ad2add405acc10d9f7d6fa874322f83d2f0a12d199b0bd",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/dial.ts",
+      "sourceBlob": "94730d54b724fcc785e73f8c384282423d1fb20a",
+      "sourceSha256": "1e6eb4ecb491cf468ccf8a9b16fda19da3b0a4372d2fadcc1765346b1c7934ca",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/dockLayout.test.ts",
+      "sourceBlob": "5ebed13770576899b604e22303ed8ecbbd9d3b13",
+      "sourceSha256": "d87d22f0bc75333ff240d29baebe69fb308295591ceb59496ad9e7f74ad200a9",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/dockLayout.ts",
+      "sourceBlob": "d70bcf4704a7a882188f43a83da8cfe2734ef1f5",
+      "sourceSha256": "952c1e43c7c55ac401599a6a325cbb01e7847aa6a68c73715c4ec689a1d14c5b",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/externalLinkIcon.ts",
+      "sourceBlob": "072e47f3e1b7e711ee22d1cb42c24e419f741706",
+      "sourceSha256": "ad3092e290901cec19369b2fbe3da526879b0ed97feff75f933aa5032dcb536c",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/helpTooltip.test.ts",
+      "sourceBlob": "9293a14200dbbf7c7b834efbb587a5999d6fcf92",
+      "sourceSha256": "163dcbc72c859a4239b424aec29fe36996af4560b2a8015d6e1ab435d7dc037c",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/helpTooltip.ts",
+      "sourceBlob": "757ba41e675ee244322322c33a58245f47142991",
+      "sourceSha256": "2f016c7cb56a42e1ef7032e47e71a2ce57a0c4c230106217e158047e6494968e",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/meshInspector.css",
+      "sourceBlob": "654a3d749677719c8d155731d68db79459dbd28c",
+      "sourceSha256": "4a98f033c7c594d77cacca091296ef057894a19670606c53451cdcac3ddae876",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/panelSectionsOpen.ts",
+      "sourceBlob": "2edb7748407dd6bbf1f07acff1cd6166d1e7c5b7",
+      "sourceSha256": "a14756e82a9d750f7909f2a8bc118c2f849ec61d59734076ca9cf1e0244dabea",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/savedWorkspace.ts",
+      "sourceBlob": "80541c97b9efa42ba3cf278bea8e530704c546d8",
+      "sourceSha256": "d9879543022fedaeaf44464be29889e7ba1b7e142c9a38ae9816f88633f812f2",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/settings/controls.ts",
+      "sourceBlob": "0170405513eb95a4e890de2346cb40c3c1ddd2fd",
+      "sourceSha256": "c9defc96822b3b018933eb8a6b9b3af300f1c42b0e4a0cef9d699432a3cba108",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/settings/parameterList.ts",
+      "sourceBlob": "f7c1c03f235c565054424962eba251fe53f38610",
+      "sourceSha256": "80b319fd7ba17e74257ce3eb5260fa5d8c7ef6dbbb77913de7a75bd821d37286",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/settings/parameterSection.test.ts",
+      "sourceBlob": "62b91ad57c26dd7e15344bb441239a1b7b0b8df7",
+      "sourceSha256": "490673079e025bc55a024b2099ea6f6e86033c19547efa1778b37f7194cb637f",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/settings/parameterSection.ts",
+      "sourceBlob": "24a4dc03f41691ef63195b9b5990166608cf82eb",
+      "sourceSha256": "7d4e312bcb4eece84d749f7a38c83b580ffb9a0a18fbedef464ca37f86f5edda",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/settings/presetsSection.test.ts",
+      "sourceBlob": "4981af9089cc6eb7da103dcfb337936028d0f041",
+      "sourceSha256": "a0eac44965896f5a2fa4462c4583b18b885530e28ee10f40a4f7a9c1c76c3316",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/settings/presetsSection.ts",
+      "sourceBlob": "bce3d941c776295a3fb480815dd1eed5c89c6097",
+      "sourceSha256": "1ad3c9764dd3a8ccd43a695857548124b2596482259f8b4a281b89b880f9831c",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/settings/savedSettings.ts",
+      "sourceBlob": "810e43d8a49e400bd6d08b0a9cd11b44f8cce6be",
+      "sourceSha256": "fd47eb5f80f06c2c2d2a97539bd8ba7641b4a2250d698ffcb97e6fe1593b659f",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/settings/themeControl.test.ts",
+      "sourceBlob": "70ab64c1d34b97c21fc09629c65df63789c1f11f",
+      "sourceSha256": "86b71be6c3381dfa71f4af65d5d743e486ad8b8d4e7f56546c6615a7eff2bc21",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/settings/themeControl.ts",
+      "sourceBlob": "d6f4fb09beb731ba179a227ebf8df429464bf5cf",
+      "sourceSha256": "9ac49d6fa1c1c197422138029ca94e5f474c600ff9dd3ed731347aab91e777de",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/settings/track.ts",
+      "sourceBlob": "e29d705080b2b1e5896e47ef427f45673b3513b8",
+      "sourceSha256": "2d8edcb3ea371d5fcde35e1e192c76f7f3c04296afe14ad29692e4907daf0e7a",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/settings/twoPositionSlider.test.ts",
+      "sourceBlob": "8046da225db835188082fe2439e04fa7ddc8ea51",
+      "sourceSha256": "fe2b72931e6bf7d27afa68bccc00abacc5a07d7790c0f71f5064ed31fbf595a3",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/settings/twoPositionSlider.ts",
+      "sourceBlob": "8aa7eeeb85d46423d6488a4bd688cbd32ccf542a",
+      "sourceSha256": "71c549f8193e5376f6560d02ff41d2104ee856815991d2ff59f4bbffa47c6be8",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/viewportInsets.test.ts",
+      "sourceBlob": "e405096e811f7db22b817b295725600c6b6fb4a9",
+      "sourceSha256": "05740c50456fe64e17211147fe90df648481aba6141792ff421c92fff8e16295",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/shell/viewportInsets.ts",
+      "sourceBlob": "e00f1ec0adaa18e578d59dbe8d5bcaf031b52964",
+      "sourceSha256": "397d9aac7eec48ebcdbe7be02bada2e8744e93e37ed00943fe4c579072b3fc0b",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/styles/base.css",
+      "sourceBlob": "ebb7a5a5d61c92908216640178da526e7519ed08",
+      "sourceSha256": "6458d2876b15a9e4970f1be0a402bef28909edb2adc48dcf314cb5b76c5d366a",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/styles/hud.css",
+      "sourceBlob": "cbd0c99b22835493f0ee659a73bdc89bd4258f7b",
+      "sourceSha256": "cc221b7efd23f13037023bbc095ecdfeb150f5cd9cd959ec49c5a26f6399dff4",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/theme/theme.ts",
+      "sourceBlob": "d4c678c8af5946803bfa511df65c346aa19ac71b",
+      "sourceSha256": "4a874dedd3ade5277867fac1f1eeef1c0e690966c400357df1ec1f1ba21d94d7",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/windowing/core/tabRules.ts",
+      "sourceBlob": "d00b1b1dc4467d7b5c09fba9d8b50b3271dab0a3",
+      "sourceSha256": "31092713e5dfba7f555f6618ca21e68203b090ad1a33fe6f080c9e3548f66e4e",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/windowing/core/types.ts",
+      "sourceBlob": "afb091a1c722d4f70e79b7e945f9aa363d0aa87c",
+      "sourceSha256": "02fd92781b95450769472fceaa68bdf25db728fa47265598b093a103ef765254",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/windowing/core/workspaceState.test.ts",
+      "sourceBlob": "05c12e07d2ed9853a3b0f8bfa3d9dabd678abf84",
+      "sourceSha256": "f9b36cf3f8a4b548f6250d29baf682696b67e8edc081f84bde7c9398de6965c5",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/windowing/core/workspaceState.ts",
+      "sourceBlob": "affa3efa58f066936e78c4eefd44b8e4c58d8f4a",
+      "sourceSha256": "ff4bfc738de0a8c4b1b233938ba333579146a43160b646800a4999274ec8ea68",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/windowing/layout/panelLayout.test.ts",
+      "sourceBlob": "828861de6fd30c7630f9cb88222dec1c0fa934fa",
+      "sourceSha256": "f1279d6889965686396578e381daa90c9f4a94594969c48831f9f57b4b2cdf1f",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/windowing/layout/panelLayout.ts",
+      "sourceBlob": "cc42f766c64e5aef9f392a607e06a7e53b0294e9",
+      "sourceSha256": "39974a725811c4effd44297e2f04c581a32f0eef12214d957e4fc5259d23acf3",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/windowing/layout/viewportPolicy.test.ts",
+      "sourceBlob": "fb20ef43fe13f321b73d7af458adbf7cccb6ce68",
+      "sourceSha256": "b6b7e5591c40b971d2e037ed050d1a88297cf9d202fe2b5eba191be8269600d3",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/windowing/layout/viewportPolicy.ts",
+      "sourceBlob": "3e13e3c3fa4f8b88d4de7366d2bd8a62f1964e25",
+      "sourceSha256": "ecb75b5eb0827210a48f5eca224d1356f8d15385f0010e5043aa0b7aa6310c47",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/windowing/react/DockPanel.tsx",
+      "sourceBlob": "56eebe3f5ea8ad75e09a65c3cf3c82b33275ba01",
+      "sourceSha256": "5ac910bdf00e60ac49b540acae25000d091834628df5f9dfb6c9fdb6783800e0",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/windowing/react/FloatingWindow.tsx",
+      "sourceBlob": "415451711e86d2097249b0fa8d95b74c0ebd3a20",
+      "sourceSha256": "cbc49b7dd7d58003a8b312056eefaa9fcdb8ff64c1ee53031eb0be0b1d64b14b",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/windowing/react/PanelLauncher.tsx",
+      "sourceBlob": "616ee90db71198413b25b423a67e11358019b5a9",
+      "sourceSha256": "a645ce60cb4b9ccd6ded693271455e9f224da443385d951a0d8d99921d6db762",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/windowing/react/TabStrip.test.tsx",
+      "sourceBlob": "fbda4ae678cc9faa3d72519e94bd78375f118fd1",
+      "sourceSha256": "457411c2a81c79e4aa9e6fd79c684111069aa2b85a481d057523b762a042c9d9",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/windowing/react/TabStrip.tsx",
+      "sourceBlob": "0f6ddb5a48d082577bd6aab27ffc025e36a13b85",
+      "sourceSha256": "3fab90e7f41c12b54b8e30a1ff54eeff123336be2cf4778344bc2279461913e9",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/windowing/react/WorkspaceDockSlot.tsx",
+      "sourceBlob": "e3b621b87c5453862631bb97447a484b381c1b5b",
+      "sourceSha256": "fbeb5df9e4fa0f5993580719e35701c4ca442515d7f5beffdec495013250460c",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/windowing/react/menuFit.ts",
+      "sourceBlob": "fb861dc11bd1f57b7d4dba462b56bfb23169ebf1",
+      "sourceSha256": "06ea519c53eebb89098037411af3001e536f01c641c12ac9bd2427445403d715",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/windowing/react/useEscapeToClose.ts",
+      "sourceBlob": "b2888d025fe55f34fde388cfad5105b747a1bc39",
+      "sourceSha256": "43cb256b770d637e7419a78c4e6c4ced478de400bcd79f994e24b8f9058e5e3d",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/windowing/react/useWindowWorkspace.ts",
+      "sourceBlob": "4e13d1decc797fa4a752cb6a1f28ebd9e5558117",
+      "sourceSha256": "c3217c2112f6903380aac5226179f4206351ff79358e10ebbb2335ce5d356805",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "sourcePath": "src/windowing/styles/windowing.css",
+      "sourceBlob": "d40f04ce560c4b918296b9cb635b53e50c1267aa",
+      "sourceSha256": "df784366b87588ad1ea34a82dcf941ea71a0e92f0f68d5383756e51d1c50ee77",
+      "sourceRepository": "https://github.com/foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    }
+  ],
+  "sourceMappings": [
+    {
+      "source": "src/settings/registry.ts",
+      "destination": "src/settings/registry.ts",
+      "sourceBlob": "5d676a465ca2f48b791cb01b9acdde64b87f8487",
+      "sourceSha256": "65e17adb4909b16e85522524fb513cf63afa3512f62a4d6f847e2c794609913c",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths.",
+        "Core omitted storage is memory-only; localStorage default isolated in browser adapter."
+      ],
+      "destinationSha256": "e452a4ed3b3097d9c03613e9977402479a28cc8288bcbd7b4c94c3797b46f253",
+      "destinationBytes": 40375
+    },
+    {
+      "source": "src/settings/types.ts",
+      "destination": "src/settings/types.ts",
+      "sourceBlob": "23bdb5cd302d5f81bb5bac794cedcd83e97d616b",
+      "sourceSha256": "7d93631ecfff9414b5a821a292166a7bd67b5a2e363f0c2175bd8f758a981e31",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths."
+      ],
+      "destinationSha256": "7d93631ecfff9414b5a821a292166a7bd67b5a2e363f0c2175bd8f758a981e31",
+      "destinationBytes": 9053
+    },
+    {
+      "source": "src/settings/values.ts",
+      "destination": "src/settings/values.ts",
+      "sourceBlob": "5eeb0a016835a85c1106d20c98d310d38b13e04d",
+      "sourceSha256": "dffe74b3f1961c9aa0e6b60096b9a526b018f593fab06bd80848c9cc552bcc89",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths."
+      ],
+      "destinationSha256": "c49022e40a71804390570a9f31935ef57d95081db6bff194b0a16b173c155ee0",
+      "destinationBytes": 6356
+    },
+    {
+      "source": "src/settings/parameterGroup.ts",
+      "destination": "src/settings/parameterGroup.ts",
+      "sourceBlob": "0b120b506dee7aea4af2cac1ea314757f72f50a9",
+      "sourceSha256": "5db09d509c941279956ea10a4d7ed23ad2e30f22dd9486f0c45dc694462074bb",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths."
+      ],
+      "destinationSha256": "5049fc78c18aa560b79a4b7622ad1d286421c65968175b076c4045f38768be2e",
+      "destinationBytes": 1056
+    },
+    {
+      "source": "src/settings/registry.test.ts",
+      "destination": "src/settings/registry.test.ts",
+      "sourceBlob": "48b2548d57d2c251795cc57381c057034d0bdd2f",
+      "sourceSha256": "98592ac596eda6ea3bb08acab37a5879bac77923e5ebcb15c782d5664c29a2db",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths."
+      ],
+      "destinationSha256": "b144110105329fcd72948291b8456d6d1c9ad5ec20cb266ab8137e4c4bf21200",
+      "destinationBytes": 24040
+    },
+    {
+      "source": "src/settings/parameterGroup.test.ts",
+      "destination": "src/settings/parameterGroup.test.ts",
+      "sourceBlob": "706acc6e8ce05aebf864005a394c2843de610748",
+      "sourceSha256": "626f700d6b5fd62c582a5da6d0cbffce58d8f4d9ab280769ceb53e417e1c8ac0",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths."
+      ],
+      "destinationSha256": "b1046ecdef8d46962a0993a67bdff2b1cac523de0569a111cc3159112bdb895d",
+      "destinationBytes": 2134
+    },
+    {
+      "source": "src/windowing/core/types.ts",
+      "destination": "src/windowing/core/types.ts",
+      "sourceBlob": "afb091a1c722d4f70e79b7e945f9aa363d0aa87c",
+      "sourceSha256": "02fd92781b95450769472fceaa68bdf25db728fa47265598b093a103ef765254",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths."
+      ],
+      "destinationSha256": "02fd92781b95450769472fceaa68bdf25db728fa47265598b093a103ef765254",
+      "destinationBytes": 507
+    },
+    {
+      "source": "src/windowing/core/workspaceState.ts",
+      "destination": "src/windowing/core/workspaceState.ts",
+      "sourceBlob": "affa3efa58f066936e78c4eefd44b8e4c58d8f4a",
+      "sourceSha256": "ff4bfc738de0a8c4b1b233938ba333579146a43160b646800a4999274ec8ea68",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths."
+      ],
+      "destinationSha256": "ed0b9239afdde9f16f58743f44e5badc0a5321670ef749f3e49864491361b32f",
+      "destinationBytes": 8327
+    },
+    {
+      "source": "src/windowing/core/tabRules.ts",
+      "destination": "src/windowing/core/tabRules.ts",
+      "sourceBlob": "d00b1b1dc4467d7b5c09fba9d8b50b3271dab0a3",
+      "sourceSha256": "31092713e5dfba7f555f6618ca21e68203b090ad1a33fe6f080c9e3548f66e4e",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths."
+      ],
+      "destinationSha256": "a30a336ac63dffb1737b6a0b27ab3c1592d00c301e93aa9dd6c56d48c0615071",
+      "destinationBytes": 1486
+    },
+    {
+      "source": "src/windowing/core/workspaceState.test.ts",
+      "destination": "src/windowing/core/workspaceState.test.ts",
+      "sourceBlob": "05c12e07d2ed9853a3b0f8bfa3d9dabd678abf84",
+      "sourceSha256": "f9b36cf3f8a4b548f6250d29baf682696b67e8edc081f84bde7c9398de6965c5",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths."
+      ],
+      "destinationSha256": "c30ed27def3679cda2398cab61cd0e311bbcf9b9899b687ba3c89013fec2eba0",
+      "destinationBytes": 7092
+    },
+    {
+      "source": "src/shell/contextTabs.ts",
+      "destination": "src/windowing/core/contextTabs.ts",
+      "sourceBlob": "7e82398934572b0e078f37bca7c30bef6ddd20a7",
+      "sourceSha256": "8f09896ccb255cbc42e886f606139303ab30b8deb6c6174e695112971ba6052e",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths.",
+        "Generic context tab helpers relocated to windowing/core."
+      ],
+      "destinationSha256": "2310dd7ec6f7985b2c562ea2edcc38f9d9e37da8eac3fd9f096ef8f1a7171b81",
+      "destinationBytes": 2497
+    },
+    {
+      "source": "src/shell/contextTabs.test.ts",
+      "destination": "src/windowing/core/contextTabs.test.ts",
+      "sourceBlob": "781d7595dab0e1103634da70a57c2d28af90456d",
+      "sourceSha256": "dde6caba8f1e2e73e69863cdd8e264b2d31b5c3eacf367d68e17471c3487baa4",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths.",
+        "Generic context tab helpers relocated to windowing/core."
+      ],
+      "destinationSha256": "6f375d84117f92de73e02662eac836989791a1e110f664b15e5a0eb517060288",
+      "destinationBytes": 1994
+    },
+    {
+      "source": "LICENSE",
+      "destination": "LICENSE",
+      "sourceBlob": "be3f7b28e564e7dd05eaf59d64adba1a4065ac0e",
+      "sourceSha256": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0",
+      "transformations": [],
+      "destinationSha256": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0",
+      "destinationBytes": 34523
+    },
+    {
+      "source": "NOTICE",
+      "destination": "NOTICE",
+      "sourceBlob": "cd6a1d92cce505eaeea37e9726a2f98a0a61a12d",
+      "sourceSha256": "323da85db96d02ed0cf48db889efa184037f538f002e868aeeff396ebb44a993",
+      "transformations": [],
+      "destinationSha256": "323da85db96d02ed0cf48db889efa184037f538f002e868aeeff396ebb44a993",
+      "destinationBytes": 359
+    },
+    {
+      "source": "src/shell/AdoptedElement.tsx",
+      "destination": "src/shell/AdoptedElement.tsx",
+      "sourceBlob": "62624d76ebfd394d574cfed5c6c08bb6f99d41a5",
+      "sourceSha256": "13f0f99b54a434dd2b62c88637ce5aaa921b04b16227969eebcfacc7b3da3c6a",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths."
+      ],
+      "destinationSha256": "13f0f99b54a434dd2b62c88637ce5aaa921b04b16227969eebcfacc7b3da3c6a",
+      "destinationBytes": 634
+    },
+    {
+      "source": "src/shell/SectionsPanel.tsx",
+      "destination": "src/shell/SectionsPanel.tsx",
+      "sourceBlob": "52c3fc34a66cb66021f59663dcfb78ce3e30c6b3",
+      "sourceSha256": "c72d06035f09eb9adf4553012f1a546cb0329507f6f68facfdd01d620a70ce0b",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths.",
+        "Add optional injected section-state storage prop."
+      ],
+      "destinationSha256": "d87c10d69f5d632f50d5f3c81e53f2676b288e42a424be94b281afa9bf735fdf",
+      "destinationBytes": 2178
+    },
+    {
+      "source": "src/shell/choiceGroup.ts",
+      "destination": "src/shell/choiceGroup.ts",
+      "sourceBlob": "772b1293a0148b2d60c9f093bb801a50d579e1e0",
+      "sourceSha256": "e4ff0fd7166dba5e2354e184d675ba51e4e3d869edf44f351d083c39220d5723",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths.",
+        "Primary source-only Document port propagation; host Document/element ownerDocument replaces ambient DOM authority in changed settings/help/dial/App Files paths; assertions retained with explicit fixture bindings, all UNRUN."
+      ],
+      "destinationSha256": "2e1c7ea3768429842ad27ac6835def0c94147d02c6ba96da223fe3376d79e6ac",
+      "destinationBytes": 2615
+    },
+    {
+      "source": "src/shell/externalLinkIcon.ts",
+      "destination": "src/shell/externalLinkIcon.ts",
+      "sourceBlob": "072e47f3e1b7e711ee22d1cb42c24e419f741706",
+      "sourceSha256": "ad3092e290901cec19369b2fbe3da526879b0ed97feff75f933aa5032dcb536c",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths.",
+        "Primary source-only Document port propagation; host Document/element ownerDocument replaces ambient DOM authority in changed settings/help/dial/App Files paths; assertions retained with explicit fixture bindings, all UNRUN."
+      ],
+      "destinationSha256": "3c8e1feab4252599766a86d4ddd540b94c42fe56099c8ac47606010fbe97fa59",
+      "destinationBytes": 982
+    },
+    {
+      "source": "src/shell/helpTooltip.ts",
+      "destination": "src/shell/helpTooltip.ts",
+      "sourceBlob": "757ba41e675ee244322322c33a58245f47142991",
+      "sourceSha256": "2f016c7cb56a42e1ef7032e47e71a2ce57a0c4c230106217e158047e6494968e",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths.",
+        "Primary source-only Document port propagation; host Document/element ownerDocument replaces ambient DOM authority in changed settings/help/dial/App Files paths; assertions retained with explicit fixture bindings, all UNRUN."
+      ],
+      "destinationSha256": "7184f79c0461509ae8ef4637168107a0fad09fd2e7d408a459cab27cecc0bb51",
+      "destinationBytes": 6205
+    },
+    {
+      "source": "src/shell/helpTooltip.test.ts",
+      "destination": "src/shell/helpTooltip.test.ts",
+      "sourceBlob": "9293a14200dbbf7c7b834efbb587a5999d6fcf92",
+      "sourceSha256": "163dcbc72c859a4239b424aec29fe36996af4560b2a8015d6e1ab435d7dc037c",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths.",
+        "Primary source-only Document port propagation; host Document/element ownerDocument replaces ambient DOM authority in changed settings/help/dial/App Files paths; assertions retained with explicit fixture bindings, all UNRUN."
+      ],
+      "destinationSha256": "0c68538be1fa09180f1669b021dc3e96e5393ef7379814250bacc6b01fb05e4a",
+      "destinationBytes": 7287
+    },
+    {
+      "source": "src/shell/panelSectionsOpen.ts",
+      "destination": "src/shell/panelSectionsOpen.ts",
+      "sourceBlob": "2edb7748407dd6bbf1f07acff1cd6166d1e7c5b7",
+      "sourceSha256": "a14756e82a9d750f7909f2a8bc118c2f849ec61d59734076ca9cf1e0244dabea",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths.",
+        "Accept explicit SettingsStorage; omitted argument uses optional browser adapter."
+      ],
+      "destinationSha256": "3a9f1ec7476fe03737611e01efaa1392cad81bc49ef101b015c21edd70691501",
+      "destinationBytes": 1191
+    },
+    {
+      "source": "src/shell/settings/controls.ts",
+      "destination": "src/shell/settings/controls.ts",
+      "sourceBlob": "0170405513eb95a4e890de2346cb40c3c1ddd2fd",
+      "sourceSha256": "c9defc96822b3b018933eb8a6b9b3af300f1c42b0e4a0cef9d699432a3cba108",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths.",
+        "Primary source-only Document port propagation; host Document/element ownerDocument replaces ambient DOM authority in changed settings/help/dial/App Files paths; assertions retained with explicit fixture bindings, all UNRUN."
+      ],
+      "destinationSha256": "5869b61ab00d1fe337875e507163696c13e3e14b8e8f84682342532d799f0c84",
+      "destinationBytes": 35716
+    },
+    {
+      "source": "src/shell/settings/parameterSection.ts",
+      "destination": "src/shell/settings/parameterSection.ts",
+      "sourceBlob": "24a4dc03f41691ef63195b9b5990166608cf82eb",
+      "sourceSha256": "7d4e312bcb4eece84d749f7a38c83b580ffb9a0a18fbedef464ca37f86f5edda",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths.",
+        "Host SettingsRegistry argument is mandatory; no application singleton import/default.",
+        "Add optional injected section-state storage to parameter/sections/host-section APIs.",
+        "New increment requires supplied shared refresh.subscribe and refuses omission before DOM allocation; no per-section interval or renderer frame request.",
+        "Primary source-only Document port propagation; host Document/element ownerDocument replaces ambient DOM authority in changed settings/help/dial/App Files paths; assertions retained with explicit fixture bindings, all UNRUN."
+      ],
+      "destinationSha256": "b263bf2de5f6327234e165cb50815d744385f3445839816121a3401cbeadd6c1",
+      "destinationBytes": 12354
+    },
+    {
+      "source": "src/shell/settings/parameterSection.test.ts",
+      "destination": "src/shell/settings/parameterSection.test.ts",
+      "sourceBlob": "62b91ad57c26dd7e15344bb441239a1b7b0b8df7",
+      "sourceSha256": "490673079e025bc55a024b2099ea6f6e86033c19547efa1778b37f7194cb637f",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths.",
+        "Preserve retained assertion bodies; explicit single test-host reading refresh fixture replaces implicit implementation clock.",
+        "Primary source-only Document port propagation; host Document/element ownerDocument replaces ambient DOM authority in changed settings/help/dial/App Files paths; assertions retained with explicit fixture bindings, all UNRUN."
+      ],
+      "destinationSha256": "410a1d3636837604d2b15fc87f760e678129207b2db6d462c1517360fa80464e",
+      "destinationBytes": 28218
+    },
+    {
+      "source": "src/shell/settings/parameterList.ts",
+      "destination": "src/shell/settings/parameterList.ts",
+      "sourceBlob": "f7c1c03f235c565054424962eba251fe53f38610",
+      "sourceSha256": "80b319fd7ba17e74257ce3eb5260fa5d8c7ef6dbbb77913de7a75bd821d37286",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths.",
+        "Primary source-only Document port propagation; host Document/element ownerDocument replaces ambient DOM authority in changed settings/help/dial/App Files paths; assertions retained with explicit fixture bindings, all UNRUN."
+      ],
+      "destinationSha256": "c133fee77e562677448b939ade0efcd60cd19ae3474aaaa63c6976c82ef7c347",
+      "destinationBytes": 7358
+    },
+    {
+      "source": "src/shell/settings/presetsSection.ts",
+      "destination": "src/shell/settings/presetsSection.ts",
+      "sourceBlob": "bce3d941c776295a3fb480815dd1eed5c89c6097",
+      "sourceSha256": "1ad3c9764dd3a8ccd43a695857548124b2596482259f8b4a281b89b880f9831c",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths.",
+        "Host SettingsRegistry argument is mandatory; no application singleton import/default.",
+        "Primary source-only Document port propagation; host Document/element ownerDocument replaces ambient DOM authority in changed settings/help/dial/App Files paths; assertions retained with explicit fixture bindings, all UNRUN."
+      ],
+      "destinationSha256": "27378a6976d1f714f6e4eba64e30a5503b46ba46e2146cdf767946c661227470",
+      "destinationBytes": 13517
+    },
+    {
+      "source": "src/shell/settings/presetsSection.test.ts",
+      "destination": "src/shell/settings/presetsSection.test.ts",
+      "sourceBlob": "4981af9089cc6eb7da103dcfb337936028d0f041",
+      "sourceSha256": "a0eac44965896f5a2fa4462c4583b18b885530e28ee10f40a4f7a9c1c76c3316",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths.",
+        "Preserve retained assertion bodies; explicit single test-host reading refresh fixture replaces implicit implementation clock.",
+        "Primary source-only Document port propagation; host Document/element ownerDocument replaces ambient DOM authority in changed settings/help/dial/App Files paths; assertions retained with explicit fixture bindings, all UNRUN."
+      ],
+      "destinationSha256": "12f2c0fc9330c84fb5e3f1aaa7c041b1be252556eb6a0ed27471d6fc5df653af",
+      "destinationBytes": 10478
+    },
+    {
+      "source": "src/shell/settings/savedSettings.ts",
+      "destination": "src/shell/settings/savedSettings.ts",
+      "sourceBlob": "810e43d8a49e400bd6d08b0a9cd11b44f8cce6be",
+      "sourceSha256": "fd47eb5f80f06c2c2d2a97539bd8ba7641b4a2250d698ffcb97e6fe1593b659f",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths.",
+        "Host SettingsRegistry argument is mandatory; no application singleton import/default.",
+        "Primary source-only Document port propagation; host Document/element ownerDocument replaces ambient DOM authority in changed settings/help/dial/App Files paths; assertions retained with explicit fixture bindings, all UNRUN."
+      ],
+      "destinationSha256": "ec2a78430cefeaa43551ffe92f26ebd5395974fcef2e04e21766851f04eb4f49",
+      "destinationBytes": 3186
+    },
+    {
+      "source": "src/shell/settings/track.ts",
+      "destination": "src/shell/settings/track.ts",
+      "sourceBlob": "e29d705080b2b1e5896e47ef427f45673b3513b8",
+      "sourceSha256": "2d8edcb3ea371d5fcde35e1e192c76f7f3c04296afe14ad29692e4907daf0e7a",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths.",
+        "Primary source-only Document port propagation; host Document/element ownerDocument replaces ambient DOM authority in changed settings/help/dial/App Files paths; assertions retained with explicit fixture bindings, all UNRUN."
+      ],
+      "destinationSha256": "b5624dddf1c27adbc3c206ac165200b997f3e04adbaa5e7f141d7f4958a26817",
+      "destinationBytes": 9846
+    },
+    {
+      "source": "src/shell/settings/twoPositionSlider.ts",
+      "destination": "src/shell/settings/twoPositionSlider.ts",
+      "sourceBlob": "8aa7eeeb85d46423d6488a4bd688cbd32ccf542a",
+      "sourceSha256": "71c549f8193e5376f6560d02ff41d2104ee856815991d2ff59f4bbffa47c6be8",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths.",
+        "Primary source-only Document port propagation; host Document/element ownerDocument replaces ambient DOM authority in changed settings/help/dial/App Files paths; assertions retained with explicit fixture bindings, all UNRUN."
+      ],
+      "destinationSha256": "5bb685dda4b3dfbaa63821d1d79a5a9817c33e87ee9464fb5ade369473315a16",
+      "destinationBytes": 2541
+    },
+    {
+      "source": "src/shell/settings/twoPositionSlider.test.ts",
+      "destination": "src/shell/settings/twoPositionSlider.test.ts",
+      "sourceBlob": "8046da225db835188082fe2439e04fa7ddc8ea51",
+      "sourceSha256": "fe2b72931e6bf7d27afa68bccc00abacc5a07d7790c0f71f5064ed31fbf595a3",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths.",
+        "Primary source-only Document port propagation; host Document/element ownerDocument replaces ambient DOM authority in changed settings/help/dial/App Files paths; assertions retained with explicit fixture bindings, all UNRUN."
+      ],
+      "destinationSha256": "7ec479c613860dfa919d09a28a2398b515ecc3a6200d037aa4b0b83dae9254d8",
+      "destinationBytes": 2300
+    },
+    {
+      "source": "src/windowing/layout/panelLayout.ts",
+      "destination": "src/windowing/layout/panelLayout.ts",
+      "sourceBlob": "cc42f766c64e5aef9f392a607e06a7e53b0294e9",
+      "sourceSha256": "39974a725811c4effd44297e2f04c581a32f0eef12214d957e4fc5259d23acf3",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths."
+      ],
+      "destinationSha256": "39974a725811c4effd44297e2f04c581a32f0eef12214d957e4fc5259d23acf3",
+      "destinationBytes": 6168
+    },
+    {
+      "source": "src/windowing/layout/panelLayout.test.ts",
+      "destination": "src/windowing/layout/panelLayout.test.ts",
+      "sourceBlob": "828861de6fd30c7630f9cb88222dec1c0fa934fa",
+      "sourceSha256": "f1279d6889965686396578e381daa90c9f4a94594969c48831f9f57b4b2cdf1f",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths."
+      ],
+      "destinationSha256": "710fa031cb551945869c33e9c80f357828b0f76e520d7a5ab70f94c4fb512f62",
+      "destinationBytes": 1393
+    },
+    {
+      "source": "src/windowing/layout/viewportPolicy.ts",
+      "destination": "src/windowing/layout/viewportPolicy.ts",
+      "sourceBlob": "3e13e3c3fa4f8b88d4de7366d2bd8a62f1964e25",
+      "sourceSha256": "ecb75b5eb0827210a48f5eca224d1356f8d15385f0010e5043aa0b7aa6310c47",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths."
+      ],
+      "destinationSha256": "ecb75b5eb0827210a48f5eca224d1356f8d15385f0010e5043aa0b7aa6310c47",
+      "destinationBytes": 1345
+    },
+    {
+      "source": "src/windowing/layout/viewportPolicy.test.ts",
+      "destination": "src/windowing/layout/viewportPolicy.test.ts",
+      "sourceBlob": "fb20ef43fe13f321b73d7af458adbf7cccb6ce68",
+      "sourceSha256": "b6b7e5591c40b971d2e037ed050d1a88297cf9d202fe2b5eba191be8269600d3",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths."
+      ],
+      "destinationSha256": "33ee39916d623e4356a936b3a1d9f3fb96554c73c0163bc535e46276e2b17fae",
+      "destinationBytes": 1474
+    },
+    {
+      "source": "src/windowing/react/DockPanel.tsx",
+      "destination": "src/windowing/react/DockPanel.tsx",
+      "sourceBlob": "56eebe3f5ea8ad75e09a65c3cf3c82b33275ba01",
+      "sourceSha256": "5ac910bdf00e60ac49b540acae25000d091834628df5f9dfb6c9fdb6783800e0",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths."
+      ],
+      "destinationSha256": "5ac910bdf00e60ac49b540acae25000d091834628df5f9dfb6c9fdb6783800e0",
+      "destinationBytes": 7547
+    },
+    {
+      "source": "src/windowing/react/FloatingWindow.tsx",
+      "destination": "src/windowing/react/FloatingWindow.tsx",
+      "sourceBlob": "415451711e86d2097249b0fa8d95b74c0ebd3a20",
+      "sourceSha256": "cbc49b7dd7d58003a8b312056eefaa9fcdb8ff64c1ee53031eb0be0b1d64b14b",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths."
+      ],
+      "destinationSha256": "cbc49b7dd7d58003a8b312056eefaa9fcdb8ff64c1ee53031eb0be0b1d64b14b",
+      "destinationBytes": 5464
+    },
+    {
+      "source": "src/windowing/react/PanelLauncher.tsx",
+      "destination": "src/windowing/react/PanelLauncher.tsx",
+      "sourceBlob": "616ee90db71198413b25b423a67e11358019b5a9",
+      "sourceSha256": "a645ce60cb4b9ccd6ded693271455e9f224da443385d951a0d8d99921d6db762",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths."
+      ],
+      "destinationSha256": "ae600ccf2a5ca25d813a67711e921278e463820be833668b3a0cc5f653a7856b",
+      "destinationBytes": 6551
+    },
+    {
+      "source": "src/windowing/react/TabStrip.tsx",
+      "destination": "src/windowing/react/TabStrip.tsx",
+      "sourceBlob": "0f6ddb5a48d082577bd6aab27ffc025e36a13b85",
+      "sourceSha256": "3fab90e7f41c12b54b8e30a1ff54eeff123336be2cf4778344bc2279461913e9",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths."
+      ],
+      "destinationSha256": "7014b50c80a73196c8e1bfc1ad5ba3de26af138f15b730b6af7430fe0df9d2e3",
+      "destinationBytes": 9375
+    },
+    {
+      "source": "src/windowing/react/TabStrip.test.tsx",
+      "destination": "src/windowing/react/TabStrip.test.tsx",
+      "sourceBlob": "fbda4ae678cc9faa3d72519e94bd78375f118fd1",
+      "sourceSha256": "457411c2a81c79e4aa9e6fd79c684111069aa2b85a481d057523b762a042c9d9",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths."
+      ],
+      "destinationSha256": "1f8281cf0744d8144ccf449e6044f388189ec373394ea43f9b820b84c4da00a2",
+      "destinationBytes": 6932
+    },
+    {
+      "source": "src/windowing/react/WorkspaceDockSlot.tsx",
+      "destination": "src/windowing/react/WorkspaceDockSlot.tsx",
+      "sourceBlob": "e3b621b87c5453862631bb97447a484b381c1b5b",
+      "sourceSha256": "fbeb5df9e4fa0f5993580719e35701c4ca442515d7f5beffdec495013250460c",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths."
+      ],
+      "destinationSha256": "513f7336770e777263bca18bedfae31a2dea0b9214bd20f07a6a78641ec54101",
+      "destinationBytes": 8678
+    },
+    {
+      "source": "src/windowing/react/useWindowWorkspace.ts",
+      "destination": "src/windowing/react/useWindowWorkspace.ts",
+      "sourceBlob": "4e13d1decc797fa4a752cb6a1f28ebd9e5558117",
+      "sourceSha256": "c3217c2112f6903380aac5226179f4206351ff79358e10ebbb2335ce5d356805",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths."
+      ],
+      "destinationSha256": "8d196a6951b3397038260f0a9e62c186454421bb25e228dd156b2090d97ecccc",
+      "destinationBytes": 3390
+    },
+    {
+      "source": "src/windowing/react/menuFit.ts",
+      "destination": "src/windowing/react/menuFit.ts",
+      "sourceBlob": "fb861dc11bd1f57b7d4dba462b56bfb23169ebf1",
+      "sourceSha256": "06ea519c53eebb89098037411af3001e536f01c641c12ac9bd2427445403d715",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths."
+      ],
+      "destinationSha256": "06ea519c53eebb89098037411af3001e536f01c641c12ac9bd2427445403d715",
+      "destinationBytes": 2950
+    },
+    {
+      "source": "src/windowing/react/useEscapeToClose.ts",
+      "destination": "src/windowing/react/useEscapeToClose.ts",
+      "sourceBlob": "b2888d025fe55f34fde388cfad5105b747a1bc39",
+      "sourceSha256": "43cb256b770d637e7419a78c4e6c4ced478de400bcd79f994e24b8f9058e5e3d",
+      "transformations": [
+        "Relative TypeScript imports use emitted ESM .js paths."
+      ],
+      "destinationSha256": "43cb256b770d637e7419a78c4e6c4ced478de400bcd79f994e24b8f9058e5e3d",
+      "destinationBytes": 878
+    },
+    {
+      "source": "src/windowing/styles/windowing.css",
+      "destination": "src/windowing/styles/windowing.css",
+      "sourceBlob": "d40f04ce560c4b918296b9cb635b53e50c1267aa",
+      "sourceSha256": "df784366b87588ad1ea34a82dcf941ea71a0e92f0f68d5383756e51d1c50ee77",
+      "transformations": [
+        "Split out Location/airport/result styles; UI keeps only generic window/theme styles."
+      ],
+      "destinationSha256": "36b6f2a3dce4c1faf8e4eeaddc670da4aad21af56de501f6d67d39062a737298",
+      "destinationBytes": 6283
+    },
+    {
+      "source": "src/styles/hud.css",
+      "destination": "src/styles/ui.css",
+      "sourceBlob": "cbd0c99b22835493f0ee659a73bdc89bd4258f7b",
+      "sourceSha256": "cc221b7efd23f13037023bbc095ecdfeb150f5cd9cd959ec49c5a26f6399dff4",
+      "transformations": [
+        "Split generic section/choice/track/parameter/preset/transfer/theme/icon styles. Toolbar, map, sky, About, scenes, renderer and log styles remain in their owners."
+      ],
+      "destinationSha256": "706f33dc1f6abc5321798aa31ad83a7b1dd102df76f310582b6de9d5155972e4",
+      "destinationBytes": 18454
+    },
+    {
+      "source": "src/shell/SectionsPanel.test.tsx",
+      "destination": "src/shell/SectionsPanel.test.tsx",
+      "sourceBlob": "78a1fd7135caf286c21af4966b69a885fa8570e3",
+      "sourceSha256": "6688111bf46d425d3b30a48bf49eada6ec1a52f1b842aee9d2cf120bffe2dfe4",
+      "transformations": [
+        "Relative imports use emitted ESM .js paths.",
+        "Extract generic SectionsPanel tests. Mixed WindowOverlay integration tests remain in the old source for primary integration; no tests deleted there."
+      ],
+      "destinationSha256": "09b5341d32031da9677a81297021b5a3657a1d740e8185b334436a38e7a11e20",
+      "destinationBytes": 3773
+    },
+    {
+      "source": "src/shell/savedWorkspace.ts",
+      "destination": "src/windowing/core/workspacePersistence.ts",
+      "sourceBlob": "80541c97b9efa42ba3cf278bea8e530704c546d8",
+      "sourceSha256": "d9879543022fedaeaf44464be29889e7ba1b7e142c9a38ae9816f88633f812f2",
+      "transformations": [
+        "Separate pure parse/serialize from browser persistence; preserve key and record. Deduplicate within-slot IDs and reject array-shaped malformed records."
+      ],
+      "destinationSha256": "92622f80f979d9130fc45c85eeb181427419bffec8a87e83c4b0e18f930e5c67",
+      "destinationBytes": 2110
+    },
+    {
+      "source": "src/shell/savedWorkspace.ts",
+      "destination": "src/browser/workspace.ts",
+      "sourceBlob": "80541c97b9efa42ba3cf278bea8e530704c546d8",
+      "sourceSha256": "d9879543022fedaeaf44464be29889e7ba1b7e142c9a38ae9816f88633f812f2",
+      "transformations": [
+        "Preserve load/save names and browser defaults with optional explicit storage; share the pure codec."
+      ],
+      "destinationSha256": "83e8e19ae859a2b6a951e4f5cc045b52ff4a8b627d45b942f3f744d989bd83a7",
+      "destinationBytes": 1189
+    },
+    {
+      "source": "src/shell/dial.ts",
+      "destination": "src/shell/dial.ts",
+      "sourceBlob": "94730d54b724fcc785e73f8c384282423d1fb20a",
+      "sourceSha256": "1e6eb4ecb491cf468ccf8a9b16fda19da3b0a4372d2fadcc1765346b1c7934ca",
+      "transformations": [
+        "Retained immutable committed behavior; emitted .js ESM imports. Explicit host ports replace defaults/global integration where required.",
+        "Idempotent destroy releases active pointer capture; retained render handles are inert after disposal.",
+        "Primary source-only Document port propagation; host Document/element ownerDocument replaces ambient DOM authority in changed settings/help/dial/App Files paths; assertions retained with explicit fixture bindings, all UNRUN."
+      ],
+      "destinationSha256": "3b6e0c0ef3b0cb342604160f6534e939793d774c9395b30503d9028d7c8c98de",
+      "destinationBytes": 17420
+    },
+    {
+      "source": "src/shell/dial.test.ts",
+      "destination": "src/shell/dial.test.ts",
+      "sourceBlob": "8033bee0e201437bdcf5564dce893f78de2590cd",
+      "sourceSha256": "0e61fdb29669651e18ad2add405acc10d9f7d6fa874322f83d2f0a12d199b0bd",
+      "transformations": [
+        "Retained immutable committed behavior; emitted .js ESM imports. Explicit host ports replace defaults/global integration where required."
+      ],
+      "destinationSha256": "9aa0cd57c5067fb3723b7bca74ae3a8a2cfa0b693be7369fbe33ddf0a3bf538b",
+      "destinationBytes": 9399
+    },
+    {
+      "source": "src/log/fitLogResize.ts",
+      "destination": "src/log/fitLogResize.ts",
+      "sourceBlob": "a3b39b7f945cda04a555bf06f2ca1081baead54a",
+      "sourceSha256": "84337bc1fc8a5beda3fe0e4a81ea1b6863105c894580a8ebf12cc12770ecdd47",
+      "transformations": [
+        "Retained immutable committed behavior; emitted .js ESM imports. Explicit host ports replace defaults/global integration where required."
+      ],
+      "destinationSha256": "84337bc1fc8a5beda3fe0e4a81ea1b6863105c894580a8ebf12cc12770ecdd47",
+      "destinationBytes": 897
+    },
+    {
+      "source": "src/log/fitLogResize.test.ts",
+      "destination": "src/log/fitLogResize.test.ts",
+      "sourceBlob": "8eb5ef7f3ee5efee69eee6551c1d3dce6d8bf944",
+      "sourceSha256": "0ba811a04fa8911d219a0017e1a5375b7e4e74863f4ee8f0f3c0f8bf100b367a",
+      "transformations": [
+        "Retained immutable committed behavior; emitted .js ESM imports. Explicit host ports replace defaults/global integration where required."
+      ],
+      "destinationSha256": "eb086264342fc1a5e60120d84eb9b49e80dd85176d220b550f453719f0dcf54e",
+      "destinationBytes": 1060
+    },
+    {
+      "source": "src/log/gameLogDefaults.ts",
+      "destination": "src/log/gameLogDefaults.ts",
+      "sourceBlob": "6a0b5aad2d02b2fb507f436d91dded9b447c11a6",
+      "sourceSha256": "34fbaef1060b118e6c9a316c40f704ac986b305d5e167633612ea8deab5d5de1",
+      "transformations": [
+        "Retained immutable committed behavior; emitted .js ESM imports. Explicit host ports replace defaults/global integration where required."
+      ],
+      "destinationSha256": "34fbaef1060b118e6c9a316c40f704ac986b305d5e167633612ea8deab5d5de1",
+      "destinationBytes": 360
+    },
+    {
+      "source": "src/shell/dockLayout.ts",
+      "destination": "src/shell/dockLayout.ts",
+      "sourceBlob": "d70bcf4704a7a882188f43a83da8cfe2734ef1f5",
+      "sourceSha256": "952c1e43c7c55ac401599a6a325cbb01e7847aa6a68c73715c4ec689a1d14c5b",
+      "transformations": [
+        "Retained immutable committed behavior; emitted .js ESM imports. Explicit host ports replace defaults/global integration where required."
+      ],
+      "destinationSha256": "952c1e43c7c55ac401599a6a325cbb01e7847aa6a68c73715c4ec689a1d14c5b",
+      "destinationBytes": 2848
+    },
+    {
+      "source": "src/shell/dockLayout.test.ts",
+      "destination": "src/shell/dockLayout.test.ts",
+      "sourceBlob": "5ebed13770576899b604e22303ed8ecbbd9d3b13",
+      "sourceSha256": "d87d22f0bc75333ff240d29baebe69fb308295591ceb59496ad9e7f74ad200a9",
+      "transformations": [
+        "Retained immutable committed behavior; emitted .js ESM imports. Explicit host ports replace defaults/global integration where required."
+      ],
+      "destinationSha256": "49ea4d0bd0f9b402b9a0178cdac3271b2a9d71a2722cca47002809fd9b058c46",
+      "destinationBytes": 7377
+    },
+    {
+      "source": "src/shell/compactWorkspace.ts",
+      "destination": "src/shell/compactWorkspace.ts",
+      "sourceBlob": "3f83a752b718d01a26b2d5a63aa400dd7b8bda92",
+      "sourceSha256": "5f2cd10bcd24751a201b7127944e8ed96be1790f824e6a40f8a70a45d0e762af",
+      "transformations": [
+        "Retained immutable committed behavior; emitted .js ESM imports. Explicit host ports replace defaults/global integration where required."
+      ],
+      "destinationSha256": "5843d8f0090c6665a8fa3d14e29dfd34d2db5f4f02cf1d44243e917b50de339d",
+      "destinationBytes": 3970
+    },
+    {
+      "source": "src/shell/compactWorkspace.test.ts",
+      "destination": "src/shell/compactWorkspace.test.ts",
+      "sourceBlob": "c1273579139200d113717a8f1aa1706db32f2273",
+      "sourceSha256": "c9424c0f618712bc7c57321d484788e3b2b3316a16cec9e7a2053b6ceda9ed0c",
+      "transformations": [
+        "Retained immutable committed behavior; emitted .js ESM imports. Explicit host ports replace defaults/global integration where required."
+      ],
+      "destinationSha256": "85f0d4f4aa43f2ad196e8319fd1058458cc6f7a6ba18d0576bccdc588e8b95fb",
+      "destinationBytes": 5022
+    },
+    {
+      "source": "src/shell/settings/themeControl.ts",
+      "destination": "src/shell/settings/themeControl.ts",
+      "sourceBlob": "d6f4fb09beb731ba179a227ebf8df429464bf5cf",
+      "sourceSha256": "9ac49d6fa1c1c197422138029ca94e5f474c600ff9dd3ed731347aab91e777de",
+      "transformations": [
+        "Retained immutable committed behavior; emitted .js ESM imports. Explicit host ports replace defaults/global integration where required.",
+        "Primary source-only Document port propagation; host Document/element ownerDocument replaces ambient DOM authority in changed settings/help/dial/App Files paths; assertions retained with explicit fixture bindings, all UNRUN."
+      ],
+      "destinationSha256": "6569b9d1e0fdba8ade92b51d0d08ffb108b723ffc7af67121e6f7fb0ce5105bc",
+      "destinationBytes": 792
+    },
+    {
+      "source": "src/diagnostics/issueReport.ts",
+      "destination": "src/diagnostics/issueReport.ts",
+      "sourceBlob": "3cb405f025980a3a7a0aa2e2a2e2df468bbe6a12",
+      "sourceSha256": "4e4dbadd721ea047e53e0b2d237667579ca892d1bbddd0246f579435571130e7",
+      "transformations": [
+        "Retained immutable committed behavior; emitted .js ESM imports. Explicit host ports replace defaults/global integration where required."
+      ],
+      "destinationSha256": "4e4dbadd721ea047e53e0b2d237667579ca892d1bbddd0246f579435571130e7",
+      "destinationBytes": 7996
+    },
+    {
+      "source": "src/diagnostics/issueReport.test.ts",
+      "destination": "src/diagnostics/issueReport.test.ts",
+      "sourceBlob": "f5bd2a3a2f2fc408d829c08f3800e0179e085a47",
+      "sourceSha256": "b69165eec52508e4c181da1229888559a14456cfe94caaeac47d29c223e6e91a",
+      "transformations": [
+        "Retained immutable committed behavior; emitted .js ESM imports. Explicit host ports replace defaults/global integration where required."
+      ],
+      "destinationSha256": "2a266e7cb938b440892883d5a6690d186a276d254b4aed2719bec605b307100d",
+      "destinationBytes": 9051
+    },
+    {
+      "source": "src/diagnostics/errorCapture.ts",
+      "destination": "src/diagnostics/errorCapture.ts",
+      "sourceBlob": "537a911019117a54b35b0e623456cb1228927cc2",
+      "sourceSha256": "b979a4bf4bff4694315e15a34d55ec7525a82cfb53bd069aa164d1c80899079e",
+      "transformations": [
+        "Retained immutable committed behavior; emitted .js ESM imports. Explicit host ports replace defaults/global integration where required."
+      ],
+      "destinationSha256": "b979a4bf4bff4694315e15a34d55ec7525a82cfb53bd069aa164d1c80899079e",
+      "destinationBytes": 4858
+    },
+    {
+      "source": "src/diagnostics/errorCapture.test.ts",
+      "destination": "src/diagnostics/errorCapture.test.ts",
+      "sourceBlob": "d5017c4b87e9222d2a63e3aba61159ac04e68ca6",
+      "sourceSha256": "9e572322e0c4a8c71bdd2ab993271756fccd33fbbb85c2ee38f0011f6e3f7e4c",
+      "transformations": [
+        "Retained immutable committed behavior; emitted .js ESM imports. Explicit host ports replace defaults/global integration where required."
+      ],
+      "destinationSha256": "3bf9c5200be5a2c680a20c10c345f7e002f0fb5aa6a95faca51970df24b825a3",
+      "destinationBytes": 5745
+    },
+    {
+      "source": "src/diagnostics/testEnvironment.ts",
+      "destination": "tests/fixtures/trailEnvironment.ts",
+      "sourceBlob": "ce2148e76d3f9ce4b4d18aa7fe4fb491e4170abd",
+      "sourceSha256": "1a53f9073fee8e5c02e73e6dfad43399d530748ce4367b84a5d7867add90a918",
+      "transformations": [
+        "Retained immutable committed behavior; emitted .js ESM imports. Explicit host ports replace defaults/global integration where required.",
+        "Retained source-only test environment moved outside distributed src; no browser or test helper initialized by package import."
+      ],
+      "destinationSha256": "da4dd3d894089eb7232973cdfee93c60827480adb248f098c675eaa7c29e08aa",
+      "destinationBytes": 2434
+    },
+    {
+      "source": "src/diagnostics/sessionTrail.test.ts",
+      "destination": "src/diagnostics/sessionTrail.test.ts",
+      "sourceBlob": "014ba422a13f0bab9c639f36db9fc46ff20e825e",
+      "sourceSha256": "80f4b4ce68ea7bcebd33d7e71fa6afbd54d07203f2a46307d1dacad1383dbd72",
+      "transformations": [
+        "Retained immutable committed behavior; emitted .js ESM imports. Explicit host ports replace defaults/global integration where required."
+      ],
+      "destinationSha256": "8e24162cbbd646fb7d99c1ce5b384bbf5ffb02c156a4047be6771283814876d0",
+      "destinationBytes": 10952
+    },
+    {
+      "source": "src/diagnostics/report.test.ts",
+      "destination": "src/diagnostics/report.test.ts",
+      "sourceBlob": "ce75f620676bda953cd2bedc885ecccb14353f10",
+      "sourceSha256": "2332a88d2a888b1b7fb40bc52abbc0fc0da55e460b5efe30d7b4cc1f91c12295",
+      "transformations": [
+        "Retained immutable committed behavior; emitted .js ESM imports. Explicit host ports replace defaults/global integration where required."
+      ],
+      "destinationSha256": "4b823f2dde739e82b8a172358fa303abe4a00e44fa18948172ca5311f9cc8907",
+      "destinationBytes": 5244
+    },
+    {
+      "source": "src/diagnostics/sessionTrail.ts",
+      "destination": "src/diagnostics/sessionTrail.ts",
+      "sourceBlob": "7f18863838bd67c332a97fea90582a7ea6085773",
+      "sourceSha256": "1352eea06f48329fa0ba97edb7b661a62a3a528695c473ad300522477c0b22ff",
+      "transformations": [
+        "Retained immutable committed behavior; emitted .js ESM imports. Explicit host ports replace defaults/global integration where required.",
+        "Dispose pending probes once, ignore late waits, preserve malformed records for read-only rollback visits; original record/ping protocol retained."
+      ],
+      "destinationSha256": "f62fc5c1f60fb5025532274cc6fc3559e2a293d4d14120366ac36c6e4c63e0d1",
+      "destinationBytes": 12611
+    },
+    {
+      "source": "src/diagnostics/report.ts",
+      "destination": "src/diagnostics/report.ts",
+      "sourceBlob": "29781fe4bcccb64f2873c9213806dae38765bd30",
+      "sourceSha256": "1c4d38555f9307569ee4ef8b2c15bbd52b5ee48b5a909f8d8d864b0deb0bb06b",
+      "transformations": [
+        "Retained immutable committed behavior; emitted .js ESM imports. Explicit host ports replace defaults/global integration where required.",
+        "Host supplies appName; report state/renderer/clock/identity remain injected."
+      ],
+      "destinationSha256": "14e47dc65d74ee6fbacd599e4dd32890c44431b7699f51dcaad69ac351a3f3be",
+      "destinationBytes": 4844
+    },
+    {
+      "source": "src/diagnostics/browserDetails.ts",
+      "destination": "src/browser/browserDetails.ts",
+      "sourceBlob": "7f5c16ceaec6b31fc4fa52c3415744f3992fa055",
+      "sourceSha256": "d4810144efeb9ac012e08f6ed8756e308210d475686b6d21029513f5fb573411",
+      "transformations": [
+        "Retained immutable committed behavior; emitted .js ESM imports. Explicit host ports replace defaults/global integration where required."
+      ],
+      "destinationSha256": "d4810144efeb9ac012e08f6ed8756e308210d475686b6d21029513f5fb573411",
+      "destinationBytes": 1545
+    },
+    {
+      "source": "src/log/gameLog.css",
+      "destination": "src/styles/gameLog.css",
+      "sourceBlob": "f4b439befb6e3f99ee1cec62376ba63e3cc1a9a2",
+      "sourceSha256": "43583550c19e4f38c8194c41913647de77ca00c47cc1afa068dbb84c65944a2e",
+      "transformations": [
+        "Retained immutable committed behavior; emitted .js ESM imports. Explicit host ports replace defaults/global integration where required."
+      ],
+      "destinationSha256": "43583550c19e4f38c8194c41913647de77ca00c47cc1afa068dbb84c65944a2e",
+      "destinationBytes": 6761
+    },
+    {
+      "source": "src/styles/hud.css",
+      "destination": "src/styles/dial.css",
+      "sourceBlob": "cbd0c99b22835493f0ee659a73bdc89bd4258f7b",
+      "sourceSha256": "cc221b7efd23f13037023bbc095ecdfeb150f5cd9cd959ec49c5a26f6399dff4",
+      "transformations": [
+        "Only generic dial selector groups and themes retained; Sky and Date/time layout remain Sky-owned."
+      ],
+      "destinationSha256": "a6c3977bfaadf8ed08d39cfbb04627470c448262a06a41218b33630dd1783024",
+      "destinationBytes": 2962
+    },
+    {
+      "source": "src/log/createGameLog.ts",
+      "destination": "src/log/createGameLog.ts",
+      "sourceBlob": "391cf9c22e09156566a4819fde16a813fe15fe9b",
+      "sourceSha256": "4712d6d1bae43ea8165143f06c329a5675493fd3948ef16408a26ee83aed3a5e",
+      "transformations": [
+        "Preserve log lifecycle/progress/actions/busy/TTL/resize behavior. Mandatory supplied registry/element/clipboard/size/geometry/timer ports; no global mounting, singleton, shell allocation or implicit clock.",
+        "Disposed and removed line handles/actions/copy completions become inert; host remains sole timer/size authority."
+      ],
+      "destinationSha256": "183f3f138070feabfa317bac5f0688ccc0e356d11eecf75eedf402608cb73a63",
+      "destinationBytes": 16057
+    },
+    {
+      "source": "src/log/createGameLog.ts",
+      "destination": "src/browser/clipboard.ts",
+      "sourceBlob": "391cf9c22e09156566a4819fde16a813fe15fe9b",
+      "sourceSha256": "4712d6d1bae43ea8165143f06c329a5675493fd3948ef16408a26ee83aed3a5e",
+      "transformations": [
+        "Extract exact clipboard fallback/selection-focus restoration as explicit optional browser adapter; no module-time access."
+      ],
+      "destinationSha256": "4b1c33400420bca080c43886b65738a5acb5b2082a35455fab533eafc00f2291",
+      "destinationBytes": 1320
+    },
+    {
+      "source": "src/settings/catalogue/interface.ts",
+      "destination": "src/settings/uiParameters.ts",
+      "sourceBlob": "d4765a9126b7978d19be7fe958022504731881ee",
+      "sourceSha256": "794e4a0546e9e146d323405f40b83f824e6bbac3e79d77c0f7a4e1692448a1ea",
+      "transformations": [
+        "Extract only UI-owned theme/log/trail schemas with exact source IDs/defaults/homes/units/bounds. Host registers explicitly; other owner feature catalogues remain outside UI."
+      ],
+      "destinationSha256": "687baa5757ebbcc155104bfb000fede7bece6846d54b3ebcd143a23e0fa5d6ac",
+      "destinationBytes": 3955
+    },
+    {
+      "source": "src/shell/diagnosticsSection.ts",
+      "destination": "src/shell/diagnosticsSection.ts",
+      "sourceBlob": "b5c5d30d6dc4b373619749911d6fca3cb1251ae8",
+      "sourceSha256": "78963cca1868d184ae705b61f2df7dd0be1bb7727857b4931b44b0edadcc2987",
+      "transformations": [
+        "Preserve local report/review/draft/generation/disposal behavior with injected report, clipboard, filename clock and object URL/download ports. No service transport or app startup.",
+        "Inject optional document/report-only href and guard queued work after disposal; source clipboard supplied explicitly."
+      ],
+      "destinationSha256": "7abb08789ed0b9c5b08858f08db467cf77230b2b87d8d416889ed0d5c7f7b30d",
+      "destinationBytes": 4718
+    },
+    {
+      "source": "src/shell/bugReportPanel.ts",
+      "destination": "src/shell/bugReportPanel.ts",
+      "sourceBlob": "5d6b8a0eb155d4445f42bb7032bbd29d6b84bbc6",
+      "sourceSha256": "6bbe6d3b3ac59d87cdba0347b752164523a275670489595dc0bd434bdf977b31",
+      "transformations": [
+        "Preserve local report/review/draft/generation/disposal behavior with injected report, clipboard, filename clock and object URL/download ports. No service transport or app startup.",
+        "Inject optional document; rejected reviewed-report copies keep external draft gate closed; retain deferred report/download review."
+      ],
+      "destinationSha256": "f4613a4e6d32aa2eba471dd8a1d77fd7f4982c453ff6ce97474ee3c1dc884558",
+      "destinationBytes": 12617
+    },
+    {
+      "source": "src/app/appDiagnostics.ts",
+      "destination": "src/diagnostics/settingsReport.ts",
+      "sourceBlob": "f2871ebe3ec44c42a888d55300a3f97e10e2e2e6",
+      "sourceSha256": "a0c78408845f072b52cd22f5d25829e5391c1e9b2cee1cfd73badaa21fedd6ec",
+      "transformations": [
+        "Extract only pure injected settings reporting/redaction helpers; source/app identity/scene/renderer composition excluded."
+      ],
+      "destinationSha256": "406d1a9d6f786fc5ce76f0553c201a1da78d1215e975c04377fde48aed9c0718",
+      "destinationBytes": 2158
+    },
+    {
+      "source": "src/app/publishedVersion.ts",
+      "destination": "src/diagnostics/publishedVersion.ts",
+      "sourceBlob": "b1ed5fc9436224904191282f1eeaec2203914191",
+      "sourceSha256": "2096abe7184f4b7a79f243d87da7d66fee296686b9f2e7fc478eea1b30fd9e32",
+      "transformations": [
+        "Only host-supplied published-version state and source human-readable formatter. No transport, browser watcher, reload authority or app import."
+      ],
+      "destinationSha256": "6783243a7aee1c547eb69c56adb19985b9e594b490eb0e4825c0922424ad2e79",
+      "destinationBytes": 2387
+    },
+    {
+      "source": "src/app/appFiles.ts",
+      "destination": "src/diagnostics/appFiles.ts",
+      "sourceBlob": "e4824b191fb911c86a51d25a8bf6387f3e66106c",
+      "sourceSha256": "73070cd3ff7694de30a136794b0bcaae92b851298bfde1d0b6bd1c11b5a0cbc6",
+      "transformations": [
+        "Only host AppFiles status data contract; no service worker/cache implementation."
+      ],
+      "destinationSha256": "cbdde514832ddc5edafd34c20a5c37f28a79a170c26b23b05a6006bde7a09add",
+      "destinationBytes": 337
+    },
+    {
+      "source": "src/shell/appFilesSection.ts",
+      "destination": "src/shell/appFilesSection.ts",
+      "sourceBlob": "4e8011eff134312d877fe8d2bd936e411b06e2ca",
+      "sourceSha256": "bbbe9b28d2e5b2ea657ccdf0a9c3dfe0abb57ffd93af268d9841ab4ce1777b13",
+      "transformations": [
+        "Retain host AppFiles and published-version status/actions with structural data ports and host refresh subscription; no independent interval, transport, service worker or feature imports.",
+        "Replace autonomous interval with mandatory host refresh; generation-order status answers, detach retained action handlers.",
+        "Primary source-only Document port propagation; host Document/element ownerDocument replaces ambient DOM authority in changed settings/help/dial/App Files paths; assertions retained with explicit fixture bindings, all UNRUN."
+      ],
+      "destinationSha256": "d6d302191dd21501fa13e069e20f817ab340e40bd6ba6690ba64b8f230e6c1e3",
+      "destinationBytes": 5713
+    },
+    {
+      "source": "src/shell/settings/themeControl.test.ts",
+      "destination": "src/shell/settings/themeControl.test.ts",
+      "sourceBlob": "70ab64c1d34b97c21fc09629c65df63789c1f11f",
+      "sourceSha256": "86b71be6c3381dfa71f4af65d5d743e486ad8b8d4e7f56546c6615a7eff2bc21",
+      "transformations": [
+        "Retain original theme widget/group assertions with UI-owned schemas only; no full feature catalogue.",
+        "Preserve retained assertion bodies; explicit single test-host reading refresh fixture replaces implicit implementation clock.",
+        "Primary source-only Document port propagation; host Document/element ownerDocument replaces ambient DOM authority in changed settings/help/dial/App Files paths; assertions retained with explicit fixture bindings, all UNRUN."
+      ],
+      "destinationSha256": "ff7fdecf4dcc01490af90a47abb778fdf7f86d63bc08498fac82d191e3be3ca5",
+      "destinationBytes": 5657
+    },
+    {
+      "source": "src/shell/WindowOverlay.tsx",
+      "destination": "src/shell/WindowOverlay.tsx",
+      "sourceBlob": "4d147b48013a0c30edb657bb27ec5fa77997f141",
+      "sourceSha256": "6968a18499a0590554726d2bb18d52855121240b074ed6097fcf6b49b9ee47ac",
+      "transformations": [
+        "Retain generic two-slot allocation/resize/fold/base-context persistence/tab lifecycle; replace concrete tabs/location/panorama services/global selectors/event/root effects with host definitions/content/context/storage/log/geometry/layout/focus ports. No feature IDs or implementations imported."
+      ],
+      "destinationSha256": "17abd29d22241041fbe1dfbab6d60712e02606bedd893684b41943a3a980bdf8",
+      "destinationBytes": 14850
+    },
+    {
+      "source": "src/log/createGameLog.test.ts",
+      "destination": "src/log/createGameLog.test.ts",
+      "sourceBlob": "db748e5c8f4762881fdd99893e474e44d77211e6",
+      "sourceSha256": "eb6921b79e149ba568d7c091fbd7fa7ff8184f1e3b0a6f1bad4709652f906df1",
+      "transformations": [
+        "Retain original behavior assertions through explicit test-only browser/settings/clock/refresh/transport fixtures; no runtime owner feature imports."
+      ],
+      "destinationSha256": "2763d1b4de3afdb6b7e483c0010d7e64489aabb7c84f2ef7ceff9b6fa8807ca9",
+      "destinationBytes": 19254
+    },
+    {
+      "source": "src/shell/diagnosticsSection.test.ts",
+      "destination": "src/shell/diagnosticsSection.test.ts",
+      "sourceBlob": "054fa4df9da3cbb07425fbbaf1c65ee056f183ab",
+      "sourceSha256": "9dd841c7d756b1c54924ed653beae450690f5d3c895b8c3c1d82c911d548f206",
+      "transformations": [
+        "Retain original behavior assertions through explicit test-only browser/settings/clock/refresh/transport fixtures; no runtime owner feature imports."
+      ],
+      "destinationSha256": "d68176bef753b998231efa68df8f8c5f5a8bfcd372a712e01d065d809bb9d38d",
+      "destinationBytes": 3306
+    },
+    {
+      "source": "src/shell/bugReportPanel.test.ts",
+      "destination": "src/shell/bugReportPanel.test.ts",
+      "sourceBlob": "8a08655935e3800a715b63a85b5e75f9f2c671fa",
+      "sourceSha256": "65ad79a15a76366918f7e98a5ea97eb6c71aae0c65a4ccdaa9d2ef1c6b534301",
+      "transformations": [
+        "Retain original behavior assertions through explicit test-only browser/settings/clock/refresh/transport fixtures; no runtime owner feature imports."
+      ],
+      "destinationSha256": "33c5d4fbdd72ac6e18dc76621f81fa5bcc1e211a0f70f1574545eca920c70fe2",
+      "destinationBytes": 15262
+    },
+    {
+      "source": "src/shell/appFilesSection.test.ts",
+      "destination": "src/shell/appFilesSection.test.ts",
+      "sourceBlob": "7609276396bd002d83c569c95d7f84834ee412a7",
+      "sourceSha256": "cdc7f4711463b6f18cbb4fbeb1d40e4a79169518e5be4999e3786d4578ee5953",
+      "transformations": [
+        "Retain original behavior assertions through explicit test-only browser/settings/clock/refresh/transport fixtures; no runtime owner feature imports.",
+        "Primary source-only Document port propagation; host Document/element ownerDocument replaces ambient DOM authority in changed settings/help/dial/App Files paths; assertions retained with explicit fixture bindings, all UNRUN."
+      ],
+      "destinationSha256": "8f8dae8a3f57bbfa1422259cf91fe519058868f54add8b50a342c7bbd7f28b63",
+      "destinationBytes": 7814
+    },
+    {
+      "source": "src/styles/hud.css",
+      "destination": "src/styles/status.css",
+      "sourceBlob": "cbd0c99b22835493f0ee659a73bdc89bd4258f7b",
+      "sourceSha256": "cc221b7efd23f13037023bbc095ecdfeb150f5cd9cd959ec49c5a26f6399dff4",
+      "transformations": [
+        "Split only bug/report/status paragraph layout from mixed HUD stylesheet; map feature rules remain outside."
+      ],
+      "destinationSha256": "8051f06292adc46cdcd3856ed694d132f583f94979e695a0a2c5adee24afc1fa",
+      "destinationBytes": 1517
+    },
+    {
+      "source": "src/styles/base.css",
+      "destination": "src/styles/status.css",
+      "sourceBlob": "ebb7a5a5d61c92908216640178da526e7519ed08",
+      "sourceSha256": "6458d2876b15a9e4970f1be0a402bef28909edb2adc48dcf314cb5b76c5d366a",
+      "transformations": [
+        "Only report-only page presentation selectors retained; base application layout remains host-owned."
+      ],
+      "destinationSha256": "8051f06292adc46cdcd3856ed694d132f583f94979e695a0a2c5adee24afc1fa",
+      "destinationBytes": 1517
+    },
+    {
+      "source": "src/theme/theme.ts",
+      "destination": "src/browser/theme.ts",
+      "sourceBlob": "d4c678c8af5946803bfa511df65c346aa19ac71b",
+      "sourceSha256": "4a874dedd3ade5277867fac1f1eeef1c0e690966c400357df1ec1f1ba21d94d7",
+      "transformations": [
+        "Replace eager settings/global document/event singleton with explicit instance registry/root/change port; preserve data-theme and light/dark classes and widget IDs."
+      ],
+      "destinationSha256": "bbae65d4a612ae51f11d0d1a95ed9a43bae6eb6fe54d1927f13d9a0d0a782ac6",
+      "destinationBytes": 1948
+    },
+    {
+      "source": "src/app/appDiagnostics.ts",
+      "destination": "src/diagnostics/createDiagnostics.ts",
+      "sourceBlob": "f2871ebe3ec44c42a888d55300a3f97e10e2e2e6",
+      "sourceSha256": "a0c78408845f072b52cd22f5d25829e5391c1e9b2cee1cfd73badaa21fedd6ec",
+      "transformations": [
+        "Extract recorded log/settings/errors/trail/report lifecycle with host identity/snapshots/environment and structural renderer observations. Host supplies feature transition wording; no feature app imports or globals."
+      ],
+      "destinationSha256": "bf4839d463b3524ad4e5143ab8bdc502620d99ff1905a68beb03a9594b269414",
+      "destinationBytes": 7700
+    },
+    {
+      "source": "src/app/reportOnly.ts",
+      "destination": "src/diagnostics/reportAddress.ts",
+      "sourceBlob": "7a961ca37cf184b165080135cc9d5edcbfa33192",
+      "sourceSha256": "a2fe5693924ab665d41e4f5a42530e8c041f97935a123ea2225eea0c2f8a34a4",
+      "transformations": [
+        "Retain report query/address helpers without any app startup."
+      ],
+      "destinationSha256": "f08729d39b5a75c2fa3aa23f30e0c066a9677a0cf55944a86209abcbcbba5aed",
+      "destinationBytes": 320
+    },
+    {
+      "source": "src/app/reportOnly.ts",
+      "destination": "src/shell/reportView.ts",
+      "sourceBlob": "7a961ca37cf184b165080135cc9d5edcbfa33192",
+      "sourceSha256": "a2fe5693924ab665d41e4f5a42530e8c041f97935a123ea2225eea0c2f8a34a4",
+      "transformations": [
+        "Retain report-only presentation using injected diagnostics/clock/download/identity/document ports; host decides startup and mounts returned element."
+      ],
+      "destinationSha256": "599e7fd8b94d4fc890f132d553cc6dbddfaefa57f99b35b135bae3f2e7c5e4a7",
+      "destinationBytes": 1560
+    },
+    {
+      "source": "src/shell/WindowOverlay.test.tsx",
+      "destination": "src/shell/WindowOverlay.test.tsx",
+      "sourceBlob": "c6f1c7ac4a97eb224bbd07f52cc35ac05c516c1d",
+      "sourceSha256": "65be1f4d4e1d6d1595ee3c8a7526e1cfadcf3388f67b6d6cdccd360b22787e5e",
+      "transformations": [
+        "Preserve generic responsive/layout/context/reload/toggle/close/visibility/element fixtures through a test-only explicit host adapter. Remove mixed Location search assertions; source Location implementation tests remain engine-owned."
+      ],
+      "destinationSha256": "286a2dcc8462f2e8a5002bbc69af83b61274197c860ef6c33bc254412594d811",
+      "destinationBytes": 32930
+    },
+    {
+      "source": "src/diagnostics/sessionTrail.ts",
+      "destination": "src/browser/sessionTrail.ts",
+      "sourceBlob": "7f18863838bd67c332a97fea90582a7ea6085773",
+      "sourceSha256": "1352eea06f48329fa0ba97edb7b661a62a3a528695c473ad300522477c0b22ff",
+      "transformations": [
+        "Move the original default browser environment to an optional browser adapter; pure core requires injection."
+      ],
+      "destinationSha256": "d07da568976d15220e19fb6e8416c55c6bf297525a174ed87ceec2858a2c4559",
+      "destinationBytes": 1357
+    },
+    {
+      "source": "src/settings/catalogue/index.ts",
+      "destination": "src/settings/uiParameters.ts",
+      "sourceBlob": "b801537459f08d65437f22e5e91ddad92f00f652",
+      "sourceSha256": "ad6f0a046826e1925307ede8fad987c4cdb12dedeaca06f08ee8b67076325586",
+      "transformations": [
+        "Retain exact raw foss-earth.theme light/dark legacy migration only; no full feature catalogue."
+      ],
+      "destinationSha256": "687baa5757ebbcc155104bfb000fede7bece6846d54b3ebcd143a23e0fa5d6ac",
+      "destinationBytes": 3955
+    },
+    {
+      "source": "src/shell/WindowOverlay.tsx",
+      "destination": "src/windowing/core/overlayPorts.ts",
+      "sourceBlob": "4d147b48013a0c30edb657bb27ec5fa77997f141",
+      "sourceSha256": "6968a18499a0590554726d2bb18d52855121240b074ed6097fcf6b49b9ee47ac",
+      "transformations": [
+        "Extract feature-free structural context/geometry/log/allocation/imperative contracts; no React declaration dependency."
+      ],
+      "destinationSha256": "c0fc6f6de871d39989434367d086731303b52f547d3e4b16e3700f0e5f5ab025",
+      "destinationBytes": 949
+    },
+    {
+      "source": "src/shell/WindowOverlay.tsx",
+      "destination": "src/browser/overlay.ts",
+      "sourceBlob": "4d147b48013a0c30edb657bb27ec5fa77997f141",
+      "sourceSha256": "6968a18499a0590554726d2bb18d52855121240b074ed6097fcf6b49b9ee47ac",
+      "transformations": [
+        "Expose original explicit browser geometry and root allocation effects as host-called adapters."
+      ],
+      "destinationSha256": "31dc3c38254f52c844599fd9f36413218e30a898581bb3a742f2d4fd98bf0ddf",
+      "destinationBytes": 1493
+    },
+    {
+      "source": "src/shell/WindowOverlay.tsx",
+      "destination": "tests/fixtures/earthOverlay.tsx",
+      "sourceBlob": "4d147b48013a0c30edb657bb27ec5fa77997f141",
+      "sourceSha256": "6968a18499a0590554726d2bb18d52855121240b074ed6097fcf6b49b9ee47ac",
+      "transformations": [
+        "Retain exact 13-tab/context policy in a test-only host adapter with supplied sections/elements; exclude runtime feature implementations."
+      ],
+      "destinationSha256": "20e2ed1d9ca88c787d55262568904f84d29ef7e437b87c6ceb7570d7e4a21793",
+      "destinationBytes": 5279
+    },
+    {
+      "source": "src/shell/WindowOverlay.tsx",
+      "destination": "src/shell/settingsView.ts",
+      "sourceBlob": "4d147b48013a0c30edb657bb27ec5fa77997f141",
+      "sourceSha256": "6968a18499a0590554726d2bb18d52855121240b074ed6097fcf6b49b9ee47ac",
+      "transformations": [
+        "Extract generic host-supplied Settings section composition; preserve IDs and explicit presentation storage, reject duplicate section homes.",
+        "Primary source-only Document port propagation; host Document/element ownerDocument replaces ambient DOM authority in changed settings/help/dial/App Files paths; assertions retained with explicit fixture bindings, all UNRUN."
+      ],
+      "destinationSha256": "72ff7b04efe34464901bc427309733523ab64776a3427f947a8faa3112e4015d",
+      "destinationBytes": 636
+    },
+    {
+      "source": "src/shell/viewportInsets.ts",
+      "destination": "src/browser/viewportInsets.ts",
+      "sourceBlob": "e00f1ec0adaa18e578d59dbe8d5bcaf031b52964",
+      "sourceSha256": "397d9aac7eec48ebcdbe7be02bada2e8744e93e37ed00943fe4c579072b3fc0b",
+      "transformations": [
+        "Preserve existing inset calculation/caps/pinch guard and event-driven CSS; inject host target/view, expose original policy defaults, make disposal idempotent and stale refresh inert."
+      ],
+      "destinationSha256": "e000aed2659b1d5a5deab37dc89ddd9e7d9d50e5b69eb871ea36282fa63cd99f",
+      "destinationBytes": 2592
+    },
+    {
+      "source": "src/shell/viewportInsets.test.ts",
+      "destination": "src/browser/viewportInsets.test.ts",
+      "sourceBlob": "e405096e811f7db22b817b295725600c6b6fb4a9",
+      "sourceSha256": "05740c50456fe64e17211147fe90df648481aba6141792ff421c92fff8e16295",
+      "transformations": [
+        "Retain all seven original assertions through explicit injected-view compatibility fixture; no app or global default in implementation."
+      ],
+      "destinationSha256": "dac182137cd28ed5f9d6315a98a53f75ccef7fa0301f68e81d47568cea8cad2f",
+      "destinationBytes": 3787
+    },
+    {
+      "source": "src/shell/MeshInspectorPanel.tsx",
+      "destination": "src/shell/MeshInspectorPanel.tsx",
+      "sourceBlob": "6999e682131fc25e73bf53c4d55798fd5027e470",
+      "sourceSha256": "676363de29db80f5ad526937be73b1d61d2992be3c4e38dde1a279e9d2535384",
+      "destinationSha256": "5f65bcc004ddc91996a57a065ca0540a0e5b72ac25750c8ca57ea3f14841c39a",
+      "transformations": [
+        "Original tree, subscription, native mixed checkbox, actions, expansion behavior and tests retained.",
+        "Renderer handle becomes explicit minimal injected UI port; no renderer/Babylon dependency; stylesheet travels through public UI CSS entry."
+      ],
+      "destinationBytes": 4385
+    },
+    {
+      "source": "src/shell/MeshInspectorPanel.test.tsx",
+      "destination": "src/shell/MeshInspectorPanel.test.tsx",
+      "sourceBlob": "ed2e013eaaf6e39ecef3a29007279c3b5fe71041",
+      "sourceSha256": "0745b99cdbdd2d6cf7e0509de31353f627e601b62bc2c2b54c7718b84c2350b1",
+      "destinationSha256": "5d66d31262038af0817a1912dff215fabe99d5c02dce38044ca2b5f5a427d78a",
+      "transformations": [
+        "Original tree, subscription, native mixed checkbox, actions, expansion behavior and tests retained.",
+        "Renderer handle becomes explicit minimal injected UI port; no renderer/Babylon dependency; stylesheet travels through public UI CSS entry."
+      ],
+      "destinationBytes": 8263
+    },
+    {
+      "source": "src/shell/meshInspector.css",
+      "destination": "src/styles/meshInspector.css",
+      "sourceBlob": "654a3d749677719c8d155731d68db79459dbd28c",
+      "sourceSha256": "4a98f033c7c594d77cacca091296ef057894a19670606c53451cdcac3ddae876",
+      "destinationSha256": "4a98f033c7c594d77cacca091296ef057894a19670606c53451cdcac3ddae876",
+      "transformations": [
+        "Original tree, subscription, native mixed checkbox, actions, expansion behavior and tests retained.",
+        "Renderer handle becomes explicit minimal injected UI port; no renderer/Babylon dependency; stylesheet travels through public UI CSS entry."
+      ],
+      "destinationBytes": 2036
+    },
+    {
+      "source": "src/shell/MeshInspectorPanel.tsx",
+      "destination": "src/shell/meshInspectorPorts.ts",
+      "sourceBlob": "6999e682131fc25e73bf53c4d55798fd5027e470",
+      "sourceSha256": "676363de29db80f5ad526937be73b1d61d2992be3c4e38dde1a279e9d2535384",
+      "transformations": [
+        "Author minimal public structural snapshot/subscription/selection contract derived from original panel usage; no renderer implementation dependency; root exports are type-only."
+      ],
+      "destinationSha256": "e83c443c704927c1dd0ce1fadb92c0c2a528d0356eb950a79f1feb0878f79110",
+      "destinationBytes": 618
+    },
+    {
+      "source": "src/styles/hud.css",
+      "destination": "src/styles/cacheSection.css",
+      "sourceBlob": "cbd0c99b22835493f0ee659a73bdc89bd4258f7b",
+      "sourceSha256": "cc221b7efd23f13037023bbc095ecdfeb150f5cd9cd959ec49c5a26f6399dff4",
+      "transformations": [
+        "Exact original shared cache summary/progress/list paragraph-grid block. UI owns presentation; Engine/Scenes own their data and clear actions. No layout/render check or CSS consumer qualification executed."
+      ],
+      "destinationSha256": "7f8681164ea6faed28b459fec437c8b5f18ad4238da6f8f8ead984ebaf3bff31",
+      "destinationBytes": 701
+    },
+    {
+      "source": "docs/app-files.md",
+      "destination": "docs/app-files.md",
+      "sourceBlob": "5b9c7c4ad193481a3d73bef626cd3a9b15ce7a9a",
+      "sourceSha256": "6c89f8d3cd0f2e18b9d9e85ff856217bf837f05e6374c246047d50df38e9a61e",
+      "destinationSha256": "6c89f8d3cd0f2e18b9d9e85ff856217bf837f05e6374c246047d50df38e9a61e",
+      "destinationBytes": 15726,
+      "transformations": [
+        "Immutable dated source prose retained byte for byte; staged/proposed capability statements are not implementation or validation receipts. Original relative source/evidence links require accepted public routing."
+      ],
+      "sourceRepository": "foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "source": "docs/bug-reporting.md",
+      "destination": "docs/bug-reporting.md",
+      "sourceBlob": "b32c222d47746bf6d07f84ac001da7e720d1f621",
+      "sourceSha256": "77c4c6793a2fcb6d1e9c8ec44108eea1a18437f4e5fd6b2ae1185eb3e4197c3b",
+      "destinationSha256": "77c4c6793a2fcb6d1e9c8ec44108eea1a18437f4e5fd6b2ae1185eb3e4197c3b",
+      "destinationBytes": 4529,
+      "transformations": [
+        "Immutable dated source prose retained byte for byte; staged/proposed capability statements are not implementation or validation receipts. Original relative source/evidence links require accepted public routing."
+      ],
+      "sourceRepository": "foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "source": "docs/diagnostics.md",
+      "destination": "docs/diagnostics.md",
+      "sourceBlob": "2c8cb39001645d49cb40da32558880cc4a73e737",
+      "sourceSha256": "a6cd5b99d0998c870945b555b4bd083f60ed06255a7a82b535236df7bb7e82f5",
+      "destinationSha256": "a6cd5b99d0998c870945b555b4bd083f60ed06255a7a82b535236df7bb7e82f5",
+      "destinationBytes": 19532,
+      "transformations": [
+        "Immutable dated source prose retained byte for byte; staged/proposed capability statements are not implementation or validation receipts. Original relative source/evidence links require accepted public routing."
+      ],
+      "sourceRepository": "foss-earth/foss-earth.github.io",
+      "sourceRevision": "90e23b3ee96f53ec5900afc5991a21fffa58649d"
+    },
+    {
+      "source": "src/settings/deviceContext.ts",
+      "destination": "src/browser/deviceContext.ts",
+      "sourceBlob": "c711310f76194e59d799aacfb110a9fdd2c28aa3",
+      "sourceSha256": "5a60cd133890a383d49317eb5dd343c1b693443baa24e91502f5b45ce85182fb",
+      "destinationSha256": "55ff37585559f4f6d277da48b20ba61c03a8e49ad387640cecc0d6b2238b3739",
+      "destinationBytes": 930,
+      "transformations": [
+        "Retain original browser-reported ratios/cores/memory/touch and unknown defaults through required supplied navigator/window data; no ambient browser, hardware probe, renderer or feature default registration. Public browser-only export with explicit new required-port compatibility; all source fixtures UNRUN."
+      ]
+    },
+    {
+      "source": "src/diagnostics/index.test.ts",
+      "destination": "src/diagnostics/index.test.ts",
+      "sourceBlob": "cde7b084074362a71935fc473909d7f3404c38e2",
+      "sourceSha256": "1c5ffe4d2c425d50b23018ba80a67cd7217f435b4fd45414b880a1256083020e",
+      "destinationSha256": "f963afc3b80487df12f9aebfd08291e4cb6d08f74e9545d99e83c4c30c9624ee",
+      "destinationBytes": 3169,
+      "transformations": [
+        "Retain first original no-globe diagnostics import-boundary assertion and complete original TypeScript static graph traversal; bind actual public UI createDiagnostics symbol and ESM .js source resolution. Original second heavy-drawing positive assertion belongs Renderer, separately mapped there. Source assertions UNRUN, no API/adoption equivalence inferred."
+      ]
+    }
+  ],
+  "authoredPaths": [
+    ".attribution-release.json",
+    ".attribution.json",
+    ".github/workflows/attribution-check.yml",
+    ".gitignore",
+    "AGENTS.md",
+    "CONTRIBUTING.md",
+    "README.md",
+    "SOURCE_LINEAGE.json",
+    "SOURCE_SELECTION.json",
+    "docs/document-ports.md",
+    "docs/installed-consumer.md",
+    "docs/source-specifications.md",
+    "eslint.config.js",
+    "fixtures/consumer/browser.mjs",
+    "fixtures/consumer/declaration-guard.mjs",
+    "fixtures/consumer/dependency-plan.json",
+    "fixtures/consumer/guard-negative.mjs",
+    "fixtures/consumer/guard.mjs",
+    "fixtures/consumer/minimal.mjs",
+    "fixtures/consumer/minimal.ts",
+    "fixtures/consumer/pure-guard-negative.mjs",
+    "fixtures/consumer/react.mjs",
+    "fixtures/consumer/react.ts",
+    "fixtures/consumer/tsconfig.json",
+    "fixtures/current-tabs.json",
+    "fixtures/extraction-increment.json",
+    "fixtures/settings-v1.json",
+    "fixtures/source-review.json",
+    "fixtures/workspace.json",
+    "package.json",
+    "scripts/copy-assets.mjs",
+    "src/browser/index.ts",
+    "src/browser/log.ts",
+    "src/browser/reportPorts.ts",
+    "src/browser/settings.ts",
+    "src/browser/storage.ts",
+    "src/browser/theme.test.ts",
+    "src/contributions.ts",
+    "src/diagnostics/createDiagnostics.test.ts",
+    "src/diagnostics/index.ts",
+    "src/index.ts",
+    "src/react.ts",
+    "src/settings/index.ts",
+    "src/shell/WindowOverlay.ports.test.tsx",
+    "src/shell/hostViews.test.ts",
+    "src/windowing/index.ts",
+    "tests/browser.test.ts",
+    "tests/contracts.test.ts",
+    "tests/contributions.test.ts",
+    "tests/device-context.test.ts",
+    "tests/document-ports.test.ts",
+    "tests/fixtures/readingRefresh.ts",
+    "tests/injected-widgets.test.tsx",
+    "tests/package-consumer.mjs",
+    "tests/prepare-consumer-dependencies.mjs",
+    "tsconfig.json",
+    "vitest.config.ts"
+  ],
+  "excludedInputs": [
+    "Feature settings catalogues owned by Engine/Renderer/Toolbar/Sky/360/Scenes/format leaves and host composition",
+    "Current unrelated dirty package/atmosphere/physicalHeight/weather bytes",
+    "Mixed original diagnosticDrawing implementation belongs Renderer; metadata routing is not completed assertion coverage.",
+    "Flight/Campus implementations and deferred Search/VR"
+  ],
+  "checksExecuted": [],
+  "policySentence": "YOU CANNOT HAVE AI AS A CO-AUTHOR, OR YOUR CONTRIBUTIONS WILL BE REJECTED.",
+  "diagnosticBoundary": "Retain original first no-globe diagnostic assertion at actual UI source/public factory; second heavy-drawing positive control separately Renderer-owned; UNRUN.",
+  "installedConsumerHarness": {
+    "status": "SOURCE-ONLY UNRUN",
+    "before": "build/source-only/2026-10-09T17-10-42Z-installed-consumer-closure",
+    "mandatoryInput": "UI_CONSUMER_ARCHIVES or --archives=<complete JSON>",
+    "requiredArchiveCount": 47,
+    "qualifier": "tests/package-consumer.mjs",
+    "declarationAuthority": "installed pinned TypeScript workspace only; no compiler-lib exception",
+    "productionPublicExportsChanged": false,
+    "checksExecuted": []
+  }
+}

@@ -52,7 +52,7 @@ describe("help tooltip", () => {
     const settings = createSettingsRegistry({ storage: null });
     settings.register([{ id: "test.flag", label: "Flag", description: "A switch.", unit: "none", kind: "boolean", default: false,
       defaultReason: "Test only.", home: { tab: "map", section: "loading", level: "main" }, appliesLive: true, source: "src/test.ts" }]);
-    const parameter = createParameterControl(settings, "test.flag");
+    const parameter = createParameterControl(settings, "test.flag", document);
     handles.push(parameter); document.body.append(parameter.element);
     const button = parameter.element.querySelector<HTMLButtonElement>('[aria-label="Explain Flag"]')!;
     const content = parameter.element.querySelector<HTMLElement>('[role="tooltip"]')!;

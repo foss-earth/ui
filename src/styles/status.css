@@ -1,0 +1,87 @@
+/* Generic report, review and status layouts; hosts own feature data. */
+.foss-earth-bug-report__field {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  font-size: 12px;
+}
+
+.foss-earth-bug-report__field input {
+  width: 24ch;
+  max-width: 100%;
+}
+
+.foss-earth-bug-report__field textarea {
+  width: 30ch;
+  max-width: 100%;
+}
+
+.foss-earth-status-section {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.foss-earth-status-section progress {
+  flex-basis: 100%;
+  height: 8px;
+  accent-color: #38bdf8;
+}
+
+.foss-earth-status-section > div,
+.foss-earth-status-section details {
+  flex-basis: 100%;
+}
+
+.foss-earth-status-section summary {
+  cursor: pointer;
+}
+
+.foss-earth-status-section ul {
+  margin: 4px 0;
+  padding-left: 18px;
+}
+
+.foss-earth-status-section small {
+  display: block;
+  opacity: 0.7;
+}
+
+.foss-earth-report-only {
+  position: fixed;
+  inset: 0;
+  overflow: auto;
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  padding: 16px;
+  background: #040914;
+  color: #e2e8f0;
+  font: 14px/1.4 system-ui, sans-serif;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.foss-earth-report-only h1 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.foss-earth-report-only p {
+  margin: 0;
+}
+
+.foss-earth-report-only a {
+  color: var(--globe-accent-bright);
+}
+
+.foss-earth-report-only textarea {
+  min-height: 50vh;
+  background: rgba(148, 163, 184, 0.08);
+  color: inherit;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}

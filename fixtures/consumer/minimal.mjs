@@ -47,3 +47,16 @@ assert.equal(disposed, 1);
 assert.equal(browser.loadSavedWorkspace(new Set(["about"]), null), null);
 assert.equal(browser.createBrowserSettingsRegistry({ storage: null }).getStorageError(), null);
 process.stdout.write("UI installed-artifact pure imports and injected lifecycle passed.\n");
+
+const diagnostics = await import("@foss-earth/ui/diagnostics");
+assert.equal(typeof diagnostics.createDiagnostics, "function");
+assert.equal(typeof browser.createDial, "function"); assert.equal(browser.wrapTurn(1.25), 0.25);
+assert.equal(typeof browser.createGameLog, "function"); assert.equal(typeof browser.createReportView, "function"); assert.equal(typeof browser.createThemeController, "function");
+const hostReport = diagnostics.buildReport({ appName: "Host", at: new Date(0), page: "https://host.test", build: "b", source: "s", bundle: "app.js", userAgent: "Node fixture", screen: { width: 0, height: 0, devicePixelRatio: 1, touch: false }, device: { cores: null, memoryGiB: null }, renderer: { asked: "not started", mode: "not started", driver: null, maxTextureSize: null, fallbackReason: null, lost: 0 }, state: [], settings: [], steps: [], errors: [], previous: null });
+assert.match(hostReport, /^Host report/);
+for (const entry of ["dial.css", "log.css", "status.css", "mesh-inspector.css"]) assert.ok(readFileSync(new URL(import.meta.resolve(`@foss-earth/ui/${entry}`)), "utf8").length > 0);
+process.stdout.write("UI remaining mechanism public exports, host report identity and CSS import isolation passed.\n");
+
+assert.equal(typeof browser.trackViewportInsets, "function");
+await assert.rejects(import("@foss-earth/ui/react"), /escaped|Cannot find|ERR_MODULE_NOT_FOUND/);
+assert.match(readFileSync(new URL(import.meta.resolve("@foss-earth/ui/mesh-inspector.css")), "utf8"), /foss-earth-mesh-inspector/);

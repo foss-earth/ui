@@ -31,7 +31,15 @@
       "import": "./dist/react.js"
     },
     "./styles.css": "./dist/styles/ui.css",
-    "./windowing.css": "./dist/windowing/styles/windowing.css"
+    "./windowing.css": "./dist/windowing/styles/windowing.css",
+    "./diagnostics": {
+      "types": "./dist/diagnostics/index.d.ts",
+      "import": "./dist/diagnostics/index.js"
+    },
+    "./dial.css": "./dist/styles/dial.css",
+    "./log.css": "./dist/styles/gameLog.css",
+    "./status.css": "./dist/styles/status.css",
+    "./mesh-inspector.css": "./dist/styles/meshInspector.css"
   },
   "files": [
     "dist",
@@ -40,7 +48,8 @@
     "README.md",
     "provenance.json",
     "fixtures",
-    "SOURCE_LINEAGE.json"
+    "SOURCE_LINEAGE.json",
+    "SOURCE_RECEIPT.json"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/copy-assets.mjs",
@@ -48,8 +57,12 @@
     "lint": "eslint . --cache --cache-strategy content --cache-location node_modules/.cache/eslint/",
     "test": "vitest run --maxWorkers=50%",
     "test:consumer": "node tests/package-consumer.mjs",
-    "typecheck:consumer": "tsc -p fixtures/consumer/tsconfig.json",
-    "ci": "npm run typecheck && npm run lint && npm test && npm run build && npm run typecheck:consumer && npm run test:consumer"
+    "typecheck:consumer": "node tests/package-consumer.mjs",
+    "ci": "npm run check:conformance && npm run check:implementation",
+    "prepare:consumer-dependencies": "node tests/prepare-consumer-dependencies.mjs",
+    "check:conformance": "node node_modules/@foss-earth/ci/bin/conformance.mjs --consumer . --trusted-release .attribution-release.json --output-root build/common-conformance",
+    "check:attribution": "node node_modules/@foss-earth/ci/bin/attribution.mjs --repo . --refs-file build/repository-split/intended-publication-refs.json",
+    "check:implementation": "npm run typecheck && npm run lint && npm test && npm run build && npm run test:consumer"
   },
   "peerDependencies": {
     "react": "^19.2.4",
@@ -74,6 +87,7 @@
     "react-dom": "19.2.6",
     "typescript": "5.9.3",
     "typescript-eslint": "8.59.3",
-    "vitest": "4.1.6"
+    "vitest": "4.1.6",
+    "@foss-earth/ci": "0.1.0"
   }
 }

@@ -20,3 +20,13 @@ assert.equal(typeof ui.DockPanel, "function");
 assert.equal(typeof ui.WorkspaceDockSlot, "function");
 assert.equal(typeof ui.TabStrip, "function");
 process.stdout.write("UI installed-artifact React entry and server rendering passed with local peers.\n");
+
+const overlay = renderToStaticMarkup(createElement(ui.WindowOverlay, { tabDefinitions: [{ id: "host", label: "Host" }], renderTabContent: () => "Host content", context: { active: false, ready: true, baseOnlyTabs: new Set(), contextOnlyTabs: new Set(), entryTabId: "host" }, restorableTabs: new Set(["host"]), storage: null, geometry: { observeWidth: () => { throw new Error("SSR must not observe browser width"); }, menuBottom: () => null }, logSize: { getWidth: () => null, subscribe: () => { throw new Error("SSR must not subscribe"); } }, layoutPort: { publish() { throw new Error("SSR must not publish layout"); }, clear() {} } }));
+assert.match(overlay, /foss-earth-window-overlay/);
+process.stdout.write("UI host-driven overlay server rendering passed without browser globals.\n");
+
+const snapshot = { roots: [{ id: 1, name: "Host mesh", mesh: true, selected: false, mixed: false, children: [] }], enabled: true, error: null };
+const inspector = { getSnapshot: () => snapshot, subscribe() { throw new Error("SSR must not subscribe to the host inspector"); }, setSelected() { throw new Error("SSR must not select meshes"); }, selectAll() { throw new Error("SSR must not select meshes"); } };
+const mesh = renderToStaticMarkup(createElement(ui.MeshInspectorPanel, { inspector }));
+assert.match(mesh, /Host mesh/); assert.match(mesh, /Selection does not hide geometry/);
+process.stdout.write("UI public MeshInspectorPanel SSR uses supplied snapshot without renderer or subscription.\n");

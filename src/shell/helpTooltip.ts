@@ -18,12 +18,13 @@ export interface HelpTooltipHandle {
 }
 
 let helpCount = 0;
-let closeOpenHelp: (() => void) | null = null;
-let openHelpButton: HTMLButtonElement | null = null;
+const openHelpByDocument = new WeakMap<Document, { close: () => void; button: HTMLButtonElement }>();
 
 /** A collapsing/removing panel closes its own explanation without affecting another panel. */
 export function closeHelpTooltipWithin(container: Node): void {
-  if (openHelpButton && container.contains(openHelpButton)) closeOpenHelp?.();
+  const document = container.ownerDocument ?? (container as Document);
+  const opened = openHelpByDocument.get(document);
+  if (opened && container.contains(opened.button)) opened.close();
 }
 
 /**
@@ -33,6 +34,9 @@ export function closeHelpTooltipWithin(container: Node): void {
  * closing restores the content to that exact home without reflowing the panel.
  */
 export function createHelpTooltip(options: HelpTooltipOptions): HelpTooltipHandle {
+  const document = options.content.ownerDocument;
+  const window = document.defaultView;
+  if (!window) throw new TypeError("Help content requires a host Document with a view.");
   const element = document.createElement("span");
   element.className = "foss-earth-help-tooltip";
   const button = document.createElement("button");
@@ -84,11 +88,11 @@ export function createHelpTooltip(options: HelpTooltipOptions): HelpTooltipHandl
     window.removeEventListener("resize", position);
     window.visualViewport?.removeEventListener("resize", position);
     window.visualViewport?.removeEventListener("scroll", position);
-    if (closeOpenHelp === close) { closeOpenHelp = null; openHelpButton = null; }
+    if (openHelpByDocument.get(document)?.close === close) openHelpByDocument.delete(document);
   };
   const open = (): void => {
     if (destroyed || opened) return;
-    closeOpenHelp?.();
+    openHelpByDocument.get(document)?.close();
     options.onOpen?.();
     // Capture the caller's current home, including a relocated settings row.
     home = document.createComment("help content home");
@@ -99,8 +103,7 @@ export function createHelpTooltip(options: HelpTooltipOptions): HelpTooltipHandl
     opened = true;
     button.setAttribute("aria-expanded", "true");
     button.setAttribute("aria-describedby", content.id);
-    closeOpenHelp = close;
-    openHelpButton = button;
+    openHelpByDocument.set(document, { close, button });
     position();
     document.addEventListener("pointerdown", onOutside);
     document.addEventListener("keydown", onKey, true);
@@ -111,7 +114,8 @@ export function createHelpTooltip(options: HelpTooltipOptions): HelpTooltipHandl
   };
   const onHelp = (): void => { if (opened) close(); else open(); };
   const onOutside = (event: PointerEvent): void => {
-    if (event.target instanceof Node && !button.contains(event.target) && !content.contains(event.target)) close();
+    const target = event.target as Node | null;
+    if (target?.nodeType && !button.contains(target) && !content.contains(target)) close();
   };
   const onKey = (event: KeyboardEvent): void => {
     if (event.key === "Escape") { close(); event.preventDefault(); event.stopPropagation(); }

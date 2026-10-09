@@ -5,6 +5,8 @@ import { createParameterList, createSettingsTransfer, type ParameterListHandle, 
 import { createPresetStatus, createSavePresetControl } from "./presetsSection.js";
 
 export interface ParameterSectionOptions {
+  /** Host-owned DOM realm; every control uses this document. */
+  document: Document;
   tab: string;
   section: string;
   /** The section's own controls, drawn first. */
@@ -17,6 +19,8 @@ export interface ParameterSectionOptions {
   showAll?: boolean;
   /** Storage for presentation choices, separate from the host settings record. */
   panelStorage?: SettingsStorage | null;
+  /** Required shared host refresh authority; the section starts no clock. */
+  refresh: { subscribe(listener: () => void): () => void };
 }
 
 export interface ParameterSectionHandle {
@@ -26,6 +30,12 @@ export interface ParameterSectionHandle {
 
 let sectionCount = 0;
 
+/** Browser presentation defaults belong to the supplied document's origin. */
+function presentationStorage(document: Document, storage: SettingsStorage | null | undefined): SettingsStorage | null {
+  if (storage !== undefined) return storage;
+  try { return document.defaultView?.localStorage ?? null; } catch { return null; }
+}
+
 /**
  * One section of a tab: whether its values match a preset, its own controls,
  * a control for each main-level parameter homed here that they don't cover
@@ -34,13 +44,16 @@ let sectionCount = 0;
  * help and source, and exports, imports and resets the section.
  */
 export function createParameterSection(settings: SettingsRegistry, options: ParameterSectionOptions): ParameterSectionHandle {
-  const { tab, section } = options;
+  if (!options.refresh || typeof options.refresh.subscribe !== "function") throw new TypeError("A shared host reading refresh subscription is required.");
+  const { tab, section, document } = options;
+  if (!document || typeof document.createElement !== "function") throw new TypeError("A host Document is required.");
+  const panelStorage = presentationStorage(document, options.panelStorage);
   const covered = new Set(options.covers ?? []);
   const element = document.createElement("div");
   element.className = "foss-earth-parameter-section";
   element.dataset.settingsSection = `${tab}/${section}`;
   // "Matches Sharpest", or "Custom", where a preset has values in this section.
-  const presetStatus = createPresetStatus(settings, { tab, section });
+  const presetStatus = createPresetStatus(settings, { tab, section }, document);
   element.append(presetStatus.element);
   if (options.main) element.append(options.main);
   const auto = document.createElement("div");
@@ -61,7 +74,7 @@ export function createParameterSection(settings: SettingsRegistry, options: Para
   const toggleRow = document.createElement("div");
   toggleRow.className = "foss-earth-choices foss-earth-parameter-section__footer";
   if (options.showAll !== false) toggleRow.append(toggleLabel);
-  const savePreset = createSavePresetControl(settings, { tab, section }, settings.getSectionTitle(tab, section));
+  const savePreset = createSavePresetControl(settings, { tab, section }, settings.getSectionTitle(tab, section), document);
   toggleRow.append(savePreset.element);
   element.append(toggleRow);
   let list: ParameterListHandle | null = null;
@@ -79,7 +92,7 @@ export function createParameterSection(settings: SettingsRegistry, options: Para
     for (const id of ids) {
       let control = controls.get(id);
       if (!control) {
-        control = createParameterControl(settings, id);
+        control = createParameterControl(settings, id, document);
         controls.set(id, control);
       }
       if (control.element.previousElementSibling !== previous || control.element.parentElement !== auto) {
@@ -98,8 +111,8 @@ export function createParameterSection(settings: SettingsRegistry, options: Para
   const showAll = (open: boolean): void => {
     toggle.checked = open;
     if (open && !list) {
-      list = createParameterList(settings, { tab, section });
-      transfer = createSettingsTransfer(settings, { tab, section }, `${tab}-${section}`);
+      list = createParameterList(settings, { tab, section }, document);
+      transfer = createSettingsTransfer(settings, { tab, section }, `${tab}-${section}`, document);
       element.append(list.element, transfer.element);
     } else if (!open && list) {
       list.destroy();
@@ -109,19 +122,20 @@ export function createParameterSection(settings: SettingsRegistry, options: Para
     }
   };
   const onToggle = (): void => {
-    savePanelSectionsOpen({ ...loadPanelSectionsOpen(options.panelStorage), [allKey]: toggle.checked }, options.panelStorage);
+    savePanelSectionsOpen({ ...loadPanelSectionsOpen(panelStorage), [allKey]: toggle.checked }, panelStorage);
     showAll(toggle.checked);
   };
   toggle.addEventListener("change", onToggle);
 
   syncMain();
-  showAll(loadPanelSectionsOpen(options.panelStorage)[allKey] ?? false);
-  // Readings change without the registry knowing: read them again every
-  // second, and only while the section can be seen.
+  showAll(loadPanelSectionsOpen(panelStorage)[allKey] ?? false);
+  // Readings change without the registry knowing: read them on the host
+  // refresh authority, and only while the section can be seen.
   // A reading whose source went away is cleared on the next tick.
   let shownReadings = new Set<string>();
-  const readingTimer = window.setInterval(() => {
-    if (!element.isConnected || element.closest("details")?.open === false) return;
+  let disposed = false;
+  const refreshReadings = (): void => {
+    if (disposed || !element.isConnected || element.closest("details")?.open === false) return;
     const ids = new Set<string>();
     for (const id of controls.keys()) if (settings.hasReading(id)) ids.add(id);
     if (list) for (const spec of settings.list({ tab, section })) if (settings.hasReading(spec.id)) ids.add(spec.id);
@@ -129,8 +143,11 @@ export function createParameterSection(settings: SettingsRegistry, options: Para
     shownReadings = ids;
     for (const id of refresh) controls.get(id)?.update();
     if (refresh.size > 0) list?.update(refresh);
-  }, 1000);
+  };
+  // Borrow the same refresh authority as every other host section.
+  const stopReadings = options.refresh.subscribe(refreshReadings);
   const unsubscribe = settings.subscribe(changed => {
+    if (disposed) return;
     let rebuildMain = [...changed].some(id => visibilityDependencies.has(id));
     // No ids: the saved presets changed.
     let touched = changed.size === 0;
@@ -150,8 +167,10 @@ export function createParameterSection(settings: SettingsRegistry, options: Para
   return {
     element,
     destroy() {
+      if (disposed) return;
+      disposed = true;
       unsubscribe();
-      window.clearInterval(readingTimer);
+      stopReadings();
       toggle.removeEventListener("change", onToggle);
       savePreset.destroy();
       for (const control of controls.values()) control.destroy();
@@ -182,16 +201,22 @@ export interface SectionsElementHandle {
  * Collapsible sections as plain DOM, for tabs whose content is an element:
  * the same look and remembered open state as SectionsPanel.
  */
-export function createSectionsElement(entries: readonly SectionsElementEntry[], options: { storage?: SettingsStorage | null } = {}): SectionsElementHandle {
+export function createSectionsElement(entries: readonly SectionsElementEntry[], options: { document: Document; storage?: SettingsStorage | null }): SectionsElementHandle {
+  const document = options.document;
+  const storage = presentationStorage(document, options.storage);
   const element = document.createElement("div");
   element.className = "foss-earth-panel-sections foss-earth-panel-sections--inline";
   const ids = new Set<string>();
+  const stops: (() => void)[] = [];
+  let disposed = false;
   const append = (entry: SectionsElementEntry): void => {
+    if (disposed) throw new Error("Sections element is disposed.");
+    if (ids.has(entry.id)) throw new Error(`Duplicate Settings section "${entry.id}".`);
     ids.add(entry.id);
     const details = document.createElement("details");
     details.className = "foss-earth-panel-section";
     details.dataset.section = entry.id;
-    details.open = loadPanelSectionsOpen(options.storage)[entry.id] ?? entry.defaultOpen ?? false;
+    details.open = loadPanelSectionsOpen(storage)[entry.id] ?? entry.defaultOpen ?? false;
     const summary = document.createElement("summary");
     summary.className = "foss-earth-panel-section__title";
     summary.textContent = entry.title;
@@ -199,11 +224,14 @@ export function createSectionsElement(entries: readonly SectionsElementEntry[], 
     body.className = "foss-earth-panel-section__body";
     body.append(entry.element);
     details.append(summary, body);
-    details.addEventListener("toggle", () => {
-      const saved = loadPanelSectionsOpen(options.storage);
+    const onToggle = (): void => {
+      if (disposed) return;
+      const saved = loadPanelSectionsOpen(storage);
       if ((saved[entry.id] ?? entry.defaultOpen ?? false) === details.open) return;
-      savePanelSectionsOpen({ ...saved, [entry.id]: details.open }, options.storage);
-    });
+      savePanelSectionsOpen({ ...saved, [entry.id]: details.open }, storage);
+    };
+    details.addEventListener("toggle", onToggle);
+    stops.push(() => details.removeEventListener("toggle", onToggle));
     element.append(details);
   };
   for (const entry of entries) append(entry);
@@ -211,7 +239,7 @@ export function createSectionsElement(entries: readonly SectionsElementEntry[], 
     element,
     append,
     has: (id) => ids.has(id),
-    destroy() { element.remove(); },
+    destroy() { if (disposed) return; disposed = true; for (const stop of stops.splice(0)) stop(); element.remove(); },
   };
 }
 
@@ -224,13 +252,13 @@ export interface HostSectionsHandle {
  * the tab does not draw itself, so a host's parameters appear in FOSS Earth's
  * tabs: 0sfs's renderer/instruments becomes the Renderer tab's Instruments.
  */
-export function appendHostSections(settings: SettingsRegistry, tab: string, sections: SectionsElementHandle, own: readonly string[], options: { panelStorage?: SettingsStorage | null } = {}): HostSectionsHandle {
+export function appendHostSections(settings: SettingsRegistry, tab: string, sections: SectionsElementHandle, own: readonly string[], options: { document: Document; panelStorage?: SettingsStorage | null; refresh: ParameterSectionOptions["refresh"] }): HostSectionsHandle {
   const handles: ParameterSectionHandle[] = [];
   const sync = (): void => {
     for (const section of settings.sections(tab)) {
       const id = `${tab}.${section}`;
       if (own.includes(section) || sections.has(id)) continue;
-      const handle = createParameterSection(settings, { tab, section, panelStorage: options.panelStorage });
+      const handle = createParameterSection(settings, { document: options.document, tab, section, panelStorage: options.panelStorage, refresh: options.refresh });
       handles.push(handle);
       sections.append({ id, title: settings.getSectionTitle(tab, section), element: handle.element, defaultOpen: false });
     }

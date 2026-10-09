@@ -12,7 +12,7 @@ export interface SavedSettingsSectionHandle {
  * (with "Keep these values", the only way they are saved), export, import and
  * reset of the whole record, and whether saving works in this browser.
  */
-export function createSavedSettingsSection(settings: SettingsRegistry): SavedSettingsSectionHandle {
+export function createSavedSettingsSection(settings: SettingsRegistry, document: Document): SavedSettingsSectionHandle {
   const element = document.createElement("div");
   element.className = "foss-earth-choices foss-earth-saved-settings";
   const session = document.createElement("div");
@@ -37,7 +37,7 @@ export function createSavedSettingsSection(settings: SettingsRegistry): SavedSet
   const about = document.createElement("p");
   about.className = "foss-earth-choices__note";
   about.textContent = "Only values that differ from their defaults are saved, on this device. Keys and secrets are never exported.";
-  const transfer = createSettingsTransfer(settings, {}, "all");
+  const transfer = createSettingsTransfer(settings, {}, "all", document);
   const storage = document.createElement("p");
   storage.className = "foss-earth-choices__note";
   element.append(session, allHeading, about, transfer.element, storage);

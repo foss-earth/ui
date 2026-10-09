@@ -2,10 +2,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createSettingsRegistry, type SettingsStorage } from "../../settings/registry.js";
 import type { ParameterSpec } from "../../settings/types.js";
-import { appendHostSections, createParameterSection, createSectionsElement } from "./parameterSection.js";
+import { appendHostSections as appendInjectedHostSections, createParameterSection as createInjectedParameterSection, createSectionsElement, type ParameterSectionOptions, type SectionsElementHandle } from "./parameterSection.js";
 import { createSavedSettingsSection } from "./savedSettings.js";
 
-afterEach(() => document.body.replaceChildren());
+import { testReadingRefresh } from "../../../tests/fixtures/readingRefresh.js";
+const readingRefresh = testReadingRefresh();
+const appendHostSections = (settings: Parameters<typeof appendInjectedHostSections>[0], tab: string, sections: SectionsElementHandle, own: readonly string[]) => appendInjectedHostSections(settings, tab, sections, own, { document, refresh: readingRefresh });
+const createParameterSection = (settings: Parameters<typeof createInjectedParameterSection>[0], options: Omit<ParameterSectionOptions, "refresh" | "document">) => createInjectedParameterSection(settings, { ...options, document, refresh: readingRefresh });
+afterEach(() => { readingRefresh.dispose(); document.body.replaceChildren(); });
 
 function memoryStorage(): SettingsStorage & { data: Map<string, string> } {
   const data = new Map<string, string>();
@@ -401,7 +405,7 @@ describe("host sections in FOSS Earth's tabs", () => {
   it("adds a section for each host section of a tab, titled by the host", () => {
     const settings = createSettingsRegistry({ storage: null });
     settings.register(specs);
-    const sections = createSectionsElement([{ id: "renderer.backend", title: "Renderer", element: document.createElement("div"), defaultOpen: true }]);
+    const sections = createSectionsElement([{ id: "renderer.backend", title: "Renderer", element: document.createElement("div"), defaultOpen: true }], { document });
     const hosts = appendHostSections(settings, "renderer", sections, ["backend"]);
     settings.setSectionTitle("renderer", "instruments", "Instruments");
     settings.register([{ ...base, id: "osfs.renderer.attitudeIndicator", label: "Attitude indicator", description: "Its renderer.", unit: "none", kind: "choice", choices: [{ id: "auto", label: "Auto" }, { id: "canvas2d", label: "Canvas 2D" }], default: "auto", home: { tab: "renderer", section: "instruments", level: "main" } }]);
@@ -418,7 +422,7 @@ describe("saved settings", () => {
     const storage = memoryStorage();
     const settings = createSettingsRegistry({ storage, searchParams: new URLSearchParams("set.t.budget=512") });
     settings.register(specs);
-    const saved = createSavedSettingsSection(settings);
+    const saved = createSavedSettingsSection(settings, document);
     document.body.append(saved.element);
     expect(saved.element.textContent).toContain("Budget: 512 MiB");
     const keep = [...saved.element.querySelectorAll("button")].find(button => button.textContent === "Keep these values")!;
@@ -434,7 +438,7 @@ describe("saved settings", () => {
     settings.register(specs);
     const writeText = vi.fn(async () => {});
     vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
-    const saved = createSavedSettingsSection(settings);
+    const saved = createSavedSettingsSection(settings, document);
     document.body.append(saved.element);
     [...saved.element.querySelectorAll("button")].find(button => button.textContent === "Export")!.click();
     [...saved.element.querySelectorAll("button")].find(button => button.textContent === "Copy")!.click();

@@ -7,7 +7,7 @@ afterEach(() => document.body.replaceChildren());
 describe("two-position slider", () => {
   it("uses one native keyboard-operable range and names its current stop", () => {
     const onInput = vi.fn();
-    const slider = createTwoPositionSlider({
+    const slider = createTwoPositionSlider({ document,
       label: "Priorities",
       options: [{ label: "Auto" }, { label: "Custom" }],
       onInput,
@@ -35,7 +35,7 @@ describe("two-position slider", () => {
 
   it("blocks a disabled slider and removes input handling when destroyed", () => {
     const onInput = vi.fn();
-    const slider = createTwoPositionSlider({
+    const slider = createTwoPositionSlider({ document,
       label: "Theme",
       options: [{ label: "Light", icon: "\u263C" }, { label: "Dark", icon: "\u263E" }],
       onInput,

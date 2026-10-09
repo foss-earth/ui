@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "owner": "foss-earth/ui",
+  "status": "source-only review; no checks executed",
+  "frozenFoundation": {
+    "revision": "ee3d085f98005cfd9dd7f62066d29f193c8662ed",
+    "archiveSha256": "71bc6508b41a9f7bab8a73cf465474958fb0209a2a431f92277d55ac6c4825f7",
+    "mutatedByLease": false
+  },
+  "publicContracts": {
+    "root": "pure settings/windowing/contributions/diagnostics/log contracts plus MeshInspectorPanelPort/Snapshot/Node type-only",
+    "browser": "widgets/theme/log/report/diagnostics/AppFiles/viewportInsets; import without global DOM initialization; required supplied device-context navigator/window reports",
+    "react": "SectionsPanel/windowing/WindowOverlay/MeshInspectorPanel with supplied host policies/snapshot/actions",
+    "css": [
+      "styles.css",
+      "windowing.css",
+      "dial.css",
+      "log.css",
+      "status.css",
+      "mesh-inspector.css"
+    ]
+  },
+  "sourceCorrections": [
+    {
+      "path": "src/shell/settings/parameterSection.ts",
+      "cause": "omitted refresh silently constructed per-section one-second intervals",
+      "change": "required shared refresh port; reject omission before DOM allocation; appendHostSections forwards the same required port",
+      "tests": "retained original assertions preserved through shared test-host readingRefresh; new missing-port causal fixture unrun"
+    },
+    {
+      "path": "src/browser/deviceContext.ts",
+      "cause": "Omitted existing generic settings browser context from owner extraction.",
+      "change": "Public required supplied navigator/window context, original browser reports/defaults retained; no runtime or hardware probe.",
+      "tests": "Three causal source cases and exact public runtime/type consumer fixtures prepared UNRUN."
+    }
+  ],
+  "ownershipReview": "No production implementation import from engine/renderer/Sky/Flight/Campus; no feature catalogue or app singleton. No renderer/backend/frame authority constructed. Host must supply stable MeshInspector snapshot and nonowned selection/subscription port.",
+  "guardedConsumer": {
+    "entry": "tests/package-consumer.mjs",
+    "dependencyPreparation": "tests/prepare-consumer-dependencies.mjs (separate partial INPUT-ONLY tooling; never part of qualifier)",
+    "dependencyPlan": "fixtures/consumer/dependency-plan.json",
+    "mode": "mandatory47 externally prepared pinned archives; one fresh offline complete workspace, pure-root/browser peer poison despite installed React, strict all-local compiler/declarations, retained CSS/Node-jsdom/React SSR mechanisms",
+    "guards": [
+      "archive size/SHA256/tar manifest identity and plan binding",
+      "physical requested package-directory identity/version; flat closure only, no bundle/nested/external dependency source",
+      "fresh owner output/cache/tmp realpath containment and no overwrite",
+      "runtime files and complete installed pinned compiler/declarations stay in workspace, including standard libs",
+      "outside runtime/file/ancestor-package and outside declaration/file/ancestor-package causal controls",
+      "existing React/synthetic-feature poison controls with poison-disabled existence check",
+      "all current advertised public module/declaration/CSS targets nonempty and inside UI"
+    ],
+    "executed": false
+  },
+  "actualLimitations": [
+    "all new increment checks/artifact/adoption/lineage reconciliation pending",
+    "real browser/mobile layout/GPU/device qualification absent",
+    "Required Document and ownerDocument paths are prepared with six causal tests, all UNRUN; real foreign-browser/layout qualification remains absent.",
+    "Node registerHooks/runtime syntax requires qualification on actual granted Node tool; no broad supported Node range claim",
+    "All exact47 archive pins/actual offline install and qualifier execution remain pending; older partial producer output is insufficient."
+  ],
+  "sharedCi": {
+    "revision": "9e046dd482e0229dc7c7b2d71b079d5905664656",
+    "archiveSha256": "450ede699f55f9b9c78146eadb73de7c6297e56553e7d7f9e5b164786a7beb24",
+    "policySha256": "9ca88bf5861685e22e65e5f39fa65b05faaf9c218875fccbecce1b9f2dca5bd3",
+    "status": "unchanged caller/policy files; exact installer/conformance/full refs/hosted admission pending"
+  },
+  "installedConsumerIncrement": {
+    "before": "build/source-only/2026-10-09T17-10-42Z-installed-consumer-closure",
+    "requiredArchives": 47,
+    "retainedFixtureEvidence": [
+      {
+        "path": "fixtures/consumer/minimal.mjs",
+        "beforeSha256": "d5db6186685b8602a9167541a6d2b511a9511f1a9e8246f7513dbdb94ec68b8d",
+        "currentSha256": "d5db6186685b8602a9167541a6d2b511a9511f1a9e8246f7513dbdb94ec68b8d",
+        "unchanged": true,
+        "evidence": "source bytes only; no assertion executed"
+      },
+      {
+        "path": "fixtures/consumer/react.mjs",
+        "beforeSha256": "0c4c2f442d22c1b3aa0cd0be47b16120b3ffcd20b8b32f42959926ba973b1b11",
+        "currentSha256": "0c4c2f442d22c1b3aa0cd0be47b16120b3ffcd20b8b32f42959926ba973b1b11",
+        "unchanged": true,
+        "evidence": "source bytes only; no assertion executed"
+      },
+      {
+        "path": "fixtures/consumer/react.ts",
+        "beforeSha256": "e1386c3a5a1e9e60f9c4abfd92a75f7b73d9d57109ac75b86fc23bbf4fbca5c5",
+        "currentSha256": "e1386c3a5a1e9e60f9c4abfd92a75f7b73d9d57109ac75b86fc23bbf4fbca5c5",
+        "unchanged": true,
+        "evidence": "source bytes only; no assertion executed"
+      },
+      {
+        "path": "fixtures/consumer/browser.mjs",
+        "beforeSha256": "e786189239020016b9e330e498a2b1773c994ba1eaec1b3eebdab998c60acc2c",
+        "currentSha256": "e786189239020016b9e330e498a2b1773c994ba1eaec1b3eebdab998c60acc2c",
+        "unchanged": true,
+        "evidence": "source bytes only; no assertion executed"
+      },
+      {
+        "path": "fixtures/consumer/minimal.ts",
+        "beforeSha256": "307231bf7072a1a6730178ce9c44f9d8e1131f9cebce97931b28865f7a7161af",
+        "currentSha256": "cd9f664176ee646bbbac968731661912285d2f1bf225f4e4ab50334bcdf3e28f",
+        "originalBytesRetainedAsPrefix": true,
+        "added": "public pure-subpath type imports only; original typed fixture body intact",
+        "evidence": "source bytes only; no compiler invoked"
+      }
+    ],
+    "checksExecuted": []
+  }
+}

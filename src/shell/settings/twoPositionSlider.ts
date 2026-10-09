@@ -1,4 +1,5 @@
 export interface TwoPositionSliderOptions {
+  document: Document;
   label: string;
   options: readonly [
     { label: string; icon?: string },
@@ -16,6 +17,7 @@ export interface TwoPositionSliderHandle {
 
 /** One native two-stop slider, with its choices drawn inside the track. */
 export function createTwoPositionSlider(options: TwoPositionSliderOptions): TwoPositionSliderHandle {
+  const document = options.document;
   const element = document.createElement("span");
   element.className = "foss-earth-two-position-slider";
   element.classList.toggle("foss-earth-two-position-slider--text", options.options.some(option => !option.icon));

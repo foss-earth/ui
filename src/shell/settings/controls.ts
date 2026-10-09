@@ -94,7 +94,7 @@ function noteFor(state: ParameterState, startValue: ParameterValue): string {
   return parts.join(" ");
 }
 
-function createNote(): HTMLParagraphElement {
+function createNote(document: Document): HTMLParagraphElement {
   const note = document.createElement("p");
   note.className = "foss-earth-choices__note foss-earth-parameter__note";
   note.setAttribute("role", "status");
@@ -105,11 +105,15 @@ function createNote(): HTMLParagraphElement {
 function setNote(note: HTMLElement, text: string, reveal = false): void {
   note.hidden = text === "";
   if (note.textContent !== text) note.textContent = text;
-  if (reveal && text) note.dispatchEvent(new Event("parameter-invalid", { bubbles: true }));
+  if (reveal && text) {
+    const event = note.ownerDocument.createEvent("Event");
+    event.initEvent("parameter-invalid", true, false);
+    note.dispatchEvent(event);
+  }
 }
 
 /** One compact accessory row; explanations stay closed until requested. */
-function withParameterActions(settings: SettingsRegistry, spec: ParameterSpec, control: ParameterControlHandle): ParameterControlHandle {
+function withParameterActions(document: Document, settings: SettingsRegistry, spec: ParameterSpec, control: ParameterControlHandle): ParameterControlHandle {
   const explanation = document.createElement("div");
   const tooltip = createHelpTooltip({ label: `Explain ${spec.label}`, content: explanation, onOpen: () => updateActions() });
   const help = tooltip.button;
@@ -130,11 +134,11 @@ function withParameterActions(settings: SettingsRegistry, spec: ParameterSpec, c
   source.className = "foss-earth-choice foss-earth-parameter__action foss-earth-parameter__icon-action foss-earth-parameter-row__source";
   source.title = `The code that reads ${spec.id}: ${spec.source}.${url ? " Opens in a new tab." : ""}`;
   source.setAttribute("aria-label", `Source for ${spec.label}: ${spec.source}${url ? ", opens in a new tab" : ""}`);
-  source.append(createExternalLinkIcon());
-  if (source instanceof HTMLAnchorElement && url) {
-    source.href = url;
-    source.target = "_blank";
-    source.rel = "noopener noreferrer";
+  source.append(createExternalLinkIcon(document));
+  if (url) {
+    (source as HTMLAnchorElement).href = url;
+    (source as HTMLAnchorElement).target = "_blank";
+    (source as HTMLAnchorElement).rel = "noopener noreferrer";
   }
   let header = control.element.querySelector<HTMLElement>(".foss-earth-parameter__header");
   const heading = control.element.querySelector<HTMLElement>(".foss-earth-choices__heading, .foss-earth-parameter__label");
@@ -168,7 +172,7 @@ function withParameterActions(settings: SettingsRegistry, spec: ParameterSpec, c
   };
 }
 
-function pill(type: "radio" | "checkbox", name: string, value: string, label: string): { element: HTMLLabelElement; input: HTMLInputElement; text: HTMLSpanElement } {
+function pill(document: Document, type: "radio" | "checkbox", name: string, value: string, label: string): { element: HTMLLabelElement; input: HTMLInputElement; text: HTMLSpanElement } {
   const element = document.createElement("label");
   element.className = "foss-earth-choice";
   const input = document.createElement("input");
@@ -181,7 +185,7 @@ function pill(type: "radio" | "checkbox", name: string, value: string, label: st
   return { element, input, text };
 }
 
-function createChoiceIcon(icon: NonNullable<ParameterChoice["icon"]>): SVGSVGElement {
+function createChoiceIcon(document: Document, icon: NonNullable<ParameterChoice["icon"]>): SVGSVGElement {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("viewBox", "0 0 24 24");
   svg.setAttribute("class", "foss-earth-choice__icon");
@@ -204,9 +208,9 @@ function createChoiceIcon(icon: NonNullable<ParameterChoice["icon"]>): SVGSVGEle
   return svg;
 }
 
-function choicePill(name: string, choice: ParameterChoice): ReturnType<typeof pill> {
-  const option = pill("radio", name, choice.id, choice.icon ? "" : choice.shortLabel ?? choice.label);
-  if (choice.icon) option.text.append(createChoiceIcon(choice.icon));
+function choicePill(document: Document, name: string, choice: ParameterChoice): ReturnType<typeof pill> {
+  const option = pill(document, "radio", name, choice.id, choice.icon ? "" : choice.shortLabel ?? choice.label);
+  if (choice.icon) option.text.append(createChoiceIcon(document, choice.icon));
   if (choice.shortLabel !== undefined || choice.icon !== undefined) {
     option.input.setAttribute("aria-label", choice.label);
     option.element.title = choice.description ? `${choice.label}: ${choice.description}` : choice.label;
@@ -219,11 +223,11 @@ function describeTitle(spec: ParameterSpec): string {
 }
 
 /** A switch: one pill with a checkbox, outlined while on. */
-function createSwitch(settings: SettingsRegistry, spec: ParameterSpec): ParameterControlHandle {
+function createSwitch(document: Document, settings: SettingsRegistry, spec: ParameterSpec): ParameterControlHandle {
   const element = document.createElement("div");
   element.className = "foss-earth-parameter foss-earth-parameter--inline";
   element.dataset.parameter = spec.id;
-  const toggle = pill("checkbox", `foss-earth-parameter-${++controlCount}`, "on", "");
+  const toggle = pill(document, "checkbox", `foss-earth-parameter-${++controlCount}`, "on", "");
   toggle.element.title = describeTitle(spec);
   toggle.input.setAttribute("aria-label", spec.label);
   toggle.input.id = `${toggle.input.name}-toggle`;
@@ -234,7 +238,7 @@ function createSwitch(settings: SettingsRegistry, spec: ParameterSpec): Paramete
   const header = document.createElement("div");
   header.className = "foss-earth-parameter__header";
   header.append(toggle.element, heading);
-  const note = createNote();
+  const note = createNote(document);
   element.append(header, note);
   const start = settings.get(spec.id);
   const onChange = (): void => { settings.set(spec.id, toggle.input.checked); update(); };
@@ -250,18 +254,18 @@ function createSwitch(settings: SettingsRegistry, spec: ParameterSpec): Paramete
 }
 
 /** Auto uses the defaults; Custom reveals the retained per-item priorities. */
-function createAutoCustomSlider(settings: SettingsRegistry, spec: ParameterSpec): ParameterControlHandle {
+function createAutoCustomSlider(document: Document, settings: SettingsRegistry, spec: ParameterSpec): ParameterControlHandle {
   const element = document.createElement("div");
   element.className = "foss-earth-parameter foss-earth-parameter--inline";
   element.dataset.parameter = spec.id;
-  const { header, readout } = createHeader(spec);
-  const slider = createTwoPositionSlider({
+  const { header, readout } = createHeader(document, spec);
+  const slider = createTwoPositionSlider({ document,
     label: spec.label,
     options: [{ label: "Auto" }, { label: "Custom" }],
     onInput: index => { settings.set(spec.id, index === 1); update(); },
   });
   readout.append(slider.element);
-  const note = createNote();
+  const note = createNote(document);
   element.append(header, note);
   const start = settings.get(spec.id);
   const update = (): void => {
@@ -273,16 +277,16 @@ function createAutoCustomSlider(settings: SettingsRegistry, spec: ParameterSpec)
   return { element, update, destroy() { slider.destroy(); element.remove(); } };
 }
 
-function createChoiceSlider(settings: SettingsRegistry, spec: ParameterSpec): ParameterControlHandle {
+function createChoiceSlider(document: Document, settings: SettingsRegistry, spec: ParameterSpec): ParameterControlHandle {
   const choices = settings.inspect(spec.id).choices;
-  if (choices.length !== 2) return createChoicePills(settings, spec);
+  if (choices.length !== 2) return createChoicePills(document, settings, spec);
   const element = document.createElement("div");
   element.className = "foss-earth-parameter foss-earth-parameter--inline";
   element.dataset.parameter = spec.id;
   element.setAttribute("role", "group");
   element.setAttribute("aria-label", spec.label);
-  const { header, readout } = createHeader(spec);
-  const slider = createTwoPositionSlider({
+  const { header, readout } = createHeader(document, spec);
+  const slider = createTwoPositionSlider({ document,
     label: spec.label,
     options: [
       { label: choices[0].label, icon: choices[0].shortLabel },
@@ -291,7 +295,7 @@ function createChoiceSlider(settings: SettingsRegistry, spec: ParameterSpec): Pa
     onInput: index => { settings.set(spec.id, choices[index].id); update(); },
   });
   readout.append(slider.element);
-  const note = createNote();
+  const note = createNote(document);
   element.append(header, note);
   const start = settings.get(spec.id);
   const update = (): void => {
@@ -304,7 +308,7 @@ function createChoiceSlider(settings: SettingsRegistry, spec: ParameterSpec): Pa
 }
 
 /** A heading and pills, one per choice. */
-function createChoicePills(settings: SettingsRegistry, spec: ParameterSpec): ParameterControlHandle {
+function createChoicePills(document: Document, settings: SettingsRegistry, spec: ParameterSpec): ParameterControlHandle {
   const name = `foss-earth-parameter-${++controlCount}`;
   const element = document.createElement("div");
   element.className = "foss-earth-choices foss-earth-parameter foss-earth-parameter--group";
@@ -320,13 +324,13 @@ function createChoicePills(settings: SettingsRegistry, spec: ParameterSpec): Par
   header.append(heading);
   const pills = document.createElement("span");
   pills.className = "foss-earth-parameter__pills";
-  const note = createNote();
+  const note = createNote(document);
   element.append(header, pills, note);
   const start = settings.get(spec.id);
   let shownChoices: ParameterState["choices"] | null = null;
   const onChange = (event: Event): void => {
-    const input = event.target;
-    if (!(input instanceof HTMLInputElement) || input.name !== name) return;
+    const input = event.target as HTMLInputElement | null;
+    if (input?.nodeName !== "INPUT" || input.name !== name) return;
     settings.set(spec.id, input.value);
     update();
   };
@@ -339,7 +343,7 @@ function createChoicePills(settings: SettingsRegistry, spec: ParameterSpec): Par
       element.classList.toggle("foss-earth-parameter--compact-choice", compact);
       if (compact) header.prepend(pills);
       else header.after(pills);
-      pills.replaceChildren(...state.choices.map(choice => choicePill(name, choice).element));
+      pills.replaceChildren(...state.choices.map(choice => choicePill(document, name, choice).element));
     }
     for (const input of pills.querySelectorAll<HTMLInputElement>("input")) {
       input.checked = input.value === state.value;
@@ -362,7 +366,7 @@ function fromField(spec: ParameterSpec, text: string): number | null {
   return spec.unit === "fraction" ? value / 100 : value;
 }
 
-function createHeader(spec: ParameterSpec): { header: HTMLElement; readout: HTMLElement; reading: HTMLElement } {
+function createHeader(document: Document, spec: ParameterSpec): { header: HTMLElement; readout: HTMLElement; reading: HTMLElement } {
   const header = document.createElement("div");
   header.className = "foss-earth-parameter__header";
   const label = document.createElement("span");
@@ -386,11 +390,11 @@ function showReading(settings: SettingsRegistry, id: string, element: HTMLElemen
 }
 
 /** A compact numeric field for discrete settings that do not need a track. */
-function createNumberField(settings: SettingsRegistry, spec: ParameterSpec): ParameterControlHandle {
+function createNumberField(document: Document, settings: SettingsRegistry, spec: ParameterSpec): ParameterControlHandle {
   const element = document.createElement("div");
   element.className = "foss-earth-parameter foss-earth-parameter--inline foss-earth-parameter--number-field";
   element.dataset.parameter = spec.id;
-  const { header, readout, reading } = createHeader(spec);
+  const { header, readout, reading } = createHeader(document, spec);
   const field = document.createElement("input");
   field.type = "number";
   field.className = "foss-earth-parameter__field";
@@ -401,7 +405,7 @@ function createNumberField(settings: SettingsRegistry, spec: ParameterSpec): Par
   unit.className = "foss-earth-parameter__unit";
   unit.textContent = spec.unit === "fraction" ? "%" : formatQuantity(spec.unit, 1).replace(/^1\s?/, "");
   readout.append(field, unit);
-  const note = createNote();
+  const note = createNote(document);
   element.append(header, note);
   const start = settings.get(spec.id);
   const update = (): void => {
@@ -429,12 +433,12 @@ function createNumberField(settings: SettingsRegistry, spec: ParameterSpec): Par
 }
 
 /** A value track: one thumb, the default ticked, named values as pills beside it. */
-function createValueTrack(settings: SettingsRegistry, spec: ParameterSpec): ParameterControlHandle {
+function createValueTrack(document: Document, settings: SettingsRegistry, spec: ParameterSpec): ParameterControlHandle {
   const name = `foss-earth-parameter-${++controlCount}`;
   const element = document.createElement("div");
   element.className = "foss-earth-parameter foss-earth-parameter--line";
   element.dataset.parameter = spec.id;
-  const { header, readout, reading } = createHeader(spec);
+  const { header, readout, reading } = createHeader(document, spec);
   const field = document.createElement("input");
   field.type = "number";
   field.className = "foss-earth-parameter__field";
@@ -443,7 +447,7 @@ function createValueTrack(settings: SettingsRegistry, spec: ParameterSpec): Para
   unit.className = "foss-earth-parameter__unit";
   readout.append(field, unit);
   const start = settings.get(spec.id);
-  const track: TrackHandle = createTrack({
+  const track: TrackHandle = createTrack({ document,
     ariaLabel: spec.label,
     ramp: spec.track?.ramp ?? "neutral",
     onInput: (_id, position) => {
@@ -456,16 +460,16 @@ function createValueTrack(settings: SettingsRegistry, spec: ParameterSpec): Para
   });
   const named = document.createElement("div");
   named.className = "foss-earth-parameter__named";
-  const namedPills = (spec.named ?? []).map(option => choicePill(name, option));
-  const numberPill = spec.named?.length ? pill("radio", name, "", "Value") : null;
+  const namedPills = (spec.named ?? []).map(option => choicePill(document, name, option));
+  const numberPill = spec.named?.length ? pill(document, "radio", name, "", "Value") : null;
   named.hidden = namedPills.length === 0;
   named.append(...namedPills.map(option => option.element), ...(numberPill ? [numberPill.element] : []));
-  const note = createNote();
+  const note = createNote(document);
   element.append(header, track.element, named, note);
 
   const onNamed = (event: Event): void => {
-    const input = event.target;
-    if (!(input instanceof HTMLInputElement) || input.name !== name) return;
+    const input = event.target as HTMLInputElement | null;
+    if (input?.nodeName !== "INPUT" || input.name !== name) return;
     if (input.value) settings.set(spec.id, input.value);
     else {
       // "Value": start from the number the named value stands for, or the default.
@@ -533,16 +537,16 @@ function createValueTrack(settings: SettingsRegistry, spec: ParameterSpec): Para
 }
 
 /** A range track: one track, a thumb for each end; a thumb stops at the other rather than passing it. */
-function createRangeTrack(settings: SettingsRegistry, spec: ParameterSpec): ParameterControlHandle {
+function createRangeTrack(document: Document, settings: SettingsRegistry, spec: ParameterSpec): ParameterControlHandle {
   const element = document.createElement("div");
   element.className = "foss-earth-parameter foss-earth-parameter--line";
   element.dataset.parameter = spec.id;
-  const { header, readout, reading } = createHeader(spec);
-  const note = createNote();
+  const { header, readout, reading } = createHeader(document, spec);
+  const note = createNote(document);
   const start = settings.get(spec.id);
   // Left and right thumbs; on a reversed track the left one is the range's max.
   const left = spec.track?.reversed ? "max" : "min";
-  const track = createTrack({
+  const track = createTrack({ document,
     ariaLabel: spec.label,
     ramp: spec.track?.ramp ?? "neutral",
     onInput: (id, position) => {
@@ -590,11 +594,11 @@ function createRangeTrack(settings: SettingsRegistry, spec: ParameterSpec): Para
 }
 
 /** A text field. A secret is never shown: typing replaces it, Clear forgets it. */
-function createTextField(settings: SettingsRegistry, spec: ParameterSpec): ParameterControlHandle {
+function createTextField(document: Document, settings: SettingsRegistry, spec: ParameterSpec): ParameterControlHandle {
   const element = document.createElement("div");
   element.className = "foss-earth-parameter foss-earth-parameter--line foss-earth-parameter--text";
   element.dataset.parameter = spec.id;
-  const { header, readout } = createHeader(spec);
+  const { header, readout } = createHeader(document, spec);
   const input = document.createElement("input");
   input.type = spec.sensitive ? "password" : "text";
   input.autocomplete = "off";
@@ -612,7 +616,7 @@ function createTextField(settings: SettingsRegistry, spec: ParameterSpec): Param
   clear.className = "foss-earth-choice foss-earth-parameter__action";
   clear.textContent = "Clear";
   actions.append(save, clear);
-  const note = createNote();
+  const note = createNote(document);
   element.append(header, input, actions, note);
   const start = settings.get(spec.id);
   const onSave = (): void => {
@@ -656,18 +660,18 @@ function createTextField(settings: SettingsRegistry, spec: ParameterSpec): Param
  * track, a range track or a text field. Read-only parameters show their value
  * and the reason they cannot change.
  */
-export function createParameterControl(settings: SettingsRegistry, id: string): ParameterControlHandle {
+export function createParameterControl(settings: SettingsRegistry, id: string, document: Document): ParameterControlHandle {
   const spec = settings.spec(id);
   if (!spec) throw new Error(`No parameter "${id}" is registered.`);
   let control: ParameterControlHandle;
   switch (spec.kind) {
-    case "boolean": control = spec.booleanControl === "auto-custom" ? createAutoCustomSlider(settings, spec) : createSwitch(settings, spec); break;
-    case "choice": control = spec.choiceControl === "two-position" ? createChoiceSlider(settings, spec) : createChoicePills(settings, spec); break;
-    case "number": control = spec.numberControl === "field" && !spec.named?.length ? createNumberField(settings, spec) : createValueTrack(settings, spec); break;
-    case "range": control = createRangeTrack(settings, spec); break;
-    case "text": control = createTextField(settings, spec); break;
+    case "boolean": control = spec.booleanControl === "auto-custom" ? createAutoCustomSlider(document, settings, spec) : createSwitch(document, settings, spec); break;
+    case "choice": control = spec.choiceControl === "two-position" ? createChoiceSlider(document, settings, spec) : createChoicePills(document, settings, spec); break;
+    case "number": control = spec.numberControl === "field" && !spec.named?.length ? createNumberField(document, settings, spec) : createValueTrack(document, settings, spec); break;
+    case "range": control = createRangeTrack(document, settings, spec); break;
+    case "text": control = createTextField(document, settings, spec); break;
   }
-  const decorated = withParameterActions(settings, spec, control);
+  const decorated = withParameterActions(document, settings, spec, control);
   const inline = new Map<string, { control: ParameterControlHandle; detail: HTMLElement; meta: HTMLElement }>();
   const pairedSpecs = (): ParameterSpec[] => settings.list({ tab: spec.home.tab, section: spec.home.section }).filter(candidate => candidate.inlineWith === id);
   const update = (): void => {
@@ -686,7 +690,7 @@ export function createParameterControl(settings: SettingsRegistry, id: string): 
     for (const candidate of [...shown].reverse()) {
       let child = inline.get(candidate.id);
       if (!child) {
-        const fieldControl = createNumberField(settings, candidate);
+        const fieldControl = createNumberField(document, settings, candidate);
         const field = fieldControl.element.querySelector<HTMLInputElement>('input[type="number"]')!;
         const note = fieldControl.element.querySelector<HTMLElement>(".foss-earth-parameter__note")!;
         fieldControl.element.className = "foss-earth-parameter__inline-field";

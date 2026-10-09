@@ -3,10 +3,10 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createSettingsRegistry, type SettingsStorage } from "../src/index.js";
-import { createParameterSection, createSectionsElement, PANEL_SECTIONS_OPEN_STORAGE_KEY } from "../src/browser/index.js";
+import { createParameterSection, createSectionsElement, PANEL_SECTIONS_OPEN_STORAGE_KEY, type ParameterSectionOptions } from "../src/browser/index.js";
 import { SectionsPanel } from "../src/react.js";
 
-afterEach(() => { vi.unstubAllGlobals(); document.body.replaceChildren(); });
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); document.body.replaceChildren(); });
 
 function storage(): SettingsStorage & { data: Map<string, string> } {
   const data = new Map<string, string>();
@@ -14,6 +14,19 @@ function storage(): SettingsStorage & { data: Map<string, string> } {
 }
 
 describe("optional widget host ports", () => {
+  it("refreshes readings through the supplied host subscription without installing a browser interval", () => {
+    const interval = vi.spyOn(window, "setInterval");
+    const settings = createSettingsRegistry({ storage: null });
+    settings.register([{ id: "host.cost", label: "Cost", description: "Host reading.", unit: "ms", kind: "number", bounds: () => ({ min: 0, max: 100 }), default: 1, defaultReason: "Host default.", home: { tab: "host", section: "cost", level: "main" }, appliesLive: true, source: "src/host.ts" }]);
+    let value = "First reading"; settings.setReadingSource("host.cost", () => value);
+    let refresh!: () => void; const stop = vi.fn();
+    const section = createParameterSection(settings, { document, tab: "host", section: "cost", panelStorage: null, refresh: { subscribe(listener) { refresh = listener; return stop; } } });
+    document.body.append(section.element);
+    expect(interval).not.toHaveBeenCalled();
+    value = "Second reading"; refresh(); expect(section.element.textContent).toContain("Second reading");
+    section.destroy(); section.destroy(); value = "Closed reading"; refresh();
+    expect(section.element.textContent).not.toContain("Closed reading"); expect(stop).toHaveBeenCalledOnce();
+  });
   it("edits the supplied registry and persists Show all in injected presentation storage", () => {
     const panels = storage();
     const settings = createSettingsRegistry();
@@ -22,7 +35,7 @@ describe("optional widget host ports", () => {
       default: false, defaultReason: "Off initially.", home: { tab: "host", section: "display", level: "main" },
       appliesLive: true, source: "src/host.ts",
     }]);
-    const section = createParameterSection(settings, { tab: "host", section: "display", panelStorage: panels });
+    const section = createParameterSection(settings, { document, tab: "host", section: "display", panelStorage: panels, refresh: { subscribe: () => () => {} } });
     document.body.append(section.element);
     try {
       section.element.querySelector<HTMLInputElement>('[data-parameter="host.show"] input')!.click();
@@ -37,7 +50,7 @@ describe("optional widget host ports", () => {
   it("uses injected storage for native and React section state", async () => {
     const panels = storage();
     panels.data.set(PANEL_SECTIONS_OPEN_STORAGE_KEY, JSON.stringify({ native: true, react: true }));
-    const element = createSectionsElement([{ id: "native", title: "Native", element: document.createElement("div") }], { storage: panels });
+    const element = createSectionsElement([{ id: "native", title: "Native", element: document.createElement("div") }], { document, storage: panels });
     expect(element.element.querySelector("details")?.open).toBe(true);
     element.destroy();
     vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
@@ -51,5 +64,15 @@ describe("optional widget host ports", () => {
       await act(async () => { details.open = false; details.dispatchEvent(new Event("toggle")); });
       expect(JSON.parse(panels.data.get(PANEL_SECTIONS_OPEN_STORAGE_KEY)!)).toEqual({ native: true, react: false });
     } finally { await act(async () => root.unmount()); }
+  });
+});
+
+
+describe("required shared refresh", () => {
+  it("rejects missing refresh before allocating controls or subscribing to settings", () => {
+    const settings = createSettingsRegistry({ storage: null });
+    const allocate = vi.spyOn(document, "createElement");
+    expect(() => createParameterSection(settings, { document, tab: "host", section: "display" } as ParameterSectionOptions)).toThrow(/shared host reading refresh/);
+    expect(allocate).not.toHaveBeenCalled();
   });
 });

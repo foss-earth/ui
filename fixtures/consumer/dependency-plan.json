@@ -1,0 +1,275 @@
+{
+  "schemaVersion": 1,
+  "status": "source-only exact external archive input plan; no archives installed or consumer executed",
+  "roots": [
+    "react",
+    "react-dom",
+    "scheduler",
+    "@types/react",
+    "@types/react-dom",
+    "csstype",
+    "jsdom"
+  ],
+  "compiler": {
+    "name": "typescript",
+    "version": "5.9.3"
+  },
+  "packages": [
+    {
+      "name": "@asamuzakjp/css-color",
+      "version": "5.1.11",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "@asamuzakjp/dom-selector",
+      "version": "7.1.1",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "@asamuzakjp/generational-cache",
+      "version": "1.0.1",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "@asamuzakjp/nwsapi",
+      "version": "2.3.9",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "@bramus/specificity",
+      "version": "2.4.2",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "@csstools/color-helpers",
+      "version": "6.0.2",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "@csstools/css-calc",
+      "version": "3.2.1",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "@csstools/css-color-parser",
+      "version": "4.1.1",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "@csstools/css-parser-algorithms",
+      "version": "4.0.0",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "@csstools/css-syntax-patches-for-csstree",
+      "version": "1.1.4",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "@csstools/css-tokenizer",
+      "version": "4.0.0",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "@exodus/bytes",
+      "version": "1.15.0",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "@types/react",
+      "version": "19.2.14",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "@types/react-dom",
+      "version": "19.2.3",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "bidi-js",
+      "version": "1.0.3",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "css-tree",
+      "version": "3.2.1",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "csstype",
+      "version": "3.2.3",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "data-urls",
+      "version": "7.0.0",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "decimal.js",
+      "version": "10.6.0",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "entities",
+      "version": "8.0.0",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "html-encoding-sniffer",
+      "version": "6.0.0",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "is-potential-custom-element-name",
+      "version": "1.0.1",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "jsdom",
+      "version": "29.1.1",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "lru-cache",
+      "version": "11.3.6",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "mdn-data",
+      "version": "2.27.1",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "parse5",
+      "version": "8.0.1",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "punycode",
+      "version": "2.3.1",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "react",
+      "version": "19.2.6",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "react-dom",
+      "version": "19.2.6",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "require-from-string",
+      "version": "2.0.2",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "saxes",
+      "version": "6.0.0",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "scheduler",
+      "version": "0.27.0",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "source-map-js",
+      "version": "1.2.2",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "symbol-tree",
+      "version": "3.2.4",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "tldts",
+      "version": "7.0.30",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "tldts-core",
+      "version": "7.0.30",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "tough-cookie",
+      "version": "6.0.1",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "tr46",
+      "version": "6.0.0",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "undici",
+      "version": "7.25.0",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "w3c-xmlserializer",
+      "version": "5.0.0",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "webidl-conversions",
+      "version": "8.0.1",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "whatwg-mimetype",
+      "version": "5.0.0",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "whatwg-url",
+      "version": "16.0.1",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "xml-name-validator",
+      "version": "5.0.0",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    },
+    {
+      "name": "xmlchars",
+      "version": "2.2.0",
+      "status": "installed tool metadata source input only; archive digest and consumer validation pending"
+    }
+  ],
+  "optionalNativePeersExcluded": [
+    "canvas"
+  ],
+  "acceptedArchives": null,
+  "qualifier": {
+    "entry": "tests/package-consumer.mjs",
+    "closureSchemaVersion": 1,
+    "input": "UI_CONSUMER_ARCHIVES or --archives=<JSON>",
+    "additionalRequiredPackages": [
+      {
+        "name": "@foss-earth/ui",
+        "version": "0.1.0"
+      },
+      {
+        "name": "typescript",
+        "version": "5.9.3"
+      }
+    ],
+    "completePackageCount": 47,
+    "planBinding": "SHA256 of this exact JSON file in closure.planSha256",
+    "archiveFields": [
+      "name",
+      "version",
+      "archive",
+      "sha256",
+      "bytes"
+    ],
+    "archivePathResolution": "relative to closure JSON or absolute explicitly supplied",
+    "producer": "tests/prepare-consumer-dependencies.mjs emits only the 45-package partial peer/tool input set; it cannot qualify or replace the UI/TypeScript archive closure",
+    "nativeOptionalPolicy": "canvas remains excluded; one flat version per supplied package; installed optional peers from the exact plan remain explicit direct dependencies"
+  }
+}

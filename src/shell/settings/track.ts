@@ -51,6 +51,7 @@ export interface TrackHandle {
 }
 
 export interface TrackOptions {
+  document: Document;
   ariaLabel: string;
   /** Extra classes for the track element. */
   className?: string;
@@ -82,6 +83,7 @@ export function detailColour(fraction: number): string {
 const along = (fraction: number): string => `calc(var(--thumb) / 2 + (100% - var(--thumb)) * ${fraction})`;
 
 export function createTrack(options: TrackOptions): TrackHandle {
+  const document = options.document;
   const element = document.createElement("div");
   element.className = `foss-earth-track foss-earth-track--${options.ramp}${options.className ? ` ${options.className}` : ""}`;
   element.setAttribute("role", "group");

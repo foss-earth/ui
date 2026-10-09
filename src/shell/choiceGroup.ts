@@ -11,7 +11,7 @@ export interface Choice {
  * A heading and a paragraph grid of pill-shaped radio buttons. Every radio
  * takes `name`, so two groups with the same name make one choice.
  */
-export function createChoiceGroup(name: string, heading: string, choices: readonly Choice[]): HTMLElement {
+export function createChoiceGroup(name: string, heading: string, choices: readonly Choice[], document: Document): HTMLElement {
   const group = document.createElement("div");
   group.className = "foss-earth-choices";
   group.setAttribute("role", "group");
@@ -40,7 +40,7 @@ export function createChoiceGroup(name: string, heading: string, choices: readon
       credit.title = `${choice.label}. Opens its attribution page.`;
       credit.setAttribute("aria-label", `${choice.label} attribution, opens in a new tab`);
       credit.hidden = true;
-      credit.append(createExternalLinkIcon());
+      credit.append(createExternalLinkIcon(document));
       label.append(credit);
     }
     group.append(label);
@@ -48,7 +48,7 @@ export function createChoiceGroup(name: string, heading: string, choices: readon
   return group;
 }
 
-export function createChoiceNote(text: string): HTMLParagraphElement {
+export function createChoiceNote(text: string, document: Document): HTMLParagraphElement {
   const note = document.createElement("p");
   note.className = "foss-earth-choices__note";
   note.textContent = text;

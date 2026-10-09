@@ -4,7 +4,7 @@ const SVG_NS = "http://www.w3.org/2000/svg";
  * The usual "opens elsewhere" mark: a box open at its top-right corner, with an
  * arrow leaving through the gap. Drawn in the text colour, so it follows the theme.
  */
-export function createExternalLinkIcon(): SVGSVGElement {
+export function createExternalLinkIcon(document: Document): SVGSVGElement {
   const svg = document.createElementNS(SVG_NS, "svg");
   svg.setAttribute("class", "foss-earth-external-link-icon");
   svg.setAttribute("viewBox", "0 0 24 24");

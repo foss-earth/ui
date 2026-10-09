@@ -6,3 +6,6 @@ export * from "./windowing/react/WorkspaceDockSlot.js";
 export * from "./windowing/react/useWindowWorkspace.js";
 export * from "./shell/AdoptedElement.js";
 export * from "./shell/SectionsPanel.js";
+export * from "./shell/WindowOverlay.js";
+export * from "./shell/MeshInspectorPanel.js";
+export * from "./shell/meshInspectorPorts.js";

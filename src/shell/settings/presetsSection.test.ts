@@ -2,10 +2,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createSettingsRegistry, type SettingsStorage } from "../../settings/registry.js";
 import type { ParameterSpec, SettingsPreset } from "../../settings/types.js";
-import { createParameterSection } from "./parameterSection.js";
+import { createParameterSection as createInjectedParameterSection, type ParameterSectionOptions } from "./parameterSection.js";
 import { createPresetsSection } from "./presetsSection.js";
 
-afterEach(() => document.body.replaceChildren());
+import { testReadingRefresh } from "../../../tests/fixtures/readingRefresh.js";
+const readingRefresh = testReadingRefresh();
+const createParameterSection = (settings: Parameters<typeof createInjectedParameterSection>[0], options: Omit<ParameterSectionOptions, "refresh" | "document">) => createInjectedParameterSection(settings, { ...options, document, refresh: readingRefresh });
+afterEach(() => { readingRefresh.dispose(); document.body.replaceChildren(); });
 
 function memoryStorage(): SettingsStorage {
   const data = new Map<string, string>();
@@ -30,7 +33,7 @@ function setup() {
   const settings = createSettingsRegistry({ storage: memoryStorage() });
   settings.register(specs);
   settings.registerPresets(presets);
-  const panel = createPresetsSection(settings);
+  const panel = createPresetsSection(settings, document);
   const loading = createParameterSection(settings, { tab: "map", section: "loading" });
   const camera = createParameterSection(settings, { tab: "controls", section: "camera" });
   document.body.append(panel.element, loading.element, camera.element);

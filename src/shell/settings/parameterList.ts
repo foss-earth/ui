@@ -14,11 +14,11 @@ interface Row {
   update(): void;
 }
 
-function createRow(settings: SettingsRegistry, id: string): Row {
+function createRow(settings: SettingsRegistry, id: string, document: Document): Row {
   const element = document.createElement("div");
   element.className = "foss-earth-parameter-row";
   element.dataset.parameter = id;
-  const control = createParameterControl(settings, id);
+  const control = createParameterControl(settings, id, document);
   element.append(control.element);
   return {
     element,
@@ -32,7 +32,7 @@ function createRow(settings: SettingsRegistry, id: string): Row {
  * that was derived from, where the value came from, and a link to the
  * code that reads it. Nothing is reachable only through the URL or the console.
  */
-export function createParameterList(settings: SettingsRegistry, filter: SettingsFilter): ParameterListHandle {
+export function createParameterList(settings: SettingsRegistry, filter: SettingsFilter, document: Document): ParameterListHandle {
   const element = document.createElement("div");
   element.className = "foss-earth-parameter-list";
   const rows = new Map<string, Row>();
@@ -45,7 +45,7 @@ export function createParameterList(settings: SettingsRegistry, filter: Settings
     for (const id of ids) {
       let row = rows.get(id);
       if (!row) {
-        row = createRow(settings, id);
+        row = createRow(settings, id, document);
         rows.set(id, row);
       }
       if (row.element.previousElementSibling !== previous || row.element.parentElement !== element) {
@@ -81,7 +81,7 @@ export interface SettingsTransferHandle {
  * Export, import and reset for a set of parameters: JSON the user can copy or
  * save, and a paste box that applies the valid entries and lists the rest.
  */
-export function createSettingsTransfer(settings: SettingsRegistry, filter: SettingsFilter, name: string): SettingsTransferHandle {
+export function createSettingsTransfer(settings: SettingsRegistry, filter: SettingsFilter, name: string, document: Document): SettingsTransferHandle {
   const element = document.createElement("div");
   element.className = "foss-earth-choices foss-earth-settings-transfer";
   const button = (text: string): HTMLButtonElement => {
@@ -146,10 +146,15 @@ export function createSettingsTransfer(settings: SettingsRegistry, filter: Setti
     result.hidden = false;
   };
   const onCopy = (): void => {
-    void navigator.clipboard?.writeText(text.value).then(
-      () => { result.textContent = "Copied."; result.hidden = false; },
-      () => { text.select(); result.textContent = "Select the text and copy it."; result.hidden = false; },
-    );
+    const fallback = (): void => { text.select(); result.textContent = "Select the text and copy it."; result.hidden = false; };
+    const clipboard = document.defaultView?.navigator.clipboard;
+    if (!clipboard) { fallback(); return; }
+    try {
+      void clipboard.writeText(text.value).then(
+        () => { result.textContent = "Copied."; result.hidden = false; },
+        fallback,
+      );
+    } catch { fallback(); }
   };
   const onClose = (): void => { panel.hidden = true; };
   const onReset = (): void => {

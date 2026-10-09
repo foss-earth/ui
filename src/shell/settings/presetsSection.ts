@@ -2,14 +2,14 @@ import type { SettingsRegistry } from "../../settings/registry.js";
 import type { ParameterSpec, SettingsFilter, SettingsPreset } from "../../settings/types.js";
 import { formatValue } from "../../settings/values.js";
 
-function paragraph(className: string, text = ""): HTMLParagraphElement {
+function paragraph(document: Document, className: string, text = ""): HTMLParagraphElement {
   const element = document.createElement("p");
   element.className = className;
   element.textContent = text;
   return element;
 }
 
-function action(text: string): HTMLButtonElement {
+function action(document: Document, text: string): HTMLButtonElement {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "foss-earth-choice foss-earth-parameter__action";
@@ -45,8 +45,8 @@ export interface PresetStatusHandle {
  * "Matches Sharpest", or "Custom" once any value differs, for the parameters
  * in `filter`. Hidden where no preset has a value.
  */
-export function createPresetStatus(settings: SettingsRegistry, filter: SettingsFilter): PresetStatusHandle {
-  const element = paragraph("foss-earth-choices__note foss-earth-preset-status");
+export function createPresetStatus(settings: SettingsRegistry, filter: SettingsFilter, document: Document): PresetStatusHandle {
+  const element = paragraph(document, "foss-earth-choices__note foss-earth-preset-status");
   element.setAttribute("role", "status");
   const update = (): void => {
     const relevant = settings.listPresets().some(preset => {
@@ -68,18 +68,18 @@ export interface SavePresetHandle {
 }
 
 /** Save as preset: the current values in `filter` under a name the user gives. */
-export function createSavePresetControl(settings: SettingsRegistry, filter: SettingsFilter, what: string): SavePresetHandle {
+export function createSavePresetControl(settings: SettingsRegistry, filter: SettingsFilter, what: string, document: Document): SavePresetHandle {
   const element = document.createElement("div");
   element.className = "foss-earth-choices foss-earth-preset-save";
-  const open = action("Save as preset");
+  const open = action(document, "Save as preset");
   const name = document.createElement("input");
   name.type = "text";
   name.className = "foss-earth-parameter__text";
   name.placeholder = "Preset name";
   name.setAttribute("aria-label", `Name for a preset of ${what}`);
-  const save = action("Save");
-  const cancel = action("Cancel");
-  const status = paragraph("foss-earth-choices__note");
+  const save = action(document, "Save");
+  const cancel = action(document, "Cancel");
+  const status = paragraph(document, "foss-earth-choices__note");
   status.setAttribute("role", "status");
   status.hidden = true;
   element.append(open, name, save, cancel, status);
@@ -134,13 +134,13 @@ export interface PresetsSectionHandle {
  * Saved presets can be renamed, exported and deleted, and an exported one
  * imported again.
  */
-export function createPresetsSection(settings: SettingsRegistry): PresetsSectionHandle {
+export function createPresetsSection(settings: SettingsRegistry, document: Document): PresetsSectionHandle {
   const element = document.createElement("div");
   element.className = "foss-earth-choices foss-earth-presets";
-  const status = createPresetStatus(settings, {});
+  const status = createPresetStatus(settings, {}, document);
   const list = document.createElement("div");
   list.className = "foss-earth-presets__list";
-  const saveAll = createSavePresetControl(settings, {}, "every setting");
+  const saveAll = createSavePresetControl(settings, {}, "every setting", document);
 
   // A preset exported here, or on another device, comes back as the user's.
   const importer = document.createElement("div");
@@ -154,7 +154,7 @@ export function createPresetsSection(settings: SettingsRegistry): PresetsSection
   file.hidden = true;
   file.setAttribute("aria-label", "Preset file to import");
   pick.append(file);
-  const imported = paragraph("foss-earth-choices__note");
+  const imported = paragraph(document, "foss-earth-choices__note");
   imported.setAttribute("role", "status");
   imported.hidden = true;
   importer.append(pick, imported);
@@ -183,7 +183,7 @@ export function createPresetsSection(settings: SettingsRegistry): PresetsSection
     const heading = document.createElement("div");
     heading.className = "foss-earth-choices__heading";
     heading.textContent = own ? `${preset.name} (yours)` : preset.name;
-    const description = paragraph("foss-earth-choices__note", preset.description);
+    const description = paragraph(document, "foss-earth-choices__note", preset.description);
 
     // Everything it sets, in full.
     const values = document.createElement("details");
@@ -206,12 +206,12 @@ export function createPresetsSection(settings: SettingsRegistry): PresetsSection
 
     const actions = document.createElement("div");
     actions.className = "foss-earth-choices";
-    const apply = action("Apply…");
+    const apply = action(document, "Apply…");
     actions.append(apply);
     const confirm = document.createElement("div");
     confirm.className = "foss-earth-choices foss-earth-preset__confirm";
     confirm.hidden = true;
-    const done = paragraph("foss-earth-choices__note");
+    const done = paragraph(document, "foss-earth-choices__note");
     done.setAttribute("role", "status");
     done.hidden = true;
 
@@ -221,9 +221,9 @@ export function createPresetsSection(settings: SettingsRegistry): PresetsSection
       confirm.replaceChildren();
       confirm.hidden = false;
       if (diff.changes.length === 0) {
-        confirm.append(paragraph("foss-earth-choices__note", "Every value already matches."));
+        confirm.append(paragraph(document, "foss-earth-choices__note", "Every value already matches."));
       } else {
-        confirm.append(paragraph("foss-earth-choices__note", `Applying ${preset.name} changes ${diff.changes.length} ${diff.changes.length === 1 ? "value" : "values"}:`));
+        confirm.append(paragraph(document, "foss-earth-choices__note", `Applying ${preset.name} changes ${diff.changes.length} ${diff.changes.length === 1 ? "value" : "values"}:`));
         const changes = document.createElement("ul");
         changes.className = "foss-earth-preset__changes";
         for (const change of diff.changes) {
@@ -235,10 +235,10 @@ export function createPresetsSection(settings: SettingsRegistry): PresetsSection
         confirm.append(changes);
       }
       if (diff.rejected.length > 0) {
-        confirm.append(paragraph("foss-earth-choices__note", `Left as they are: ${diff.rejected.map(entry => `${settings.spec(entry.id)?.label ?? entry.id} (${entry.reason})`).join("; ")}`));
+        confirm.append(paragraph(document, "foss-earth-choices__note", `Left as they are: ${diff.rejected.map(entry => `${settings.spec(entry.id)?.label ?? entry.id} (${entry.reason})`).join("; ")}`));
       }
-      const yes = action(diff.changes.length === 0 ? "Close" : "Apply these changes");
-      const no = action("Cancel");
+      const yes = action(document, diff.changes.length === 0 ? "Close" : "Apply these changes");
+      const no = action(document, "Cancel");
       if (diff.changes.length === 0) no.hidden = true;
       yes.addEventListener("click", () => {
         confirm.hidden = true;
@@ -252,7 +252,7 @@ export function createPresetsSection(settings: SettingsRegistry): PresetsSection
     });
 
     if (own) {
-      const rename = action("Rename");
+      const rename = action(document, "Rename");
       const field = document.createElement("input");
       field.type = "text";
       field.className = "foss-earth-parameter__text";
@@ -272,7 +272,7 @@ export function createPresetsSection(settings: SettingsRegistry): PresetsSection
       const { id, name, description } = preset;
       exported.href = `data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify({ id, name, description, values: preset.values }, null, 2))}`;
       exported.download = `foss-earth-preset-${id.replace(/^user:/, "")}.json`;
-      const remove = action("Delete");
+      const remove = action(document, "Delete");
       remove.addEventListener("click", () => {
         if (remove.dataset.confirm !== "1") { remove.dataset.confirm = "1"; remove.textContent = `Delete ${preset.name}?`; return; }
         if (settings.deletePreset(preset.id)) render();
