@@ -1,8 +1,10 @@
 const GAP = 12;
 const MIN_DOCK_WIDTH = 160;
 const MIN_LOG_WIDTH = 160;
+// A phone needs a readable window, rather than two compressed columns.
+const STACKED_BREAKPOINT = 320 + MIN_LOG_WIDTH + GAP * 3;
 
-export type DockLayoutMode = "single" | "dual";
+export type DockLayoutMode = "stacked" | "single" | "dual";
 export type DockResizePriority = "log" | "windows";
 
 export interface DockLayoutInput {
@@ -14,6 +16,8 @@ export interface DockLayoutInput {
   /** The most recent manual resize keeps its requested space first. */
   priority?: DockResizePriority;
   previousMode?: DockLayoutMode;
+  /** Measured height of the phone's window or launcher. */
+  stackHeight?: number;
 }
 
 /** One allocation for the windows and log, including the gaps between them. */
@@ -21,6 +25,19 @@ export function resolveDockLayout(input: DockLayoutInput) {
   const width = Math.max(0, input.availableWidth);
   const primary = Math.max(MIN_DOCK_WIDTH, Math.min(420, input.primaryWidth));
   const secondary = Math.max(MIN_DOCK_WIDTH, Math.min(420, input.secondaryWidth));
+  if (width < STACKED_BREAKPOINT) {
+    const fullWidth = Math.max(0, width - GAP * 2);
+    return {
+      mode: "stacked" as const,
+      primaryWidth: primary,
+      secondaryWidth: fullWidth,
+      logLeft: GAP,
+      logTop: GAP * 2 + Math.max(0, input.stackHeight ?? 30),
+      logWidth: fullWidth,
+      logCenter: width / 2,
+      maxWindowWidth: fullWidth,
+    };
+  }
   const logPriority = input.priority === "log" && input.logWidth !== null;
   const requestedLog = Math.max(MIN_LOG_WIDTH, input.logWidth ?? 560);
   // A centered log must clear the larger dock on BOTH halves of the viewport.
@@ -45,6 +62,7 @@ export function resolveDockLayout(input: DockLayoutInput) {
       primaryWidth,
       secondaryWidth,
       logLeft: (width - logWidth) / 2,
+      logTop: GAP,
       logWidth,
       logCenter: width / 2,
       // Keep a dock's captured resize handle present at the log's minimum.
@@ -61,6 +79,7 @@ export function resolveDockLayout(input: DockLayoutInput) {
     primaryWidth: primary,
     secondaryWidth,
     logLeft: GAP,
+    logTop: GAP,
     logWidth,
     logCenter: GAP + logWidth / 2,
     maxWindowWidth: Math.min(420, Math.max(MIN_DOCK_WIDTH, singleBudget - MIN_LOG_WIDTH)),

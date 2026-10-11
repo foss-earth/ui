@@ -7,7 +7,7 @@
   --game-log-max-width: var(--foss-log-width, min(380px, calc(100vw - 88px)));
   position: fixed;
   z-index: 25;
-  top: calc(12px + env(safe-area-inset-top, 0px));
+  top: calc(var(--foss-log-top, 12px) + env(safe-area-inset-top, 0px));
   left: var(--foss-log-left, calc(12px + env(safe-area-inset-left, 0px)));
   transform: none;
   box-sizing: border-box;
@@ -45,6 +45,21 @@
 html[data-dock-layout="dual"] .game-log {
   left: var(--foss-log-center);
   transform: translateX(-50%);
+}
+
+/* Phones give both surfaces a full row; the shell measures the window above. */
+html[data-dock-layout="stacked"] .game-log:not([data-minimized]) {
+  min-width: var(--foss-log-width);
+}
+
+html[data-dock-layout="stacked"] .game-log {
+  /* Keep an enlarged history above the toolbar, including browser chrome. */
+  --game-log-stack-max-height: max(0px, calc(100dvh - var(--foss-log-top) - env(safe-area-inset-top, 0px) - 80px - max(var(--foss-inset-bottom, 0px), env(safe-area-inset-bottom, 0px))));
+  max-height: min(clamp(3.5rem, 25dvh, 7rem), var(--game-log-stack-max-height));
+}
+
+html[data-dock-layout="stacked"] .game-log:is([data-open], [data-sized], [data-loading-details]) {
+  max-height: var(--game-log-stack-max-height);
 }
 
 .game-log__lines {

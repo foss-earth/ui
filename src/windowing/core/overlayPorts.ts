@@ -14,6 +14,8 @@ export interface WindowOverlayHandle<TabId extends string> {
 }
 export interface WindowOverlayGeometry {
   observeWidth(element: HTMLElement, listener: (width: number) => void): () => void;
+  /** Tracks the phone's window/launcher so the log stays below it. */
+  observeHeight?(element: HTMLElement, listener: (height: number) => void): () => void;
   menuBottom(): number | null | undefined;
 }
 export interface WindowOverlayLogSize {

@@ -201,6 +201,14 @@ overlay's lifetime, and releases its content handles after unmount. Camera input
 the overlay does not use passes through. Structural overlay port types are
 exported from the windowing entry, so browser declarations do not need React.
 
+Below 516 CSS pixels, the phone layout puts a full-width tab window above the
+full-width log. The window uses at most half the viewport height, and
+`geometry.observeHeight` keeps the log below its current height when resized,
+minimized or restored; the browser geometry adapter supplies this observer.
+Custom geometry ports can omit it to use the window element's browser observer.
+Wider screens retain the log beside one window, or centered between two windows
+when they fit. Tabs return to their saved windows when the viewport widens.
+
 ## Development
 
 UI has no `@foss-earth/*` dependencies, so its own scripts work from a plain

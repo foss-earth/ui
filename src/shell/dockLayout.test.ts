@@ -16,6 +16,7 @@ describe("shared window and log layout", () => {
       secondaryWidth: 320,
       maxWindowWidth: 320,
       logLeft: 344,
+      logTop: 12,
       logWidth: 160,
       logCenter: 424,
     });
@@ -44,6 +45,7 @@ describe("shared window and log layout", () => {
       secondaryWidth: 296,
       maxWindowWidth: 420,
       logLeft: 320,
+      logTop: 12,
       logWidth: 640,
       logCenter: 640,
     });
@@ -99,8 +101,43 @@ describe("shared window and log layout", () => {
     }).mode).toBe("single");
   });
 
+  it.each([280, 320, 360, 390, 430, 515])("stacks full-width windows and log at phone width %s without changing resize preferences", (availableWidth) => {
+    for (const priority of ["log", "windows"] as const) {
+      for (const logWidth of [null, 160, 2000]) {
+        const input: DockLayoutInput = { ...preferences, availableWidth, logWidth, priority };
+        const layout = resolveDockLayout(input);
+        expect(layout).toMatchObject({
+          mode: "stacked",
+          secondaryWidth: availableWidth - 24,
+          maxWindowWidth: availableWidth - 24,
+          logLeft: 12,
+          logTop: 54,
+          logWidth: availableWidth - 24,
+        });
+        expect(input).toEqual({ ...preferences, availableWidth, logWidth, priority });
+      }
+    }
+  });
+
+  it("returns to the two-column tablet layout at the first width that fits a preferred window and the log", () => {
+    expect(resolveDockLayout({ ...preferences, availableWidth: 515 }).mode).toBe("stacked");
+    expect(resolveDockLayout({ ...preferences, availableWidth: 516, previousMode: "stacked" })).toMatchObject({
+      mode: "single", secondaryWidth: 320, logLeft: 12, logTop: 12, logWidth: 160,
+    });
+    expect(resolveDockLayout({ ...preferences, availableWidth: 768, previousMode: "stacked" }).mode).toBe("single");
+    expect(resolveDockLayout({ ...preferences, availableWidth: 848, previousMode: "stacked" }).mode).toBe("dual");
+  });
+
+  it("places the phone log twelve pixels below the actual window height", () => {
+    const input = { ...preferences, availableWidth: 390 };
+    expect(resolveDockLayout({ ...input, stackHeight: 30 }).logTop).toBe(54);
+    expect(resolveDockLayout({ ...input, stackHeight: 180 }).logTop).toBe(204);
+    expect(resolveDockLayout({ ...input, stackHeight: 420 }).logTop).toBe(444);
+    expect(resolveDockLayout({ ...input, availableWidth: 768, stackHeight: 420 }).logTop).toBe(12);
+  });
+
   it("never overlaps the log and visible windows for either resize priority or previous arrangement", () => {
-    const widths = [280, 320, 528, 640, 700, 847, 848, 849, 1047, 1048, 1049, 1280, 1600, 1601, 1920];
+    const widths = [280, 320, 390, 430, 515, 516, 528, 640, 700, 847, 848, 849, 1047, 1048, 1049, 1280, 1600, 1601, 1920];
     const dockWidths = [[160, 160], [160, 420], [320, 320], [420, 320], [320, 420], [420, 420]];
     const logWidths = [null, 160, 380, 912, 913, 2000];
 
@@ -108,7 +145,7 @@ describe("shared window and log layout", () => {
       for (const [primaryWidth, secondaryWidth] of dockWidths) {
         for (const logWidth of logWidths) {
           for (const priority of ["log", "windows"] as const) {
-            for (const previousMode of [undefined, "single", "dual"] as const) {
+            for (const previousMode of [undefined, "stacked", "single", "dual"] as const) {
               const input: DockLayoutInput = { availableWidth, primaryWidth, secondaryWidth, logWidth, priority, previousMode };
               const layout = resolveDockLayout(input);
               const context = JSON.stringify(input);
@@ -117,8 +154,17 @@ describe("shared window and log layout", () => {
 
               expect(layout.logWidth, context).toBeGreaterThan(0);
               expect(layout.logLeft, context).toBeGreaterThanOrEqual(12);
-              expect(logRight + 12, context).toBeLessThanOrEqual(rightDockLeft + 1e-9);
-              expect(layout.secondaryWidth, context).toBeLessThanOrEqual(secondaryWidth);
+              if (layout.mode === "stacked") {
+                expect(layout.logWidth, context).toBe(availableWidth - 24);
+                expect(layout.secondaryWidth, context).toBe(availableWidth - 24);
+                expect(layout.maxWindowWidth, context).toBe(availableWidth - 24);
+                expect(layout.logTop, context).toBe(54);
+                expect(logRight + 12, context).toBe(availableWidth);
+              } else {
+                expect(logRight + 12, context).toBeLessThanOrEqual(rightDockLeft + 1e-9);
+                expect(layout.secondaryWidth, context).toBeLessThanOrEqual(secondaryWidth);
+                expect(layout.logTop, context).toBe(12);
+              }
               if (layout.mode === "dual") {
                 expect(layout.logLeft, context).toBeGreaterThanOrEqual(12 + layout.primaryWidth + 12 - 1e-9);
                 expect(layout.logCenter, context).toBe(availableWidth / 2);

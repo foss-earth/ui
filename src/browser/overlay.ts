@@ -12,6 +12,14 @@ export function browserOverlayGeometry(view: Window, menuBottom: WindowOverlayGe
       observer?.observe(element); view.addEventListener("resize", update);
       return () => { observer?.disconnect(); view.removeEventListener("resize", update); };
     },
+    observeHeight(element, listener) {
+      const update = (): void => listener(element.getBoundingClientRect().height);
+      update();
+      const Constructor = (view as Window & { ResizeObserver?: typeof ResizeObserver }).ResizeObserver;
+      const observer = Constructor ? new Constructor(update) : null;
+      observer?.observe(element); view.addEventListener("resize", update);
+      return () => { observer?.disconnect(); view.removeEventListener("resize", update); };
+    },
   };
 }
 
@@ -21,12 +29,13 @@ export function browserOverlayLayout(root: HTMLElement): WindowOverlayLayoutPort
     publish(layout) {
       root.dataset.dockLayout = layout.mode;
       root.style.setProperty("--foss-log-left", `${layout.logLeft}px`);
+      root.style.setProperty("--foss-log-top", `${layout.logTop}px`);
       root.style.setProperty("--foss-log-center", `${layout.logCenter}px`);
       root.style.setProperty("--foss-log-width", `${layout.logWidth}px`);
     },
     clear() {
       delete root.dataset.dockLayout;
-      for (const name of ["--foss-log-left", "--foss-log-center", "--foss-log-width"]) root.style.removeProperty(name);
+      for (const name of ["--foss-log-left", "--foss-log-top", "--foss-log-center", "--foss-log-width"]) root.style.removeProperty(name);
     },
   };
 }

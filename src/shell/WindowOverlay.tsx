@@ -5,6 +5,7 @@ import { useWindowWorkspace } from "../windowing/react/useWindowWorkspace.js";
 import type { WindowTabDefinition, WindowWorkspaceState, WindowSlotId } from "../windowing/core/types.js";
 import type { SettingsStorage } from "../settings/registry.js";
 import { loadSavedWorkspace, saveWorkspace } from "../browser/workspace.js";
+import { browserOverlayGeometry } from "../browser/overlay.js";
 import { resolveDockLayout, type DockLayoutMode, type DockResizePriority } from "./dockLayout.js";
 import { foldWorkspace, restoreWorkspace, forgetCompactWorkspaceTab, type CompactWorkspaceMemory } from "./compactWorkspace.js";
 import { hideWorkspaceTabs, restoreWorkspaceTabs, type HiddenTab } from "../windowing/core/contextTabs.js";
@@ -86,6 +87,7 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
   const [primaryAddOpen, setPrimaryAddOpen] = useState(false);
   const [secondaryAddOpen, setSecondaryAddOpen] = useState(false);
   const [availableWidth, setAvailableWidth] = useState(0);
+  const [stackHeight, setStackHeight] = useState(30);
 
   useLayoutEffect(() => {
     const element = overlayRef.current;
@@ -99,6 +101,7 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
     logWidth,
     priority: resizePriority,
     previousMode: layoutMode,
+    stackHeight,
   });
   const primaryAvailable = layout.mode === "dual";
   const visibleTabs = new Set<TabId>();
@@ -130,7 +133,16 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
     });
   };
 
-  useLayoutEffect(() => { layoutPort.publish(layout); }, [layoutPort, layout.mode, layout.primaryWidth, layout.secondaryWidth, layout.logLeft, layout.logCenter, layout.logWidth, layout.maxWindowWidth]);
+  useLayoutEffect(() => {
+    if (layout.mode !== "stacked" || availableWidth <= 0) return;
+    const dock = overlayRef.current?.querySelector<HTMLElement>(".foss-earth-dock-panel[data-side=right], .foss-earth-workspace-slot-launcher-right");
+    if (!dock) return;
+    if (geometry.observeHeight) return geometry.observeHeight(dock, setStackHeight);
+    const view = dock.ownerDocument.defaultView;
+    return view ? browserOverlayGeometry(view, geometry.menuBottom).observeHeight!(dock, setStackHeight) : undefined;
+  }, [geometry, availableWidth, layout.mode, workspace.state.secondary.collapsed, workspace.state.secondary.activeTab, workspace.state.secondary.tabs.length]);
+
+  useLayoutEffect(() => { layoutPort.publish(layout); }, [layoutPort, layout.mode, layout.primaryWidth, layout.secondaryWidth, layout.logLeft, layout.logTop, layout.logCenter, layout.logWidth, layout.maxWindowWidth]);
   useLayoutEffect(() => {
     if (availableWidth <= 0) return;
     if (!primaryAvailable && !compactMemory.current) {
@@ -268,13 +280,14 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
         slotId="secondary"
         workspaceState={workspace.state}
         onWorkspaceStateChange={updateWorkspace}
-        onWidthChange={(width) => resizeWindow("secondary", width)}
+        onWidthChange={(width) => { if (layout.mode !== "stacked") resizeWindow("secondary", width); }}
         tabDefinitions={tabDefinitions}
         getTabLabel={(tabId) => tabDefinitions.find((tab) => tab.id === tabId)?.label ?? tabId}
         renderTabContent={renderTabContent}
         restoreOnTabSelect
         width={layout.secondaryWidth}
         maxWidth={layout.maxWindowWidth}
+        dockPanelProps={layout.mode === "stacked" ? { expandedMaxHeightCss: "50dvh" } : undefined}
         addMenuOpen={secondaryAddOpen}
         onAddMenuOpenChange={(open) => { setSecondaryAddOpen(open); if (open) setPrimaryAddOpen(false); }}
         visible
