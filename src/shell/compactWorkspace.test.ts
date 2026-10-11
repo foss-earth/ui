@@ -17,6 +17,16 @@ const initial = () => createWindowWorkspaceState<TabId>({
 });
 
 describe("temporary compact workspace", () => {
+  it("folds into the left window when it is the one that stays, and restores both as they were", () => {
+    const original = initial();
+    const folded = foldWorkspace(original, "primary");
+
+    expect(folded.memory.into).toBe("primary");
+    expect(folded.state.secondary.tabs).toEqual([]);
+    expect(folded.state.primary).toMatchObject({ tabs: ["location", "settings", "map"], activeTab: "location", collapsed: false, width: 360 });
+    expect(restoreWorkspace(folded.state, folded.memory)).toEqual(original);
+  });
+
   it("restores both original slots, active tabs, collapsed states and dimensions", () => {
     const original = initial();
     const folded = foldWorkspace(original);

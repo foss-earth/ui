@@ -28,6 +28,8 @@ export function browserOverlayLayout(root: HTMLElement): WindowOverlayLayoutPort
   return {
     publish(layout) {
       root.dataset.dockLayout = layout.mode;
+      // The side of the window when only one shows; with it on the left, the log keeps to the right.
+      root.dataset.dockSide = layout.side;
       root.style.setProperty("--foss-log-left", `${layout.logLeft}px`);
       root.style.setProperty("--foss-log-top", `${layout.logTop}px`);
       root.style.setProperty("--foss-log-center", `${layout.logCenter}px`);
@@ -35,6 +37,7 @@ export function browserOverlayLayout(root: HTMLElement): WindowOverlayLayoutPort
     },
     clear() {
       delete root.dataset.dockLayout;
+      delete root.dataset.dockSide;
       for (const name of ["--foss-log-left", "--foss-log-top", "--foss-log-center", "--foss-log-width"]) root.style.removeProperty(name);
     },
   };

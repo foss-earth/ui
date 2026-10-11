@@ -86,6 +86,10 @@ export interface GameLogPorts {
   onSize(change: GameLogSizeChange): void;
   viewportHeight(): number;
   isCentered(): boolean;
+  /** False while the layout gives the log the screen's width, as on a phone: its grip changes only the height. */
+  resizesWidth?(): boolean;
+  /** True while the log keeps to the right of the screen, beside a window on the left: its grip moves its left edge. */
+  isRightAligned?(): boolean;
   timers: { set(work: () => void, ms: number): unknown; clear(timer: unknown | undefined): void };
 }
 export function createGameLog(settings: SettingsRegistry, ports: GameLogPorts): GameLog {
@@ -123,7 +127,8 @@ export function createGameLog(settings: SettingsRegistry, ports: GameLogPorts): 
   resize.setAttribute("role", "separator");
   resize.setAttribute("aria-label", "Resize log, click to minimize");
   resize.title = "Drag to resize, click to minimize";
-  resize.innerHTML = `<svg width="16" height="16" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><circle cx="8" cy="8" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="8" cy="5" r="1.2"/></svg>`;
+  // The dock grips' arrows (DockPanel); log.css shows the one for where the grip is.
+  resize.innerHTML = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="game-log__resize-corner" d="M10.75 2.75v8h-8M8.25 5.25l2.5-2.5 2.5 2.5M5.25 8.25l-2.5 2.5 2.5 2.5"/><path class="game-log__resize-corner-left" d="M5.25 2.75v8h8M2.75 5.25l2.5-2.5 2.5 2.5M10.75 8.25l2.5 2.5-2.5 2.5"/><path class="game-log__resize-height" d="M8 2.5v11M5.5 5 8 2.5 10.5 5M5.5 11 8 13.5 10.5 11"/></svg>`;
   element.append(peek, lines, resize);
 
   let busy = false;
@@ -134,7 +139,7 @@ export function createGameLog(settings: SettingsRegistry, ports: GameLogPorts): 
   let drag: {
     startX: number; startY: number; startW: number; startH: number;
     originLeft: number; originTop: number; pointerId: number; moved: boolean;
-    previous: LogSize | null; centered: boolean;
+    previous: LogSize | null; centered: boolean; rightAligned: boolean; widthFixed: boolean;
   } | null = null;
   const timers = new Map<Element, unknown>();
 
@@ -367,6 +372,8 @@ export function createGameLog(settings: SettingsRegistry, ports: GameLogPorts): 
       previous: sized,
       // Keep the width request continuous if this drag changes the layout mode.
       centered: ports.isCentered(),
+      rightAligned: ports.isRightAligned?.() === true,
+      widthFixed: ports.resizesWidth?.() === false,
     };
     resize.setPointerCapture?.(event.pointerId);
   });
@@ -377,10 +384,11 @@ export function createGameLog(settings: SettingsRegistry, ports: GameLogPorts): 
     }
     const next = fitLogResize({
       origin: { left: drag.originLeft, top: drag.originTop, width: drag.startW, height: drag.startH },
-      dx: event.clientX - drag.startX,
+      dx: drag.widthFixed ? 0 : event.clientX - drag.startX,
       dy: event.clientY - drag.startY,
       // Request dimensions only. The shell fits both docks and the log together.
       centered: drag.centered,
+      rightAligned: drag.rightAligned,
       minLeft: -Infinity,
       maxRight: Infinity,
       minWidth: MIN_WIDTH,
@@ -392,8 +400,9 @@ export function createGameLog(settings: SettingsRegistry, ports: GameLogPorts): 
       setMinimized(true);
       return;
     }
-    sized = { width: next.width, height: next.height };
-    applySize(true);
+    // A drag that may change only the height keeps the preferred width, and does not claim width from the windows.
+    sized = { width: drag.widthFixed ? drag.previous?.width ?? next.width : next.width, height: next.height };
+    applySize(!drag.widthFixed);
   });
   resize.addEventListener("pointerup", (event) => {
     if (destroyed || !drag || drag.pointerId !== event.pointerId) return;

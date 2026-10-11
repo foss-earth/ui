@@ -38,20 +38,22 @@ export function hideWorkspaceTabs<TabId extends string>(
 
 /**
  * Puts hidden tabs back where they were, when their context returns. A tab
- * opened again meanwhile keeps its new place. A tab from the left window goes
- * to the right while there is room for only one.
+ * opened again meanwhile keeps its new place. While there is room for only one
+ * window, `shownSlots`, a tab from the other goes to it. Hosts written before a left
+ * window could show alone pass `true` for both windows and `false` for the right.
  */
 export function restoreWorkspaceTabs<TabId extends string>(
   state: WindowWorkspaceState<TabId>,
   hidden: readonly HiddenTab<TabId>[],
-  primaryAvailable: boolean,
+  shownSlots: WindowSlotId | "both" | boolean,
 ): WindowWorkspaceState<TabId> {
+  const shown = shownSlots === true ? "both" : shownSlots === false ? "secondary" : shownSlots;
   const open = new Set(SLOT_IDS.flatMap(slotId => state[slotId].tabs));
   const back = hidden.filter(entry => !open.has(entry.tabId));
   if (back.length === 0) return state;
   const next = { primary: { ...state.primary, tabs: [...state.primary.tabs] }, secondary: { ...state.secondary, tabs: [...state.secondary.tabs] } };
   for (const entry of [...back].sort((a, b) => a.index - b.index)) {
-    const slotId = entry.slotId === "primary" && !primaryAvailable ? "secondary" : entry.slotId;
+    const slotId = shown === "both" ? entry.slotId : shown;
     const slot = next[slotId];
     slot.tabs.splice(Math.min(entry.index, slot.tabs.length), 0, entry.tabId);
     if (entry.active || slot.activeTab === null) slot.activeTab = entry.tabId;

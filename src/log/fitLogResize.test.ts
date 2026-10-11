@@ -28,4 +28,21 @@ describe("log resize", () => {
     expect(fitLogResize({ ...input, dx: -40 })).toEqual({ left: 12, top: 40, width: 160, height: 140 });
     expect(fitLogResize({ ...input, dx: -41 })).toBeNull();
   });
+
+  it("moves the left edge of a log against the right edge of the screen with the pointer", () => {
+    const input = {
+      origin: { ...origin, left: 1068 },
+      rightAligned: true,
+      dy: 0,
+      minLeft: -Infinity,
+      maxRight: Infinity,
+      minWidth: 160,
+      minHeight: 128,
+      maxHeight: 800,
+    };
+
+    expect(fitLogResize({ ...input, dx: -40 })).toEqual({ left: 1028, top: 40, width: 240, height: 140 });
+    expect(fitLogResize({ ...input, dx: 40 })).toEqual({ left: 1108, top: 40, width: 160, height: 140 });
+    expect(fitLogResize({ ...input, dx: 41 })).toBeNull();
+  });
 });

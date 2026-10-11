@@ -67,6 +67,19 @@ it("stacks phone tabs above the log, follows the panel height, and restores both
     expect(slot("right")!.style.maxHeight).toBe("50dvh");
     expect(document.documentElement.style.getPropertyValue("--foss-log-width")).toBe("366px");
     expect(logTop()).toBe("284px");
+    // The full-width window's grip changes only its height: a sideways drag past the minimum width neither narrows nor minimizes it.
+    const grip = slot("right")!.querySelector<HTMLElement>(".foss-earth-dock-panel-resize-handle")!;
+    expect(grip.dataset.axes).toBe("height");
+    grip.setPointerCapture = () => {}; grip.releasePointerCapture = () => {};
+    slot("right")!.getBoundingClientRect = () => ({ left: 12, top: 12, width: 366, height: 260, right: 378, bottom: 272, x: 12, y: 12, toJSON() {} });
+    const point = (type: string, clientX: number, clientY: number) => act(async () => { grip.dispatchEvent(new PointerEvent(type, { button: 0, clientX, clientY, pointerId: 1, bubbles: true })); });
+    await point("pointerdown", 195, 268); await point("pointermove", 445, 308); await point("pointerup", 445, 308);
+    expect(slot("right")!.dataset.collapsed).toBe("false");
+    expect(slot("right")!.style.width).toBe("366px");
+    expect(slot("right")!.style.height).toBe("300px");
+    // A touch the browser takes for itself is no click on the grip, which would minimize.
+    await point("pointerdown", 195, 308); await point("pointercancel", 195, 308);
+    expect(slot("right")!.dataset.collapsed).toBe("false");
     expandedHeight = 180;
     await act(async () => changeHeight!(expandedHeight));
     expect(logTop()).toBe("204px");
@@ -87,6 +100,7 @@ it("stacks phone tabs above the log, follows the panel height, and restores both
     expect(labels("right")).toEqual(["Right tab"]);
     expect(slot("left")!.style.width).toBe("340px");
     expect(slot("right")!.style.width).toBe("300px");
+    expect(slot("right")!.querySelector<HTMLElement>(".foss-earth-dock-panel-resize-handle")!.dataset.axes).toBe("both");
     await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Close Left tab tab"]')!.click());
     await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Close Right tab tab"]')!.click());
     await resize(390);
@@ -94,6 +108,80 @@ it("stacks phone tabs above the log, follows the panel height, and restores both
     expect(logTop()).toBe("54px");
   } finally { await act(async () => root.unmount()); }
   expect(document.documentElement.style.getPropertyValue("--foss-log-top")).toBe("");
+});
+
+it.each(["left", "right"] as const)("keeps the %s window widened out of two on its side, with the log beside it and then under it, in one drag", async (side) => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  stored.set(SAVED_WORKSPACE_STORAGE_KEY, JSON.stringify({
+    primary: { tabs: ["left-tab"], activeTab: "left-tab", collapsed: false, width: 320 },
+    secondary: { tabs: ["right-tab"], activeTab: "right-tab", collapsed: false, width: 320 },
+  }));
+  let heightElement: HTMLElement | null = null;
+  const geometry: WindowOverlayGeometry = {
+    observeWidth(_element, listener) { listener(1280); return () => {}; },
+    observeHeight(element, listener) { heightElement = element; listener(260); return () => { heightElement = null; }; },
+    menuBottom: () => null,
+  };
+  const host = document.createElement("div"); document.body.append(host); const root = createRoot(host);
+  const html = document.documentElement;
+  const other = side === "left" ? "right" : "left";
+  const slot = (name: "left" | "right") => host.querySelector<HTMLElement>(`[data-side="${name}"]`);
+  const labels = (name: "left" | "right") => Array.from(slot(name)?.querySelectorAll(".foss-earth-tab-button") ?? [], button => button.textContent);
+  const variable = (name: string) => html.style.getPropertyValue(name);
+  await act(async () => root.render(<SharedWindowOverlay<"left-tab" | "right-tab">
+    tabDefinitions={[{ id: "left-tab", label: "Left tab" }, { id: "right-tab", label: "Right tab" }]}
+    renderTabContent={tabId => <p>{tabId}</p>} geometry={geometry}
+    context={{ active: false, ready: true, baseOnlyTabs: new Set(), contextOnlyTabs: new Set(), entryTabId: "left-tab" }}
+    restorableTabs={new Set(["left-tab", "right-tab"])} storage={localStorage}
+    logSize={{ getWidth: () => null, subscribe: () => () => {} }} layoutPort={browserOverlayLayout(html)}
+  />));
+  try {
+    expect(html.dataset.dockLayout).toBe("dual");
+    const panel = slot(side)!;
+    const grip = panel.querySelector<HTMLElement>(".foss-earth-dock-panel-resize-handle")!;
+    grip.setPointerCapture = () => {}; grip.releasePointerCapture = () => {};
+    const left = side === "left" ? 12 : 1280 - 12 - 320;
+    panel.getBoundingClientRect = () => ({ left, top: 12, width: 320, height: 260, right: left + 320, bottom: 272, x: left, y: 12, toJSON() {} });
+    // The grip is on the window's inner corner; widening moves it toward the middle.
+    const startX = side === "left" ? left + 320 : left;
+    const widenTo = (width: number) => act(async () => { grip.dispatchEvent(new PointerEvent("pointermove", { button: 0, clientX: startX + (side === "left" ? 1 : -1) * (width - 320), clientY: 272, pointerId: 1, bubbles: true })); });
+    await act(async () => { grip.dispatchEvent(new PointerEvent("pointerdown", { button: 0, clientX: startX, clientY: 272, pointerId: 1, bubbles: true })); });
+
+    await widenTo(536);
+    expect(html.dataset.dockLayout).toBe("dual");
+    await widenTo(537);
+    expect(html.dataset.dockLayout).toBe("single");
+    expect(html.dataset.dockSide).toBe(side);
+    expect(slot(other)).toBeNull();
+    expect(slot(side)).toBe(panel);
+    expect(panel.querySelector(".foss-earth-dock-panel-resize-handle")).toBe(grip);
+    expect(labels(side)).toEqual(side === "left" ? ["Left tab", "Right tab"] : ["Right tab", "Left tab"]);
+    expect(panel.querySelector(".foss-earth-tab-shell-selected .foss-earth-tab-button")!.textContent).toBe(side === "left" ? "Left tab" : "Right tab");
+    expect(panel.style.width).toBe("537px");
+    expect(variable("--foss-log-left")).toBe(side === "left" ? `${1280 - 12 - 380}px` : "12px");
+
+    await widenTo(1085);
+    expect(html.dataset.dockLayout).toBe("stacked");
+    expect(panel.style.width).toBe("1085px");
+    expect(panel.style.maxHeight).toBe("50dvh");
+    expect(grip.dataset.axes).toBe("both");
+    expect(heightElement).toBe(panel);
+    expect(variable("--foss-log-top")).toBe("284px");
+    expect(variable("--foss-log-width")).toBe("1085px");
+    expect(variable("--foss-log-left")).toBe(side === "left" ? "12px" : `${1280 - 12 - 1085}px`);
+
+    // Narrowed in the same drag, the log comes back beside the window, then between the two.
+    await widenTo(700);
+    expect(html.dataset.dockLayout).toBe("single");
+    await widenTo(420);
+    await act(async () => { grip.dispatchEvent(new PointerEvent("pointerup", { button: 0, clientX: startX, clientY: 272, pointerId: 1, bubbles: true })); });
+    expect(html.dataset.dockLayout).toBe("dual");
+    expect(labels("left")).toEqual(["Left tab"]);
+    expect(labels("right")).toEqual(["Right tab"]);
+    expect(slot(side)!.style.width).toBe("420px");
+    expect(slot(other)!.style.width).toBe("320px");
+  } finally { await act(async () => root.unmount()); }
+  expect(html.dataset.dockSide).toBeUndefined();
 });
 
 it("owns responsive launchers, cross-side tab moves, minimize/restore, and injected host content", async () => {

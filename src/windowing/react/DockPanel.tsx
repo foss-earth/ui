@@ -13,6 +13,13 @@ interface ResizeDragState {
   moved: boolean;
 }
 
+/** The grip's arrows, centered in a 16 px box: a corner grip's run from its corner along the two edges it moves. */
+const RESIZE_ICON_PATHS = {
+  left: "M10.75 2.75v8h-8M8.25 5.25l2.5-2.5 2.5 2.5M5.25 8.25l-2.5 2.5 2.5 2.5",
+  right: "M5.25 2.75v8h8M2.75 5.25l2.5-2.5 2.5 2.5M10.75 8.25l2.5 2.5-2.5 2.5",
+  height: "M8 2.5v11M5.5 5 8 2.5 10.5 5M5.5 11 8 13.5 10.5 11",
+};
+
 export interface DockPanelClassNames {
   container?: string;
   expanded?: string;
@@ -50,6 +57,8 @@ export interface DockPanelProps {
   resizeClickThresholdPx?: number;
   resizeAriaLabel?: string;
   resizeTitle?: string;
+  /** "height" for a panel as wide as the screen: its grip sits mid-bottom and changes only the height. */
+  resizeAxes?: "both" | "height";
   onDragOver?: DragEventHandler<HTMLDivElement>;
   onDrop?: DragEventHandler<HTMLDivElement>;
 }
@@ -76,6 +85,7 @@ export function DockPanel(props: DockPanelProps) {
     resizeClickThresholdPx = 6,
     resizeAriaLabel = "Resize panel, click to minimize",
     resizeTitle = "Drag to resize, click to minimize",
+    resizeAxes = "both",
     onDragOver,
     onDrop,
   } = props;
@@ -136,23 +146,20 @@ export function DockPanel(props: DockPanelProps) {
       drag.moved = true;
     }
 
-    const maxW = Math.max(minWidth, maxWidth);
-    const maxH = Math.max(minHeight, window.innerHeight - maxHeightPaddingPx);
-    const deltaX = event.clientX - drag.startX;
-    const rawW = drag.startW + (isRightPanel ? -deltaX : deltaX);
-
-    if (rawW < minWidth) {
-      onCollapsedChange(true);
-      dragRef.current = null;
-      event.currentTarget.releasePointerCapture(event.pointerId);
-      return;
+    if (resizeAxes === "both") {
+      const deltaX = event.clientX - drag.startX;
+      const rawW = drag.startW + (isRightPanel ? -deltaX : deltaX);
+      if (rawW < minWidth) {
+        onCollapsedChange(true);
+        dragRef.current = null;
+        event.currentTarget.releasePointerCapture(event.pointerId);
+        return;
+      }
+      onWidthChange(Math.min(Math.max(minWidth, maxWidth), rawW));
     }
 
-    const nextW = Math.min(maxW, rawW);
-    const nextH = Math.max(minHeight, Math.min(maxH, drag.startH + (event.clientY - drag.startY)));
-
-    onWidthChange(nextW);
-    setPanelHeight(nextH);
+    const maxH = Math.max(minHeight, window.innerHeight - maxHeightPaddingPx);
+    setPanelHeight(Math.max(minHeight, Math.min(maxH, drag.startH + (event.clientY - drag.startY))));
   };
 
   const onHandlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -165,6 +172,11 @@ export function DockPanel(props: DockPanelProps) {
 
     dragRef.current = null;
     event.currentTarget.releasePointerCapture(event.pointerId);
+  };
+
+  // The browser took the pointer, as for a page gesture: the drag ends where it is, and it was no click.
+  const onHandlePointerCancel = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (dragRef.current?.pointerId === event.pointerId) dragRef.current = null;
   };
 
   const positionStyle: CSSProperties = {
@@ -201,60 +213,58 @@ export function DockPanel(props: DockPanelProps) {
       data-side={side}
       data-collapsed={collapsed ? "true" : "false"}
     >
-      {header ? (
-        <div
-          className={cx(
-            "foss-earth-dock-panel-header",
-            classNames?.header,
-            collapsed ? classNames?.headerCollapsed : classNames?.headerExpanded,
-          )}
-        >
-          {header}
-        </div>
-      ) : null}
+      {/* The contents clip to the rounded corners; the grip sits across the edge, outside this. */}
+      <div className="foss-earth-dock-panel-clip">
+        {header ? (
+          <div
+            className={cx(
+              "foss-earth-dock-panel-header",
+              classNames?.header,
+              collapsed ? classNames?.headerCollapsed : classNames?.headerExpanded,
+            )}
+          >
+            {header}
+          </div>
+        ) : null}
 
-      {collapsed ? null : (
-        <>
+        {collapsed ? null : (
           <div className={cx("foss-earth-dock-panel-body", classNames?.body)}>
             {children}
           </div>
-          <div
-            role="separator"
-            aria-label={resizeAriaLabel}
-            title={resizeTitle}
-            onPointerDown={onHandlePointerDown}
-            onPointerMove={onHandlePointerMove}
-            onPointerUp={onHandlePointerUp}
-            onPointerCancel={onHandlePointerUp}
-            className={cx(
-              "foss-earth-dock-panel-resize-handle",
-              classNames?.resizeHandle,
-              isRightPanel ? classNames?.resizeHandleForRightPanel : classNames?.resizeHandleForLeftPanel,
-            )}
+        )}
+      </div>
+
+      {collapsed ? null : (
+        <div
+          role="separator"
+          aria-label={resizeAriaLabel}
+          title={resizeTitle}
+          onPointerDown={onHandlePointerDown}
+          onPointerMove={onHandlePointerMove}
+          onPointerUp={onHandlePointerUp}
+          onPointerCancel={onHandlePointerCancel}
+          data-axes={resizeAxes}
+          className={cx(
+            "foss-earth-dock-panel-resize-handle",
+            classNames?.resizeHandle,
+            isRightPanel ? classNames?.resizeHandleForRightPanel : classNames?.resizeHandleForLeftPanel,
+          )}
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 16 16"
+            className={cx("foss-earth-dock-panel-resize-dots", classNames?.resizeDots)}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
           >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 10 10"
-              className={cx("foss-earth-dock-panel-resize-dots", classNames?.resizeDots)}
-              fill="currentColor"
-            >
-              {isRightPanel ? (
-                <>
-                  <circle cx="2" cy="8" r="1.2" />
-                  <circle cx="5" cy="8" r="1.2" />
-                  <circle cx="2" cy="5" r="1.2" />
-                </>
-              ) : (
-                <>
-                  <circle cx="8" cy="8" r="1.2" />
-                  <circle cx="5" cy="8" r="1.2" />
-                  <circle cx="8" cy="5" r="1.2" />
-                </>
-              )}
-            </svg>
-          </div>
-        </>
+            <path d={RESIZE_ICON_PATHS[resizeAxes === "height" ? "height" : side]} />
+          </svg>
+        </div>
       )}
     </div>
   );

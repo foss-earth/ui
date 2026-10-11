@@ -2,7 +2,7 @@ import { createBrowserClipboard } from "./clipboard.js";
 import type { GameLogPorts } from "../log/createGameLog.js";
 
 /** Explicit optional browser timer/clipboard/viewport adapter. Host keeps placement authority. */
-export function browserGameLogPorts(element: HTMLElement, view: Window, host: Pick<GameLogPorts, "onSize" | "isCentered">): GameLogPorts {
+export function browserGameLogPorts(element: HTMLElement, view: Window, host: Pick<GameLogPorts, "onSize" | "isCentered" | "resizesWidth" | "isRightAligned">): GameLogPorts {
   return {
     element,
     ...host,

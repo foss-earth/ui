@@ -23,14 +23,22 @@ describe("tabs a context hides", () => {
 
   it("come back where they were, and selected if they were, when the context returns", () => {
     const { state: hiddenState, hidden } = hideWorkspaceTabs(state, new Set<Tab>(["location", "map"]));
-    expect(restoreWorkspaceTabs(hiddenState, hidden, true)).toEqual(state);
+    expect(restoreWorkspaceTabs(hiddenState, hidden, "both")).toEqual(state);
   });
 
   it("keep a place the user gave them meanwhile, and go right while only one window fits", () => {
     const { state: hiddenState, hidden } = hideWorkspaceTabs(state, new Set<Tab>(["location", "map"]));
     const reopened = { ...hiddenState, secondary: { ...hiddenState.secondary, tabs: ["scenes", "map"] as Tab[] } };
-    const restored = restoreWorkspaceTabs(reopened, hidden, false);
+    const restored = restoreWorkspaceTabs(reopened, hidden, "secondary");
     expect(restored.primary.tabs).toEqual(["settings"]);
     expect(restored.secondary).toMatchObject({ tabs: ["location", "scenes", "map"], activeTab: "location" });
+  });
+
+  it("go left while only the left window shows", () => {
+    const { state: hiddenState, hidden } = hideWorkspaceTabs(state, new Set<Tab>(["location", "map"]));
+    const restored = restoreWorkspaceTabs(hiddenState, hidden, "primary");
+    expect(restored.primary.tabs).toEqual(expect.arrayContaining(["location", "map", "settings"]));
+    expect(restored.secondary.tabs).not.toContain("location");
+    expect(restored.secondary.tabs).not.toContain("map");
   });
 });

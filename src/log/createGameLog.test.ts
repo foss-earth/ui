@@ -321,6 +321,38 @@ describe("game log", () => {
     expect(log.element.style.transform).toBe("");
   });
 
+  it("changes only the height of a phone's full-width log, even dragged sideways past its minimum", () => {
+    log = createGameLog();
+    log.print({ text: "Terrain ready", tone: "success" });
+    document.documentElement.dataset.dockLayout = "stacked";
+    log.element.getBoundingClientRect = () => ({ left: 12, top: 84, width: 366, height: 140, right: 378, bottom: 224, x: 12, y: 84, toJSON() {} });
+    const grip = log.element.querySelector<HTMLElement>(".game-log__resize")!;
+    grip.dispatchEvent(new PointerEvent("pointerdown", { button: 0, clientX: 300, clientY: 220, pointerId: 1 }));
+    grip.dispatchEvent(new PointerEvent("pointermove", { button: 0, clientX: 50, clientY: 300, pointerId: 1 }));
+    grip.dispatchEvent(new PointerEvent("pointerup", { button: 0, clientX: 50, clientY: 300, pointerId: 1 }));
+    expect(log.isMinimized()).toBe(false);
+    expect(log.element.style.width).toBe("366px");
+    expect(log.element.style.height).toBe("220px");
+  });
+
+  it("widens leftward from its bottom-left grip while it keeps to the right, beside a window on the left", () => {
+    log = createGameLog();
+    log.print({ text: "Terrain ready", tone: "success" });
+    document.documentElement.dataset.dockLayout = "single";
+    document.documentElement.dataset.dockSide = "left";
+    try {
+      log.element.getBoundingClientRect = () => ({ left: 888, top: 12, width: 380, height: 140, right: 1268, bottom: 152, x: 888, y: 12, toJSON() {} });
+      const grip = log.element.querySelector<HTMLElement>(".game-log__resize")!;
+      grip.dispatchEvent(new PointerEvent("pointerdown", { button: 0, clientX: 888, clientY: 152, pointerId: 1 }));
+      grip.dispatchEvent(new PointerEvent("pointermove", { button: 0, clientX: 808, clientY: 172, pointerId: 1 }));
+      grip.dispatchEvent(new PointerEvent("pointerup", { button: 0, clientX: 808, clientY: 172, pointerId: 1 }));
+      expect(log.element.style.width).toBe("460px");
+      expect(log.element.style.height).toBe("160px");
+    } finally {
+      delete document.documentElement.dataset.dockSide;
+    }
+  });
+
   it("releases and restores its preferred width on minimize, reopen, and destroy", () => {
     const widths: Array<number | null> = [];
     const onSize = (event: Event) => widths.push((event as CustomEvent<GameLogSizeChange>).detail.width);
@@ -380,6 +412,8 @@ function createGameLog(settings = (() => { const current = createSettingsRegistr
     onSize: detail => window.dispatchEvent(new CustomEvent<GameLogSizeChange>(GAME_LOG_SIZE_EVENT, { detail })),
     viewportHeight: () => window.innerHeight,
     isCentered: () => document.documentElement.dataset.dockLayout !== "single",
+    resizesWidth: () => document.documentElement.dataset.dockLayout !== "stacked",
+    isRightAligned: () => document.documentElement.dataset.dockLayout === "single" && document.documentElement.dataset.dockSide === "left",
     timers: { set: (work, ms) => setTimeout(work, ms), clear: timer => { if (timer !== undefined) clearTimeout(timer as ReturnType<typeof setTimeout>); } },
   });
 }

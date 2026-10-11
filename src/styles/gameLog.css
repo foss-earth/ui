@@ -25,8 +25,7 @@
    */
   max-height: clamp(3.5rem, 25vh, 7rem);
   max-height: clamp(3.5rem, 25dvh, 7rem);
-  overflow-x: hidden;
-  overflow-y: auto;
+  /* Its lines scroll, so nothing clips here and the resize grip can sit across the corner. */
   /* createGameLog keeps a history reader's place itself. */
   overflow-anchor: none;
   overscroll-behavior: contain;
@@ -47,7 +46,18 @@ html[data-dock-layout="dual"] .game-log {
   transform: translateX(-50%);
 }
 
-/* Phones give both surfaces a full row; the shell measures the window above. */
+/* Beside a window on the left, the log keeps to the right edge, its lines too. */
+html[data-dock-layout="single"][data-dock-side="left"] .game-log {
+  left: auto;
+  right: calc(12px + env(safe-area-inset-right, 0px));
+  align-items: flex-end;
+}
+html[data-dock-layout="single"][data-dock-side="left"] .game-log__lines { align-items: flex-end; }
+
+/*
+ * Under a window, the log is as wide as it, as on a phone, where both have a
+ * full row; the shell measures the window above.
+ */
 html[data-dock-layout="stacked"] .game-log:not([data-minimized]) {
   min-width: var(--foss-log-width);
 }
@@ -101,18 +111,50 @@ html[data-dock-layout="stacked"] .game-log:is([data-open], [data-sized], [data-l
   font: inherit;
   cursor: pointer;
 }
-/* Same bottom-right grip as the left dock: drag resizes, a click minimizes. */
+/*
+ * Same grip as the left dock, a circle on the bottom-right corner: drag resizes, a click
+ * minimizes. White, as the log stays dark in either theme.
+ */
 .game-log__resize {
+  --game-log-grip-offset: -12px;
   position: absolute;
-  right: 4px;
-  bottom: 4px;
-  width: 20px;
-  height: 20px;
-  color: rgba(148, 163, 184, 0.7);
+  right: var(--game-log-grip-offset);
+  bottom: var(--game-log-grip-offset);
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  background: rgb(8, 15, 27);
+  color: #fff;
   cursor: nwse-resize;
   pointer-events: auto;
   touch-action: none;
 }
+.game-log__resize::before { position: absolute; inset: -6px; border-radius: 50%; content: ""; }
+/* Past a sized log's 1 px border, onto its outer corner. */
+.game-log[data-sized] .game-log__resize { --game-log-grip-offset: -13px; }
+/* Without its history or a size, the log is only its lines: the grip goes with the last one showing. */
+.game-log:not([data-open], [data-sized]):not(:has(.game-log__line:not([data-fading], [data-expired]))) .game-log__resize { display: none; }
+.game-log__resize-corner-left, .game-log__resize-height { display: none; }
+/* Against the right edge, the log's grip is on its free corner, the bottom-left. */
+html[data-dock-layout="single"][data-dock-side="left"] .game-log__resize {
+  right: auto;
+  left: var(--game-log-grip-offset);
+  cursor: nesw-resize;
+}
+html[data-dock-layout="single"][data-dock-side="left"] .game-log__resize-corner { display: none; }
+html[data-dock-layout="single"][data-dock-side="left"] .game-log__resize-corner-left { display: inline; }
+/* Under a window, the log is as wide as it and changes only its height, from the middle of its bottom edge. */
+html[data-dock-layout="stacked"] .game-log__resize {
+  right: auto;
+  left: calc(50% - 12px);
+  cursor: ns-resize;
+}
+html[data-dock-layout="stacked"] .game-log__resize-corner { display: none; }
+html[data-dock-layout="stacked"] .game-log__resize-height { display: inline; }
 .game-log__peek {
   display: inline-flex;
   align-items: center;

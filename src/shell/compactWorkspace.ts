@@ -1,19 +1,34 @@
 import { moveTabsBetweenWorkspaceSlots } from "../windowing/core/workspaceState.js";
-import type { WindowSlotState, WindowWorkspaceState } from "../windowing/core/types.js";
+import type { WindowSlotId, WindowSlotState, WindowWorkspaceState } from "../windowing/core/types.js";
 
 type SlotPresentation<TabId extends string> = Pick<WindowSlotState<TabId>, "activeTab" | "collapsed">;
 
+/**
+ * What folding changed. `primary` is the window whose tabs moved and `secondary`
+ * the one they joined, as for a fold into the right window; a fold into the left
+ * window (`into: "primary"`) records them the other way round.
+ */
 export interface CompactWorkspaceMemory<TabId extends string> {
+  into: WindowSlotId;
   primary: SlotPresentation<TabId> & { tabs: TabId[] };
   secondary: SlotPresentation<TabId>;
   foldedSecondary: SlotPresentation<TabId>;
 }
 
-/** Temporarily combine the tabs, retaining their homes for the next wide layout. */
-export function foldWorkspace<TabId extends string>(state: WindowWorkspaceState<TabId>): {
+/** The workspace with its windows swapped, so a fold into the left window works as one into the right. */
+function mirror<TabId extends string>(state: WindowWorkspaceState<TabId>): WindowWorkspaceState<TabId> {
+  return { primary: state.secondary, secondary: state.primary };
+}
+
+/** Temporarily combine the tabs in one window, the right unless `into` says, retaining their homes for the next wide layout. */
+export function foldWorkspace<TabId extends string>(state: WindowWorkspaceState<TabId>, into: WindowSlotId = "secondary"): {
   state: WindowWorkspaceState<TabId>;
   memory: CompactWorkspaceMemory<TabId>;
 } {
+  if (into === "primary") {
+    const folded = foldWorkspace(mirror(state));
+    return { state: mirror(folded.state), memory: { ...folded.memory, into } };
+  }
   const folded = moveTabsBetweenWorkspaceSlots(state, "primary", "secondary");
   const secondary = folded === state ? state.secondary : {
     ...folded.secondary,
@@ -25,6 +40,7 @@ export function foldWorkspace<TabId extends string>(state: WindowWorkspaceState<
   return {
     state: folded === state ? state : { ...folded, secondary },
     memory: {
+      into,
       primary: {
         tabs: [...state.primary.tabs],
         activeTab: state.primary.activeTab,
@@ -41,6 +57,7 @@ export function restoreWorkspace<TabId extends string>(
   state: WindowWorkspaceState<TabId>,
   memory: CompactWorkspaceMemory<TabId>,
 ): WindowWorkspaceState<TabId> {
+  if (memory.into === "primary") return mirror(restoreWorkspace(mirror(state), { ...memory, into: "secondary" }));
   const restoredTabs = memory.primary.tabs.filter((tabId) => (
     state.secondary.tabs.includes(tabId) && !state.primary.tabs.includes(tabId)
   ));

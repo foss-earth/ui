@@ -24,7 +24,6 @@
 .foss-earth-dock-panel {
   box-sizing: border-box;
   z-index: 10;
-  overflow: hidden;
   border: 1px solid rgba(148, 163, 184, 0.28);
   border-radius: 10px;
   background: rgba(8, 15, 27, 0.94);
@@ -32,6 +31,13 @@
   color: rgba(241, 245, 249, 0.94);
   box-shadow: 0 14px 36px rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(14px);
+}
+
+/* The panel's contents clip to its rounded corners; its resize grip sits outside this, across the edge. */
+.foss-earth-dock-panel-clip {
+  height: 100%;
+  overflow: hidden;
+  border-radius: inherit;
 }
 
 .foss-earth-dock-panel-header {
@@ -205,18 +211,44 @@
 }
 
 .foss-earth-dock-panel-resize-handle {
+  /* A circle centered on the panel's outer corner, past its 1 px border, in the opposite color to the panel. */
   position: absolute;
-  right: 4px;
-  bottom: 4px;
-  width: 20px;
-  height: 20px;
-  color: rgba(148, 163, 184, 0.7);
+  z-index: 1;
+  right: -13px;
+  bottom: -13px;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  background: rgb(8, 15, 27);
+  color: #fff;
   cursor: nwse-resize;
+  /* A touch on the grip resizes; without this, a phone's browser takes it as a page pan after a few px. */
+  touch-action: none;
+}
+
+/* A larger target for a finger than the circle shows. */
+.foss-earth-dock-panel-resize-handle::before {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  content: "";
 }
 
 .foss-earth-dock-panel[data-side="right"] .foss-earth-dock-panel-resize-handle {
   right: auto;
-  left: 4px;
+  left: -13px;
+  cursor: nesw-resize;
+}
+
+/* A panel as wide as the screen changes only its height, from the middle of its bottom edge. */
+.foss-earth-dock-panel .foss-earth-dock-panel-resize-handle[data-axes="height"] {
+  right: auto;
+  left: calc(50% - 12px);
+  cursor: ns-resize;
 }
 
 .foss-earth-dock-panel-drop-active::after {
@@ -283,6 +315,11 @@
 
 :root[data-theme="light"] .foss-earth-dock-panel-body {
   background: #fff;
+}
+
+:root[data-theme="light"] .foss-earth-dock-panel-resize-handle {
+  background: #fff;
+  color: #000;
 }
 
 :root[data-theme="light"] .foss-earth-tab-button,

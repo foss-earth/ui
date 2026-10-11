@@ -12,9 +12,11 @@ describe("shared window and log layout", () => {
     expect(narrow.logLeft).toBe(12);
     expect(wide).toEqual({
       mode: "dual",
+      side: "right",
+      windowWidthFixed: false,
       primaryWidth: 320,
       secondaryWidth: 320,
-      maxWindowWidth: 320,
+      maxWindowWidth: 824,
       logLeft: 344,
       logTop: 12,
       logWidth: 160,
@@ -41,9 +43,11 @@ describe("shared window and log layout", () => {
 
     expect(enlarged).toEqual({
       mode: "dual",
+      side: "right",
+      windowWidthFixed: false,
       primaryWidth: 296,
       secondaryWidth: 296,
-      maxWindowWidth: 420,
+      maxWindowWidth: 1256,
       logLeft: 320,
       logTop: 12,
       logWidth: 640,
@@ -136,9 +140,43 @@ describe("shared window and log layout", () => {
     expect(resolveDockLayout({ ...input, availableWidth: 768, stackHeight: 420 }).logTop).toBe(12);
   });
 
-  it("never overlaps the log and visible windows for either resize priority or previous arrangement", () => {
+  it.each(["left", "right"] as const)("moves the log beside a window widened out of two, then under it, keeping the %s window on its side", (side) => {
+    const widened = side === "left" ? "primaryWidth" : "secondaryWidth";
+    const at = (width: number, previousMode?: "dual" | "single" | "stacked") => resolveDockLayout({ ...preferences, availableWidth: 1280, [widened]: width, priority: "windows", previousMode, widened: side });
+    const windowLeft = (width: number) => side === "left" ? 12 : 1280 - 12 - width;
+
+    expect(at(536)).toMatchObject({ mode: "dual", [widened]: 536, logWidth: 160, logCenter: 640 });
+    const beside = at(537, "dual");
+    expect(beside).toMatchObject({ mode: "single", side, [widened]: 537, logTop: 12, logWidth: 380 });
+    expect(beside.logLeft).toBe(side === "left" ? 1280 - 12 - 380 : 12);
+    expect(at(1084, "single")).toMatchObject({ mode: "single", [widened]: 1084, logWidth: 160 });
+    const under = at(1085, "single");
+    expect(under).toMatchObject({ mode: "stacked", side, windowWidthFixed: false, [widened]: 1085, logTop: 54, logWidth: 1085 });
+    expect(under.logLeft).toBe(windowLeft(1085));
+    // A window fills the row at most, and narrowing it brings the log back beside it.
+    expect(at(2000, "stacked")).toMatchObject({ mode: "stacked", [widened]: 1256, logLeft: 12, logWidth: 1256, maxWindowWidth: 1256 });
+    expect(at(1084, "stacked").mode).toBe("single");
+    expect(at(536, "single").mode).toBe("dual");
+  });
+
+  it("keeps a widened window alone when the log is resized beside it, until both windows fit at their widths", () => {
+    const input = { ...preferences, primaryWidth: 620, logWidth: 440, priority: "log" as const, previousMode: "single" as const, widened: "left" as const };
+    expect(resolveDockLayout({ ...input, availableWidth: 1280 })).toMatchObject({ mode: "single", side: "left", primaryWidth: 620, logLeft: 1280 - 12 - 440, logWidth: 440 });
+    // Grown past the room beside it, the log narrows the window, which still stays alone.
+    expect(resolveDockLayout({ ...input, availableWidth: 1280, logWidth: 800 })).toMatchObject({ mode: "single", primaryWidth: 444, logWidth: 800 });
+    expect(resolveDockLayout({ ...input, availableWidth: 1727 }).mode).toBe("single");
+    expect(resolveDockLayout({ ...input, availableWidth: 1728 })).toMatchObject({ mode: "dual", primaryWidth: 620, secondaryWidth: 320, logWidth: 440 });
+  });
+
+  it("keeps a phone's full-width window on the side that stayed", () => {
+    expect(resolveDockLayout({ ...preferences, availableWidth: 390, widened: "left" })).toMatchObject({
+      mode: "stacked", side: "left", windowWidthFixed: true, primaryWidth: 366, secondaryWidth: 320, logLeft: 12, logWidth: 366,
+    });
+  });
+
+  it("never overlaps the log and visible windows for either resize priority, previous arrangement or kept side", () => {
     const widths = [280, 320, 390, 430, 515, 516, 528, 640, 700, 847, 848, 849, 1047, 1048, 1049, 1280, 1600, 1601, 1920];
-    const dockWidths = [[160, 160], [160, 420], [320, 320], [420, 320], [320, 420], [420, 420]];
+    const dockWidths = [[160, 160], [160, 420], [320, 320], [420, 320], [320, 420], [420, 420], [900, 320], [320, 1300]];
     const logWidths = [null, 160, 380, 912, 913, 2000];
 
     for (const availableWidth of widths) {
@@ -146,37 +184,55 @@ describe("shared window and log layout", () => {
         for (const logWidth of logWidths) {
           for (const priority of ["log", "windows"] as const) {
             for (const previousMode of [undefined, "stacked", "single", "dual"] as const) {
-              const input: DockLayoutInput = { availableWidth, primaryWidth, secondaryWidth, logWidth, priority, previousMode };
-              const layout = resolveDockLayout(input);
-              const context = JSON.stringify(input);
-              const logRight = layout.logLeft + layout.logWidth;
-              const rightDockLeft = availableWidth - 12 - layout.secondaryWidth;
+              for (const side of ["left", "right"] as const) {
+                const input: DockLayoutInput = { availableWidth, primaryWidth, secondaryWidth, logWidth, priority, previousMode, widened: side };
+                const layout = resolveDockLayout(input);
+                const context = JSON.stringify(input);
+                const logRight = layout.logLeft + layout.logWidth;
+                const kept = side === "left" ? layout.primaryWidth : layout.secondaryWidth;
+                const keptLeft = side === "left" ? 12 : availableWidth - 12 - kept;
 
-              expect(layout.logWidth, context).toBeGreaterThan(0);
-              expect(layout.logLeft, context).toBeGreaterThanOrEqual(12);
-              if (layout.mode === "stacked") {
-                expect(layout.logWidth, context).toBe(availableWidth - 24);
-                expect(layout.secondaryWidth, context).toBe(availableWidth - 24);
-                expect(layout.maxWindowWidth, context).toBe(availableWidth - 24);
-                expect(layout.logTop, context).toBe(54);
-                expect(logRight + 12, context).toBe(availableWidth);
-              } else {
-                expect(logRight + 12, context).toBeLessThanOrEqual(rightDockLeft + 1e-9);
-                expect(layout.secondaryWidth, context).toBeLessThanOrEqual(secondaryWidth);
-                expect(layout.logTop, context).toBe(12);
+                expect(layout.side, context).toBe(side);
+                expect(layout.logWidth, context).toBeGreaterThan(0);
+                expect(layout.logLeft, context).toBeGreaterThanOrEqual(12);
+                expect(logRight + 12, context).toBeLessThanOrEqual(availableWidth + 1e-9);
+                expect(layout.maxWindowWidth, context).toBe(Math.max(160, availableWidth - 24));
+                if (layout.mode === "stacked") {
+                  // Under the window that stayed, as wide as it; a phone's fills the row.
+                  expect(layout.logLeft, context).toBe(keptLeft);
+                  expect(layout.logWidth, context).toBe(kept);
+                  expect(layout.logTop, context).toBe(54);
+                  expect(layout.windowWidthFixed, context).toBe(availableWidth < 516);
+                  if (availableWidth < 516) expect(kept, context).toBe(availableWidth - 24);
+                  else expect(availableWidth - 36 - kept, context).toBeLessThan(160);
+                } else {
+                  expect(layout.logTop, context).toBe(12);
+                  expect(layout.windowWidthFixed, context).toBe(false);
+                  expect(layout.primaryWidth, context).toBeLessThanOrEqual(primaryWidth);
+                  expect(layout.secondaryWidth, context).toBeLessThanOrEqual(secondaryWidth);
+                }
+                if (layout.mode === "dual") {
+                  expect(layout.logLeft, context).toBeGreaterThanOrEqual(12 + layout.primaryWidth + 12 - 1e-9);
+                  expect(logRight + 12, context).toBeLessThanOrEqual(availableWidth - 12 - layout.secondaryWidth + 1e-9);
+                  expect(layout.logCenter, context).toBe(availableWidth / 2);
+                  expect(layout.primaryWidth, context).toBeGreaterThanOrEqual(160);
+                  expect(layout.secondaryWidth, context).toBeGreaterThanOrEqual(160);
+                  if (priority === "log" && logWidth !== null) expect(layout.logWidth, context).toBe(logWidth);
+                }
+                if (layout.mode === "single") {
+                  // Beside the window that stayed, against the other edge.
+                  expect(layout.logWidth, context).toBeGreaterThanOrEqual(160);
+                  if (side === "left") {
+                    expect(logRight + 12, context).toBe(availableWidth);
+                    expect(layout.logLeft, context).toBeGreaterThanOrEqual(12 + kept + 12 - 1e-9);
+                  } else {
+                    expect(layout.logLeft, context).toBe(12);
+                    expect(logRight + 12, context).toBeLessThanOrEqual(keptLeft + 1e-9);
+                  }
+                }
+                const repeated = resolveDockLayout({ ...input, previousMode: layout.mode });
+                expect(repeated, context).toEqual(layout);
               }
-              if (layout.mode === "dual") {
-                expect(layout.logLeft, context).toBeGreaterThanOrEqual(12 + layout.primaryWidth + 12 - 1e-9);
-                expect(layout.logCenter, context).toBe(availableWidth / 2);
-                expect(layout.primaryWidth, context).toBeGreaterThanOrEqual(160);
-                expect(layout.secondaryWidth, context).toBeGreaterThanOrEqual(160);
-                expect(layout.primaryWidth, context).toBeLessThanOrEqual(primaryWidth);
-                if (priority === "log" && logWidth !== null) expect(layout.logWidth, context).toBe(logWidth);
-              } else {
-                expect(layout.logLeft, context).toBe(12);
-              }
-              const repeated = resolveDockLayout({ ...input, previousMode: layout.mode });
-              expect(repeated, context).toEqual(layout);
             }
           }
         }

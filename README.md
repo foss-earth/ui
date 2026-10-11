@@ -142,8 +142,9 @@ supplies the `--foss-hud-*` positioning variables; `--globe-accent` is optional.
   drag, keyboard, marks and label placement. The host supplies the readouts and
   callbacks, for example Sky's astronomy and clock.
 - `createGameLog(settings, ports)` adopts an existing host surface and needs
-  `copy`, `onSize`, `viewportHeight`, `isCentered` and `timers.set/clear` ports.
-  It handles progress, busy actions, history, copy confirmation, line lifetime,
+  `copy`, `onSize`, `viewportHeight`, `isCentered` and `timers.set/clear` ports;
+  an optional `resizesWidth` returns false while its grip may change only the
+  height, as in the phone layout. It handles progress, busy actions, history, copy confirmation, line lifetime,
   minimize and resize. It never allocates a dock or mounts itself; the host
   destroys it. `browserGameLogPorts` and `createBrowserClipboard` adapt browser
   objects.
@@ -202,12 +203,17 @@ the overlay does not use passes through. Structural overlay port types are
 exported from the windowing entry, so browser declarations do not need React.
 
 Below 516 CSS pixels, the phone layout puts a full-width tab window above the
-full-width log. The window uses at most half the viewport height, and
+full-width log. Their grips sit mid-bottom and change only the height. The
+window uses at most half the viewport height, and
 `geometry.observeHeight` keeps the log below its current height when resized,
 minimized or restored; the browser geometry adapter supplies this observer.
 Custom geometry ports can omit it to use the window element's browser observer.
 Wider screens retain the log beside one window, or centered between two windows
-when they fit. Tabs return to their saved windows when the viewport widens.
+when they fit. Windows keep the widths they are given: widening one of two past
+the room for both keeps it on its side with the other's tabs and the log beside
+it, against the other edge, and widening it further puts the log under it, as
+wide as it. A resized log does not shrink that window to bring the other back.
+Tabs return to their saved windows when there is room for both again.
 
 ## Development
 
