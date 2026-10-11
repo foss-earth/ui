@@ -39,7 +39,11 @@
     "./dial.css": "./dist/styles/dial.css",
     "./log.css": "./dist/styles/gameLog.css",
     "./status.css": "./dist/styles/status.css",
-    "./mesh-inspector.css": "./dist/styles/meshInspector.css"
+    "./mesh-inspector.css": "./dist/styles/meshInspector.css",
+    "./vite": {
+      "types": "./vite/index.d.mts",
+      "import": "./vite/index.mjs"
+    }
   },
   "files": [
     "dist",
@@ -57,7 +61,9 @@
     ".attribution.json",
     ".attribution-release.json",
     ".github/workflows/attribution-check.yml",
-    "deps/foss-earth-ci-1db73d1ddb342e348a2c9e8387f7bbc7ebb3225e.tgz"
+    "deps/foss-earth-ci-1db73d1ddb342e348a2c9e8387f7bbc7ebb3225e.tgz",
+    "vite",
+    "docs"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/copy-assets.mjs",

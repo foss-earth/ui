@@ -1,4 +1,6 @@
 export * from "./settings.js";
+export * from "./keptFiles.js";
+export * from "./publishedVersionWatch.js";
 export * from "./workspace.js";
 export * from "../shell/settings/controls.js";
 export * from "../shell/settings/parameterSection.js";

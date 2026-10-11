@@ -1,0 +1,17 @@
+import assert from "node:assert/strict";
+import * as core from "@foss-earth/ui";
+import * as browser from "@foss-earth/ui/browser";
+import * as build from "@foss-earth/ui/vite";
+assert.equal(typeof globalThis.document, "undefined");
+assert.equal(typeof globalThis.window, "undefined");
+assert.equal("createBrowserGlobeBindings" in core, false);
+for (const name of ["createKeptFilesClient", "createPublishedVersionWatcher", "askPublishedVersion"]) assert.equal(typeof browser[name], "function", name);
+assert.equal(typeof build.appFiles, "function");
+const pin = { url: "scene.json", sha256: "a".repeat(64), sizeBytes: 12 };
+const output = build.appFilesWorker(["assets/page-12345678.js", "index.html"], { identity: "consumer-fixture", base: "/", scope: "/", extraFiles: [pin] });
+assert.equal(output.manifest.retention, "retain-older");
+assert.equal(output.manifest.workerFile, "foss-earth-sw.js");
+assert.equal(output.receipt.state, "PRODUCED_NOT_QUALIFIED");
+assert.match(output.receipt.workerSha256, /^[a-f0-9]{64}$/);
+assert.equal(output.manifest.files.some(file => file.url === "/scene.json"), true);
+console.log("UI browser/report/build imports and injected finite worker production need no globe/viewer/device/DOM session.");
