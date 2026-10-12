@@ -7,6 +7,8 @@ export interface OverlayContextPolicy<TabId extends string> {
   baseOnlyTabs: ReadonlySet<TabId>;
   contextOnlyTabs: ReadonlySet<TabId>;
   entryTabId: TabId;
+  /** Fit the entry tab to this body height while retaining the window's ordinary height. */
+  measureEntry?(body: HTMLElement): number | null;
 }
 export interface WindowOverlayHandle<TabId extends string> {
   openOrSelectTab(tabId: TabId): void;

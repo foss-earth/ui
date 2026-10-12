@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type DragEventHandler, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type DragEventHandler, type ReactNode } from "react";
 
 function cx(...parts: Array<string | null | undefined | false>): string {
   return parts.filter(Boolean).join(" ");
@@ -11,6 +11,13 @@ interface ResizeDragState {
   startH: number;
   pointerId: number;
   moved: boolean;
+  fitKey: string | number | null;
+}
+
+interface ContentFitState {
+  key: string | number;
+  measuredHeight: number | null;
+  manualHeight: number | null;
 }
 
 /** The grip's arrows, centered in a 16 px box: a corner grip's run from its corner along the two edges it moves. */
@@ -53,6 +60,8 @@ export interface DockPanelProps {
   minWidth?: number;
   minHeight?: number;
   initialHeight?: number;
+  /** A temporary height for one content visit; its measurer returns the desired body height. */
+  contentFit?: { key: string | number; measure(body: HTMLElement): number | null };
   maxHeightPaddingPx?: number;
   resizeClickThresholdPx?: number;
   resizeAriaLabel?: string;
@@ -81,6 +90,7 @@ export function DockPanel(props: DockPanelProps) {
     minWidth = 160,
     minHeight = 128,
     initialHeight = 512,
+    contentFit,
     maxHeightPaddingPx = 80,
     resizeClickThresholdPx = 6,
     resizeAriaLabel = "Resize panel, click to minimize",
@@ -95,9 +105,45 @@ export function DockPanel(props: DockPanelProps) {
   const resolvedMaxHeight = expandedMaxHeightCss ?? "calc(100vh - 1.5rem)";
 
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const headerRef = useRef<HTMLDivElement | null>(null);
+  const bodyRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<ResizeDragState | null>(null);
   const [panelHeight, setPanelHeight] = useState(initialHeight);
+  const [fitState, setFitState] = useState<ContentFitState | null>(null);
   const [dragActive, setDragActive] = useState(false);
+
+  const fitKey = contentFit?.key;
+  const measureFit = contentFit?.measure;
+  useLayoutEffect(() => {
+    const panel = containerRef.current, body = bodyRef.current;
+    if (collapsed || fitKey === undefined || !measureFit || !panel || !body) return;
+    const view = panel.ownerDocument.defaultView;
+    if (!view) return;
+    const measure = (): void => {
+      const bodyHeight = measureFit(body);
+      if (bodyHeight === null || !Number.isFinite(bodyHeight) || bodyHeight <= 0) return;
+      const style = view.getComputedStyle(panel);
+      const borders = (Number.parseFloat(style.borderTopWidth) || 0) + (Number.parseFloat(style.borderBottomWidth) || 0);
+      const measuredHeight = Math.ceil(bodyHeight + (headerRef.current?.getBoundingClientRect().height ?? 0) + borders);
+      setFitState(current => {
+        if (current?.key === fitKey && (current.manualHeight !== null || current.measuredHeight === measuredHeight)) return current;
+        return { key: fitKey, measuredHeight, manualHeight: null };
+      });
+    };
+    // Children keep their natural height inside the scrolling body, even when the panel is capped.
+    const resize = typeof view.ResizeObserver === "function" ? new view.ResizeObserver(measure) : null;
+    const observeContent = (): void => {
+      resize?.disconnect();
+      for (const child of body.children) resize?.observe(child);
+      if (headerRef.current) resize?.observe(headerRef.current);
+    };
+    const mutations = new view.MutationObserver(() => { observeContent(); measure(); });
+    mutations.observe(body, { childList: true, subtree: true, characterData: true, attributes: true });
+    observeContent();
+    measure();
+    view.addEventListener("resize", measure);
+    return () => { resize?.disconnect(); mutations.disconnect(); view.removeEventListener("resize", measure); };
+  }, [collapsed, fitKey, measureFit, width]);
 
   useEffect(() => {
     const handleDragStart = (event: Event) => {
@@ -130,6 +176,7 @@ export function DockPanel(props: DockPanelProps) {
       startH: rect.height,
       pointerId: event.pointerId,
       moved: false,
+      fitKey: contentFit?.key ?? null,
     };
 
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -159,7 +206,15 @@ export function DockPanel(props: DockPanelProps) {
     }
 
     const maxH = Math.max(minHeight, window.innerHeight - maxHeightPaddingPx);
-    setPanelHeight(Math.max(minHeight, Math.min(maxH, drag.startH + (event.clientY - drag.startY))));
+    const resizedHeight = Math.max(minHeight, Math.min(maxH, drag.startH + (event.clientY - drag.startY)));
+    const resizeFitKey = drag.fitKey;
+    if (resizeFitKey !== null) {
+      if (drag.moved) setFitState(current => ({
+        key: resizeFitKey,
+        measuredHeight: current?.key === resizeFitKey ? current.measuredHeight : null,
+        manualHeight: resizedHeight,
+      }));
+    } else setPanelHeight(resizedHeight);
   };
 
   const onHandlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -189,7 +244,7 @@ export function DockPanel(props: DockPanelProps) {
     ? { maxWidth: width }
     : {
         width,
-        height: panelHeight,
+        height: contentFit && fitState?.key === contentFit.key ? fitState.manualHeight ?? fitState.measuredHeight ?? panelHeight : panelHeight,
         maxWidth,
         maxHeight: resolvedMaxHeight,
       };
@@ -217,6 +272,7 @@ export function DockPanel(props: DockPanelProps) {
       <div className="foss-earth-dock-panel-clip">
         {header ? (
           <div
+            ref={headerRef}
             className={cx(
               "foss-earth-dock-panel-header",
               classNames?.header,
@@ -228,7 +284,7 @@ export function DockPanel(props: DockPanelProps) {
         ) : null}
 
         {collapsed ? null : (
-          <div className={cx("foss-earth-dock-panel-body", classNames?.body)}>
+          <div ref={bodyRef} className={cx("foss-earth-dock-panel-body", classNames?.body)}>
             {children}
           </div>
         )}

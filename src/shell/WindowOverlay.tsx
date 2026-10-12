@@ -180,11 +180,13 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
   // it was when its context returns.
   const contextMemory = useRef<OverlayContextMemory<TabId>>({ base: [], context: [], opened: null, arriving: false });
   const contextShown = useRef(false);
+  const contextVisit = useRef(0);
   useLayoutEffect(() => {
     if (contextShown.current === inContext) return;
     contextShown.current = inContext;
     const memory = contextMemory.current;
     if (inContext) {
+      contextVisit.current += 1;
       const hidden = hideWorkspaceTabs(workspace.state, context.baseOnlyTabs);
       memory.base = hidden.hidden;
       const restored = restoreWorkspaceTabs(hidden.state, memory.context, shown);
@@ -269,6 +271,12 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
   const stackedPanel = layout.mode === "stacked"
     ? { expandedMaxHeightCss: "50dvh", resizeAxes: layout.windowWidthFixed ? "height" as const : "both" as const }
     : undefined;
+  const panelProps = (slotId: WindowSlotId) => ({
+    ...(layout.side === (slotId === "primary" ? "left" : "right") ? stackedPanel : undefined),
+    ...(inContext && context.ready && context.measureEntry && workspace.state[slotId].activeTab === context.entryTabId
+      ? { contentFit: { key: contextVisit.current, measure: context.measureEntry } }
+      : {}),
+  });
 
   return (
     <div ref={setOverlay} className="foss-earth-window-overlay">
@@ -285,7 +293,7 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
         restoreOnTabSelect
         width={layout.primaryWidth}
         maxWidth={layout.maxWindowWidth}
-        dockPanelProps={layout.side === "left" ? stackedPanel : undefined}
+        dockPanelProps={panelProps("primary")}
         addMenuOpen={primaryAddOpen}
         onAddMenuOpenChange={(open) => { setPrimaryAddOpen(open); if (open) setSecondaryAddOpen(false); }}
         strings={{ openPanelTabAriaLabel: "Open left panel", openPanelTabTitle: "Open left panel" }}
@@ -305,7 +313,7 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
         restoreOnTabSelect
         width={layout.secondaryWidth}
         maxWidth={layout.maxWindowWidth}
-        dockPanelProps={layout.side === "right" ? stackedPanel : undefined}
+        dockPanelProps={panelProps("secondary")}
         addMenuOpen={secondaryAddOpen}
         onAddMenuOpenChange={(open) => { setSecondaryAddOpen(open); if (open) setPrimaryAddOpen(false); }}
         visible={shown !== "primary"}

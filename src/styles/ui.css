@@ -15,8 +15,8 @@
 /* Settings and Controls tabs: one collapsible section per group. */
 .foss-earth-panel-sections {
   display: grid;
-  gap: 8px;
-  padding: 12px;
+  gap: 4px;
+  padding: 6px;
 }
 
 .foss-earth-panel-section {
@@ -28,8 +28,8 @@
 .foss-earth-panel-section__title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
+  gap: 4px;
+  padding: 5px 6px;
   list-style: none;
   font-size: 13px;
   font-weight: 700;
@@ -58,7 +58,7 @@
 }
 
 .foss-earth-panel-section__body {
-  padding: 0 12px 12px;
+  padding: 0 6px 6px;
 }
 
 :root[data-theme="light"] .foss-earth-panel-section {
@@ -75,7 +75,7 @@
 /* ─── Choice tabs: Map and Renderer ─────────────────────────────── */
 /* Headings and notes take a whole line; the pills flow as a paragraph grid. */
 .foss-earth-element-tab {
-  padding: 12px;
+  padding: 6px;
 }
 
 .foss-earth-choice-panel {
@@ -87,7 +87,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 3px;
 }
 
 .foss-earth-choices[hidden] {
@@ -120,7 +120,7 @@
   gap: 6px;
   box-sizing: border-box;
   min-height: 28px;
-  padding: 4px 11px;
+  padding: 2px 5.5px;
   border: 1px solid rgba(148, 163, 184, 0.32);
   border-radius: 999px;
   font-size: 12px;
@@ -152,8 +152,8 @@
   display: inline-flex;
   align-items: center;
   align-self: stretch;
-  margin: -4px -11px -4px -2px;
-  padding: 0 9px 0 7px;
+  margin: -2px -5.5px -2px -1px;
+  padding: 0 4.5px 0 3.5px;
   border-radius: 0 999px 999px 0;
   color: rgba(147, 197, 253, 0.92);
   font-weight: 400;
@@ -398,7 +398,7 @@
 
 .foss-earth-parameter-section {
   display: grid;
-  gap: 12px;
+  gap: 6px;
 }
 
 .foss-earth-parameter-section__main[hidden],
@@ -457,7 +457,7 @@
 .foss-earth-parameter--inline > .foss-earth-parameter__header > .foss-earth-choice:not(.foss-earth-parameter__icon-action) {
   justify-content: center;
   min-width: 28px;
-  padding: 4px 5px;
+  padding: 2px 2.5px;
 }
 
 .foss-earth-parameter--group > .foss-earth-parameter__header {
@@ -505,7 +505,7 @@
   position: relative;
   justify-content: center;
   min-width: 28px;
-  padding: 4px 5px;
+  padding: 2px 2.5px;
 }
 
 .foss-earth-choice__icon {
@@ -605,7 +605,7 @@
   box-sizing: border-box;
   width: 26px;
   height: 26px;
-  padding: 4px;
+  padding: 2px;
   text-decoration: none;
 }
 
