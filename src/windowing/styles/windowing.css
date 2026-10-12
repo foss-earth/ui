@@ -374,14 +374,15 @@ html[data-world-presentation="split"] .foss-earth-workspace-slot-launcher {
   display: none;
 }
 
+/* Overlay. Split places these on the screen edge, below the toolbar when it is on top. */
 .foss-earth-workspace-slot-launcher-left {
-  top: 12px;
-  left: 12px;
+  top: 6px;
+  left: 6px;
 }
 
 .foss-earth-workspace-slot-launcher-right {
-  top: 12px;
-  right: 12px;
+  top: 6px;
+  right: 6px;
 }
 
 :root[data-theme="dark"] .foss-earth-dock-panel,

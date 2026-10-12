@@ -96,7 +96,7 @@ export function DockPanel(props: DockPanelProps) {
     children,
     classNames,
     topOffsetPx,
-    edgeOffsetPx = 12,
+    edgeOffsetPx = 6,
     expandedMaxHeightCss,
     minWidth = 160,
     minHeight = 128,
@@ -116,7 +116,8 @@ export function DockPanel(props: DockPanelProps) {
   const hold = usePresentationHold(onHoldPresentation);
 
   const isRightPanel = side === "right";
-  const resolvedTop = topOffsetPx ?? 12;
+  // Overlay sits 6px from the screen corner. Split passes its own offsets.
+  const resolvedTop = topOffsetPx ?? 6;
   const resolvedMaxHeight = expandedMaxHeightCss ?? `calc(100dvh - ${maxHeightPaddingPx}px)`;
   const topPx = typeof resolvedTop === "number" ? resolvedTop : 0;
   const containerRef = useRef<HTMLDivElement | null>(null);

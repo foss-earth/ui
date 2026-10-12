@@ -1,4 +1,6 @@
 const GAP = 12;
+/** An overlay window's distance from the screen corner, and the HUD bar's side inset. */
+const OVERLAY_EDGE = 6;
 const MIN_DOCK_WIDTH = 160;
 const MIN_LOG_WIDTH = 160;
 // A phone needs one readable window, rather than two compressed columns.
@@ -107,7 +109,7 @@ export function resolveDockLayout(input: DockLayoutInput): DockLayout {
   const side = input.widened ?? "right";
   if (width < STACKED_BREAKPOINT) {
     const presentation = chosenPresentation(input.presentation, "split");
-    const full = presentation === "split" ? width : Math.max(0, width - GAP * 2);
+    const full = presentation === "split" ? width : Math.max(0, width - OVERLAY_EDGE * 2);
     const primary = clampWidth(input.primaryWidth, Math.max(full, MIN_DOCK_WIDTH));
     const secondary = clampWidth(input.secondaryWidth, Math.max(full, MIN_DOCK_WIDTH));
     return {

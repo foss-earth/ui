@@ -20,6 +20,7 @@ afterEach(() => {
   Reflect.deleteProperty(document, "execCommand");
   document.body.replaceChildren();
   delete document.documentElement.dataset.dockLayout;
+  delete document.documentElement.dataset.logVisible;
 });
 
 describe("game log", () => {
@@ -177,6 +178,47 @@ describe("game log", () => {
     expect(showing()[0]).toContain("(copied 2 clipboard)");
     vi.advanceTimersByTime(GAME_LOG_LINE_MS / 2 + GAME_LOG_FADE_MS);
     expect(showing()).toHaveLength(0);
+  });
+
+  it("keeps faded lines in the log tab, and shows them again when the tab opens after they faded", async () => {
+    vi.useFakeTimers();
+    document.documentElement.dataset.logVisible = "false";
+    log = createGameLog();
+    log.print({ text: "Older" });
+    log.print({ text: "Newer" });
+    vi.advanceTimersByTime(GAME_LOG_LINE_MS + GAME_LOG_FADE_MS);
+    expect(log.isOpen()).toBe(true);
+    expect(log.isMinimized()).toBe(false);
+    expect(rows().map(row => row.textContent)).toEqual(["›Newer", "›Older"]);
+    expect(log.element.hasAttribute("data-minimized")).toBe(false);
+
+    log.print({ text: "While the tab is open" });
+    vi.advanceTimersByTime(GAME_LOG_LINE_MS + GAME_LOG_FADE_MS);
+    expect(log.isMinimized()).toBe(false);
+    expect(rows().map(row => row.textContent)).toEqual(["›While the tab is open", "›Newer", "›Older"]);
+
+    document.documentElement.dataset.logVisible = "true";
+    await Promise.resolve();
+    expect(log.isOpen()).toBe(false);
+    expect(log.isMinimized()).toBe(true);
+  });
+
+  it("opens the history when a faded log becomes the tab", async () => {
+    vi.useFakeTimers();
+    log = createGameLog();
+    log.print({ text: "Already faded" });
+    vi.advanceTimersByTime(GAME_LOG_LINE_MS + GAME_LOG_FADE_MS);
+    expect(log.isMinimized()).toBe(true);
+    expect(showing()).toHaveLength(0);
+
+    document.documentElement.dataset.logVisible = "false";
+    await Promise.resolve();
+    expect(log.isOpen()).toBe(true);
+    expect(log.isMinimized()).toBe(false);
+    expect(rows()[0].textContent).toContain("Already faded");
+    vi.advanceTimersByTime(GAME_LOG_LINE_MS + GAME_LOG_FADE_MS);
+    expect(log.isMinimized()).toBe(false);
+    expect(rows()[0].textContent).toContain("Already faded");
   });
 
   it("shows a new message alone instead of bringing the history back", () => {

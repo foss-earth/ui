@@ -476,14 +476,41 @@ export function createGameLog(settings: SettingsRegistry, ports: GameLogPorts): 
     };
   };
 
+  const setOpen = (next: boolean): void => {
+    if (destroyed) return;
+    open = next;
+    element.toggleAttribute("data-open", open);
+    if (open) {
+      setMinimized(false);
+      lines.scrollTop = 0;
+    } else {
+      maybeMinimize();
+    }
+    syncScrollable();
+  };
   peek.addEventListener("click", () => {
     if (destroyed) return;
-    setMinimized(false);
-    open = true;
-    element.setAttribute("data-open", "");
-    lines.scrollTop = 0;
-    syncScrollable();
+    setOpen(true);
   });
+
+  // A log in a tab is the history: lines that have faded over the world stay
+  // listed. The floating log is the only place a finished line disappears.
+  const layoutRoot = element.ownerDocument.documentElement;
+  let openedByLayout = false;
+  const syncLayout = (): void => {
+    if (destroyed) return;
+    const hosted = layoutRoot.dataset.logVisible === "false";
+    if (hosted) {
+      openedByLayout = true;
+      if (!open) setOpen(true);
+    } else if (openedByLayout) {
+      openedByLayout = false;
+      setOpen(false);
+    }
+  };
+  const layoutObserver = new MutationObserver(syncLayout);
+  layoutObserver.observe(layoutRoot, { attributes: true, attributeFilter: ["data-log-visible"] });
+  syncLayout();
 
   const releaseDrag = (target: HTMLElement, pointerId: number): void => {
     drag = null;
@@ -562,14 +589,7 @@ export function createGameLog(settings: SettingsRegistry, ports: GameLogPorts): 
       busy = next;
       for (const row of lines.children) schedule(row as HTMLElement);
     },
-    setOpen(next) {
-      if (destroyed) return;
-      open = next;
-      element.toggleAttribute("data-open", open);
-      if (open) setMinimized(false);
-      if (open) lines.scrollTop = 0;
-      syncScrollable();
-    },
+    setOpen,
     isOpen: () => open,
     minimize() {
       if (destroyed) return;
@@ -579,6 +599,7 @@ export function createGameLog(settings: SettingsRegistry, ports: GameLogPorts): 
     destroy() {
       if (destroyed) return;
       destroyed = true;
+      layoutObserver.disconnect();
       drag = null;
       for (const timer of [...timers.values(), ...swipeTimers.values()]) ports.timers.clear(timer);
       timers.clear();

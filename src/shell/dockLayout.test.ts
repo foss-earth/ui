@@ -146,7 +146,7 @@ describe("shared window and log layout", () => {
 
   it("lets a choice force overlay on a phone and split on a wide screen", () => {
     expect(resolveDockLayout({ ...preferences, availableWidth: 390, presentation: "overlay" })).toMatchObject({
-      mode: "stacked", presentation: "overlay", secondaryWidth: 366,
+      mode: "stacked", presentation: "overlay", secondaryWidth: 378,
     });
     expect(resolveDockLayout({ ...preferences, availableWidth: 1200, presentation: "split" })).toMatchObject({
       mode: "dual", presentation: "split", logVisible: true,

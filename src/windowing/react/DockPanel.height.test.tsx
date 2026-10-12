@@ -42,7 +42,7 @@ it("pulls a fullscreen-tall panel back onto the screen when the window gets shor
   viewport.height = 500;
   Object.defineProperty(window, "innerHeight", { configurable: true, value: 500 });
   await act(async () => { document.dispatchEvent(new Event("fullscreenchange")); });
-  expect(panel.style.height).toBe(`${panelHeightLimit(500, 12, 80, 128)}px`);
+  expect(panel.style.height).toBe(`${panelHeightLimit(500, 6, 80, 128)}px`);
   await act(async () => root.unmount());
 });
 
