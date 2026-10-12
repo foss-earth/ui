@@ -38,7 +38,7 @@ it("fits an entry tab on a phone, honors its resize, and restores the ordinary w
   />));
   const panel = () => host.querySelector<HTMLElement>('.foss-earth-dock-panel[data-side="right"]')!;
   const resize = async (height: number) => {
-    const grip = panel().querySelector<HTMLElement>(".foss-earth-dock-panel-resize-handle")!;
+    const grip = document.querySelector<HTMLElement>(".foss-earth-dock-panel-resize-handle")!;
     grip.setPointerCapture = () => {}; grip.releasePointerCapture = () => {};
     const start = panel().getBoundingClientRect().height;
     const point = (type: string, clientY: number) => act(async () => {

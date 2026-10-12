@@ -20,6 +20,11 @@
   padding: 6px;
 }
 
+.foss-earth-panel-preface {
+  display: grid;
+  gap: 8px;
+}
+
 .foss-earth-panel-section {
   border: 1px solid rgba(148, 163, 184, 0.22);
   border-radius: 8px;

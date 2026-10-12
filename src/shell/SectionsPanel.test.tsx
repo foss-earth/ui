@@ -79,6 +79,18 @@ describe("SectionsPanel", () => {
     expect(onChange).toHaveBeenCalledOnce();
   });
 
+  it("draws a leading element above the sections, without a heading", async () => {
+    const lead = document.createElement("p");
+    lead.textContent = "Theme";
+    await act(async () => root.render(<SectionsPanel leading={lead} sections={[{ id: "toolbar", title: "Toolbar", render: () => <p>Buttons</p> }]} />));
+    const panel = host.querySelector(".foss-earth-panel-sections")!;
+    const preface = panel.querySelector(".foss-earth-panel-preface")!;
+    expect(panel.firstElementChild).toBe(preface);
+    expect(preface.contains(lead)).toBe(true);
+    expect(lead.closest("details")).toBeNull();
+    expect(section("toolbar").querySelector("summary")?.textContent).toBe("Toolbar");
+  });
+
   it("falls back to each section's default where storage is refused", async () => {
     vi.stubGlobal("localStorage", {
       getItem: () => { throw new Error("private browsing"); },

@@ -93,6 +93,8 @@ export interface WorkspaceDockSlotProps<TabId extends string> {
   menuContainer?: HTMLElement | null;
   /** The top of what the host draws over the window's bottom edge, such as a toolbar: the + menus end above it. */
   menuBottom?: () => number | null | undefined;
+  /** A still press on a tab or the resize grip. */
+  onHoldPresentation?: (point: { x: number; y: number }) => void;
 }
 
 function availableTabsFromWorkspace<TabId extends string>(
@@ -133,6 +135,7 @@ export function WorkspaceDockSlot<TabId extends string>(props: WorkspaceDockSlot
     onBeforeCloseTab,
     menuContainer,
     menuBottom,
+    onHoldPresentation,
   } = props;
 
   if (!visible) return null;
@@ -267,9 +270,11 @@ export function WorkspaceDockSlot<TabId extends string>(props: WorkspaceDockSlot
           renderCloseButtonContent={renderTabCloseButtonContent}
           menuContainer={menuContainer}
           menuBottom={menuBottom}
+          onHoldPresentation={onHoldPresentation}
         />
       )}
       {...dockPanelProps}
+      onHoldPresentation={onHoldPresentation}
     >
       {renderTabContent(activeTab)}
     </DockPanel>

@@ -2,6 +2,10 @@ import type { ParameterSpec, LegacyMigration } from "./index.js";
 import { TRAIL_STEPS_DEFAULT } from "../diagnostics/sessionTrail.js";
 import { GAME_LOG_LINE_MS, GAME_LOG_MAX_LINES } from "../log/gameLogDefaults.js";
 const SETTINGS_TAB = "settings"; const INTERFACE_TAB = "interface";
+export const WINDOWS_PRESENTATION_ID = "interface.windows.presentation";
+export const TABS_BEHIND_TOOLBAR_ID = "interface.windows.tabsBehindToolbar";
+export const TOOLBAR_EDGE_ID = "interface.windows.toolbarEdge";
+export const WORLD_RESIZE_ID = "interface.windows.worldResize";
 /** Register explicitly in the host's registry; no owner feature catalogue is imported. */
 export const UI_PARAMETERS: readonly ParameterSpec[] = [
 {
@@ -48,6 +52,70 @@ export const UI_PARAMETERS: readonly ParameterSpec[] = [
     home: { tab: INTERFACE_TAB, section: "theme", level: "main" },
     appliesLive: true,
     source: "@foss-earth/ui/src/browser/theme.ts",
+  },
+{
+    id: WINDOWS_PRESENTATION_ID,
+    label: "Windows and the world",
+    description: "Overlay draws the world full screen and floats the windows on it. Split gives the windows the top of the screen and draws the world only underneath, which is lighter on a phone. Until this is moved, a phone uses split and a wider screen uses overlay. Holding a tab, or the window's resize handle, without moving opens the same switch.",
+    unit: "none",
+    kind: "choice",
+    choiceControl: "two-position",
+    choices: [
+      { id: "overlay", label: "Overlay" },
+      { id: "auto", label: "Auto" },
+      { id: "split", label: "Split" },
+    ],
+    default: "auto",
+    defaultReason: "A phone has one window covering most of the screen, so drawing the world only under it spends less. A wider screen keeps the windows floating so they can be resized over the world.",
+    home: { tab: INTERFACE_TAB, section: "windows", level: "main" },
+    appliesLive: true,
+    source: "@foss-earth/ui/src/shell/dockLayout.ts",
+  },
+{
+    id: TOOLBAR_EDGE_ID,
+    label: "Toolbar",
+    description: "Where the toolbar sits on the window. Top is above the tabs. Bottom is the edge where the window meets the world. Auto uses the top on a phone and the bottom when two windows fit.",
+    unit: "none",
+    kind: "choice",
+    choices: [
+      { id: "top", label: "Top", icon: "bar-top", description: "Above the tabs." },
+      { id: "auto", label: "Auto", shortLabel: "A", description: "Above the tabs on a phone, and at the bottom of the window when two windows fit." },
+      { id: "bottom", label: "Bottom", icon: "bar-bottom", description: "At the bottom of the window, on the edge with the world." },
+    ],
+    default: "bottom",
+    defaultReason: "The toolbar stays on the edge between the window and the world. Above the tabs is a choice.",
+    home: { tab: INTERFACE_TAB, section: "windows", level: "main" },
+    appliesLive: true,
+    source: "@foss-earth/ui/src/shell/WindowOverlay.tsx",
+  },
+{
+    id: TABS_BEHIND_TOOLBAR_ID,
+    label: "Tabs behind the toolbar",
+    description: "Lets the window show through the toolbar. Off keeps a solid space behind the toolbar.",
+    unit: "none",
+    kind: "boolean",
+    default: false,
+    defaultReason: "The toolbar's gaps showing the tabs underneath reads as the window shining through a control, which is distracting. The solid strip is the same surface as the window.",
+    home: { tab: INTERFACE_TAB, section: "windows", level: "main" },
+    appliesLive: true,
+    source: "@foss-earth/ui/src/shell/WindowOverlay.tsx",
+  },
+{
+    id: WORLD_RESIZE_ID,
+    label: "World size",
+    description: "When the drawing buffer changes size. Release keeps it while a split window is dragged and while this browser window changes shape, then resizes it once when the drag ends. Live resizes it on every movement.",
+    unit: "none",
+    kind: "choice",
+    choiceControl: "two-position",
+    choices: [
+      { id: "live", label: "Live" },
+      { id: "release", label: "Release" },
+    ],
+    default: "release",
+    defaultReason: "A drawing buffer that follows every movement of a drag is rendered again at each size. One resize at the end spends that once.",
+    home: { tab: INTERFACE_TAB, section: "windows", level: "main" },
+    appliesLive: true,
+    source: "@foss-earth/ui/src/shell/WindowOverlay.tsx",
   },
 {
     id: "interface.log.lineDuration",

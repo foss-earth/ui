@@ -4,6 +4,44 @@
   pointer-events: none;
 }
 
+/* A phone's window is the top band: it meets the top and side edges, and the world is drawn under it. */
+html[data-world-presentation="split"] .foss-earth-dock-panel {
+  border-top: 0;
+  border-right: 0;
+  border-left: 0;
+  border-radius: 0;
+}
+html[data-world-presentation="split"] .foss-earth-dock-panel-clip {
+  padding-right: env(safe-area-inset-right, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+}
+/* The toolbar owns this strip. The panel's own background is the space behind the bar. */
+html[data-world-presentation="split"][data-toolbar-edge="top"]:not([data-tabs-behind-toolbar="true"]) .foss-earth-dock-panel {
+  padding-top: var(--foss-hud-bar-height, 28px);
+}
+html[data-world-presentation="split"]:not([data-toolbar-edge="top"]):not([data-tabs-behind-toolbar="true"]) .foss-earth-dock-panel[data-toolbar-host="true"]:not([data-collapsed="true"]) {
+  padding-bottom: var(--foss-hud-bar-height, 28px);
+}
+html[data-world-presentation="split"][data-toolbar-edge="top"] .foss-earth-workspace-slot-launcher-left {
+  top: calc(env(safe-area-inset-top, 0px) + var(--foss-hud-bar-height, 28px));
+  left: env(safe-area-inset-left, 0px);
+}
+html[data-world-presentation="split"][data-toolbar-edge="top"] .foss-earth-workspace-slot-launcher-right {
+  top: calc(env(safe-area-inset-top, 0px) + var(--foss-hud-bar-height, 28px));
+  right: env(safe-area-inset-right, 0px);
+}
+html[data-world-presentation="split"]:not([data-toolbar-edge="top"]) .foss-earth-workspace-slot-launcher-left {
+  top: env(safe-area-inset-top, 0px);
+  left: env(safe-area-inset-left, 0px);
+}
+html[data-world-presentation="split"]:not([data-toolbar-edge="top"]) .foss-earth-workspace-slot-launcher-right {
+  top: env(safe-area-inset-top, 0px);
+  right: env(safe-area-inset-right, 0px);
+}
+html[data-world-presentation="split"] .foss-earth-workspace-slot-launcher {
+  z-index: 12;
+}
+
 .foss-earth-window-overlay > * {
   pointer-events: auto;
 }
@@ -181,6 +219,43 @@
   pointer-events: auto;
 }
 
+/* Overlay and split, side by side, kept inside the screen. */
+.foss-earth-presentation-switch {
+  z-index: 40;
+  display: flex;
+  gap: 2px;
+  box-sizing: border-box;
+  padding: 3px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 10px;
+  background: rgba(8, 15, 27, 0.98);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
+  font-family: "Segoe UI", sans-serif;
+  pointer-events: auto;
+}
+
+.foss-earth-presentation-switch button {
+  min-height: 32px;
+  padding: 4px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.foss-earth-presentation-switch button[aria-checked="true"] {
+  background: rgba(56, 189, 248, 0.28);
+}
+
+:root[data-theme="light"] .foss-earth-presentation-switch {
+  border-color: rgba(71, 85, 105, 0.28);
+  background: rgba(255, 255, 255, 0.98);
+  color: rgb(15, 23, 42);
+}
+
 .foss-earth-window-menu {
   z-index: 20;
   display: grid;
@@ -201,7 +276,8 @@
   white-space: nowrap;
 }
 
-.foss-earth-window-menu-item:hover {
+.foss-earth-window-menu-item:hover,
+.foss-earth-window-menu-item[aria-checked="true"] {
   background: rgba(56, 189, 248, 0.2);
 }
 
@@ -248,6 +324,21 @@
 .foss-earth-dock-panel .foss-earth-dock-panel-resize-handle[data-axes="height"] {
   right: auto;
   left: calc(50% - 12px);
+  cursor: ns-resize;
+}
+
+/* Split: the toolbar covers the half of the grip that sits on the window, so the grip is painted above it. */
+.foss-earth-dock-panel-resize-handle[data-lifted="true"] {
+  position: fixed;
+  z-index: 17;
+  right: auto;
+  bottom: auto;
+  pointer-events: auto;
+}
+.foss-earth-dock-panel-resize-handle[data-lifted="true"][data-side="right"]:not([data-axes="height"]) {
+  cursor: nesw-resize;
+}
+.foss-earth-dock-panel-resize-handle[data-lifted="true"][data-axes="height"] {
   cursor: ns-resize;
 }
 

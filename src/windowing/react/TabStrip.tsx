@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type 
 import { createPortal } from "react-dom";
 import { useEscapeToClose } from "./useEscapeToClose.js";
 import { fitMenu, menuBottom as menuBottomOf, MENU_EDGE_PX } from "./menuFit.js";
+import { usePresentationHold } from "./presentationHold.js";
 
 function cx(...parts: Array<string | null | undefined | false>): string {
   return parts.filter(Boolean).join(" ");
@@ -60,6 +61,8 @@ export interface TabStripProps<TabId extends string> {
    * columns when it has more items than fit. The window's edge when absent.
    */
   menuBottom?: () => number | null | undefined;
+  /** A still press on a tab. Moving starts the usual drag instead. */
+  onHoldPresentation?: (point: { x: number; y: number }) => void;
 }
 
 export function TabStrip<TabId extends string>(props: TabStripProps<TabId>) {
@@ -82,7 +85,9 @@ export function TabStrip<TabId extends string>(props: TabStripProps<TabId>) {
     renderCloseButtonContent,
     menuContainer,
     menuBottom,
+    onHoldPresentation,
   } = props;
+  const hold = usePresentationHold(onHoldPresentation);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const addRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -170,6 +175,13 @@ export function TabStrip<TabId extends string>(props: TabStripProps<TabId>) {
               onDragEnd={onMoveTab ? () => {
                 window.dispatchEvent(new Event("foss-earth-tab-drag-end"));
               } : undefined}
+              onPointerDown={(event) => {
+                if (event.button !== 0) return;
+                const target = event.target as Element;
+                if (target.closest(".foss-earth-tab-close")) return;
+                hold.arm(event.clientX, event.clientY);
+              }}
+              onContextMenu={onHoldPresentation ? (event) => event.preventDefault() : undefined}
               className={cx(
                 "foss-earth-tab-shell",
                 selected ? "foss-earth-tab-shell-selected" : "foss-earth-tab-shell-unselected",
@@ -179,7 +191,7 @@ export function TabStrip<TabId extends string>(props: TabStripProps<TabId>) {
             >
               <button
                 type="button"
-                onClick={() => onSelectTab(tabId)}
+                onClick={() => { if (hold.take()) return; onSelectTab(tabId); }}
                 className={cx(
                   "foss-earth-tab-button",
                   classNames?.tabButton,

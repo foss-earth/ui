@@ -5,7 +5,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { FixtureOverlay as WindowOverlay, type FixtureOverlayHandle as WindowOverlayHandle, type PanoramaTabs, type PanoramaTabsSnapshot } from "../../tests/fixtures/earthOverlay.js";
 import { SAVED_WORKSPACE_STORAGE_KEY } from "../browser/workspace.js";
 import { GAME_LOG_SIZE_EVENT, type GameLogSizeChange } from "../log/createGameLog.js";
-import { WindowOverlay as SharedWindowOverlay } from "./WindowOverlay.js";
+import { WindowOverlay as SharedWindowOverlay, type WindowOverlayHandle as ShellHandle } from "./WindowOverlay.js";
 import { browserOverlayLayout } from "../browser/overlay.js";
 import type { WindowOverlayGeometry } from "../windowing/core/overlayPorts.js";
 
@@ -28,14 +28,12 @@ it("stacks phone tabs above the log, follows the panel height, and restores both
     secondary: { tabs: ["right-tab"], activeTab: "right-tab", collapsed: false, width: 300 },
   }));
   let changeWidth: ((width: number) => void) | undefined;
-  let changeHeight: ((height: number) => void) | undefined;
   let heightElement: HTMLElement | null = null;
-  let expandedHeight = 260;
+  const expandedHeight = 260;
   const geometry: WindowOverlayGeometry = {
     observeWidth(_element, listener) { changeWidth = listener; listener(1200); return () => {}; },
     observeHeight(element, listener) {
       heightElement = element;
-      changeHeight = listener;
       listener(element.dataset.collapsed === "false" ? expandedHeight : 30);
       return () => { heightElement = null; };
     },
@@ -59,43 +57,41 @@ it("stacks phone tabs above the log, follows the panel height, and restores both
     expect(labels("right")).toEqual(["Right tab"]);
     await resize(390);
     expect(document.documentElement.dataset.dockLayout).toBe("stacked");
+    expect(document.documentElement.dataset.logVisible).toBe("false");
+    expect(document.documentElement.dataset.worldPresentation).toBe("split");
     expect(slot("left")).toBeNull();
     expect(labels("right")).toEqual(["Right tab", "Left tab"]);
     expect(heightElement).toBe(slot("right"));
-    expect(slot("right")!.style.width).toBe("366px");
-    expect(slot("right")!.style.maxWidth).toBe("366px");
+    expect(slot("right")!.style.width).toBe("390px");
+    expect(slot("right")!.style.maxWidth).toBe("390px");
     expect(slot("right")!.style.maxHeight).toBe("50dvh");
-    expect(document.documentElement.style.getPropertyValue("--foss-log-width")).toBe("366px");
-    expect(logTop()).toBe("284px");
+    expect(logTop()).toBe("0px");
     // The full-width window's grip changes only its height: a sideways drag past the minimum width neither narrows nor minimizes it.
-    const grip = slot("right")!.querySelector<HTMLElement>(".foss-earth-dock-panel-resize-handle")!;
+    const grip = document.querySelector<HTMLElement>(".foss-earth-dock-panel-resize-handle")!;
     expect(grip.dataset.axes).toBe("height");
     grip.setPointerCapture = () => {}; grip.releasePointerCapture = () => {};
     slot("right")!.getBoundingClientRect = () => ({ left: 12, top: 12, width: 366, height: 260, right: 378, bottom: 272, x: 12, y: 12, toJSON() {} });
     const point = (type: string, clientX: number, clientY: number) => act(async () => { grip.dispatchEvent(new PointerEvent(type, { button: 0, clientX, clientY, pointerId: 1, bubbles: true })); });
     await point("pointerdown", 195, 268); await point("pointermove", 445, 308); await point("pointerup", 445, 308);
     expect(slot("right")!.dataset.collapsed).toBe("false");
-    expect(slot("right")!.style.width).toBe("366px");
+    expect(slot("right")!.style.width).toBe("390px");
     expect(slot("right")!.style.height).toBe("300px");
     // A touch the browser takes for itself is no click on the grip, which would minimize.
     await point("pointerdown", 195, 308); await point("pointercancel", 195, 308);
     expect(slot("right")!.dataset.collapsed).toBe("false");
-    expandedHeight = 180;
-    await act(async () => changeHeight!(expandedHeight));
-    expect(logTop()).toBe("204px");
     await act(async () => selectedTab().click());
     expect(slot("right")!.dataset.collapsed).toBe("true");
-    expect(logTop()).toBe("54px");
     await act(async () => selectedTab().click());
     expect(slot("right")!.dataset.collapsed).toBe("false");
-    expect(logTop()).toBe("204px");
     await resize(700);
-    expect(document.documentElement.dataset.dockLayout).toBe("single");
-    expect(labels("right")).toEqual(["Right tab", "Left tab"]);
-    expect(logTop()).toBe("12px");
+    expect(document.documentElement.dataset.dockLayout).toBe("columns");
+    expect(document.documentElement.dataset.logVisible).toBe("false");
+    expect(labels("left")).toEqual(["Left tab"]);
+    expect(labels("right")).toEqual(["Right tab"]);
     expect(heightElement).toBeNull();
     await resize(1200);
     expect(document.documentElement.dataset.dockLayout).toBe("dual");
+    expect(document.documentElement.dataset.logVisible).toBe("true");
     expect(labels("left")).toEqual(["Left tab"]);
     expect(labels("right")).toEqual(["Right tab"]);
     expect(slot("left")!.style.width).toBe("340px");
@@ -105,7 +101,7 @@ it("stacks phone tabs above the log, follows the panel height, and restores both
     await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Close Right tab tab"]')!.click());
     await resize(390);
     expect(heightElement?.classList.contains("foss-earth-workspace-slot-launcher")).toBe(true);
-    expect(logTop()).toBe("54px");
+    expect(document.documentElement.dataset.logVisible).toBe("false");
   } finally { await act(async () => root.unmount()); }
   expect(document.documentElement.style.getPropertyValue("--foss-log-top")).toBe("");
 });
@@ -150,29 +146,27 @@ it.each(["left", "right"] as const)("keeps the %s window widened out of two on i
     await widenTo(536);
     expect(html.dataset.dockLayout).toBe("dual");
     await widenTo(537);
-    expect(html.dataset.dockLayout).toBe("single");
+    expect(html.dataset.dockLayout).toBe("columns");
+    expect(html.dataset.logVisible).toBe("false");
     expect(html.dataset.dockSide).toBe(side);
-    expect(slot(other)).toBeNull();
+    expect(slot(other)).not.toBeNull();
     expect(slot(side)).toBe(panel);
     expect(panel.querySelector(".foss-earth-dock-panel-resize-handle")).toBe(grip);
-    expect(labels(side)).toEqual(side === "left" ? ["Left tab", "Right tab"] : ["Right tab", "Left tab"]);
-    expect(panel.querySelector(".foss-earth-tab-shell-selected .foss-earth-tab-button")!.textContent).toBe(side === "left" ? "Left tab" : "Right tab");
+    expect(labels(side)).toEqual(side === "left" ? ["Left tab"] : ["Right tab"]);
+    expect(labels(other)).toEqual(side === "left" ? ["Right tab"] : ["Left tab"]);
     expect(panel.style.width).toBe("537px");
-    expect(variable("--foss-log-left")).toBe(side === "left" ? `${1280 - 12 - 380}px` : "12px");
+    expect(variable("--foss-log-width")).toBe("0px");
 
     await widenTo(1085);
-    expect(html.dataset.dockLayout).toBe("stacked");
-    expect(panel.style.width).toBe("1085px");
-    expect(panel.style.maxHeight).toBe("50dvh");
+    expect(html.dataset.dockLayout).toBe("columns");
+    expect(panel.style.width).toBe("1084px");
+    expect(slot(other)).not.toBeNull();
     expect(grip.dataset.axes).toBe("both");
-    expect(heightElement).toBe(panel);
-    expect(variable("--foss-log-top")).toBe("284px");
-    expect(variable("--foss-log-width")).toBe("1085px");
-    expect(variable("--foss-log-left")).toBe(side === "left" ? "12px" : `${1280 - 12 - 1085}px`);
+    expect(heightElement).toBeNull();
 
-    // Narrowed in the same drag, the log comes back beside the window, then between the two.
+    // Narrowed in the same drag, both windows stay, then the log returns between them.
     await widenTo(700);
-    expect(html.dataset.dockLayout).toBe("single");
+    expect(html.dataset.dockLayout).toBe("columns");
     await widenTo(420);
     await act(async () => { grip.dispatchEvent(new PointerEvent("pointerup", { button: 0, clientX: startX, clientY: 272, pointerId: 1, bubbles: true })); });
     expect(html.dataset.dockLayout).toBe("dual");
@@ -194,6 +188,7 @@ it("owns responsive launchers, cross-side tab moves, minimize/restore, and injec
   document.body.append(host);
   const root = createRoot(host);
   const apply = vi.fn();
+  let beforeUnmount = 0;
   const click = async (selector: string) => {
     const button = host.querySelector<HTMLButtonElement>(selector);
     expect(button).not.toBeNull();
@@ -227,7 +222,7 @@ it("owns responsive launchers, cross-side tab moves, minimize/restore, and injec
     expect(right.dataset.collapsed).toBe("false");
     await click('[aria-label="Close Location tab"]');
     await open("left", "Location");
-    width = 700;
+    width = 390;
     await act(async () => window.dispatchEvent(new Event("resize")));
     expect(host.querySelector('[aria-label="Open left panel"]')).toBeNull();
     expect(host.querySelector('[data-side="left"]')).toBeNull();
@@ -239,8 +234,9 @@ it("owns responsive launchers, cross-side tab moves, minimize/restore, and injec
     await click('[aria-label="Close Location tab"]');
     await click('[aria-label="Close Aircraft tab"]');
     expect(host.querySelector('[aria-label="Open right panel"]')).not.toBeNull();
+    beforeUnmount = disconnect.mock.calls.length;
   } finally { await act(async () => root.unmount()); }
-  expect(disconnect).toHaveBeenCalledOnce();
+  expect(disconnect.mock.calls.length).toBeGreaterThan(beforeUnmount);
 });
 
 it("folds tabs for a growing log and restores their homes without resurrecting closed tabs", async () => {
@@ -261,19 +257,18 @@ it("folds tabs for a growing log and restores their homes without resurrecting c
   try {
     await act(async () => api.current!.openOrSelectTab("debug"));
     await logSize(960);
-    expect(document.documentElement.dataset.dockLayout).toBe("single");
-    expect(host.querySelector('[data-side="left"]')).toBeNull();
-    expect(host.querySelector('[data-side="right"] .foss-earth-tab-button')?.textContent).toBe("Debug");
+    expect(document.documentElement.dataset.dockLayout).toBe("columns");
+    expect(document.documentElement.dataset.logVisible).toBe("false");
+    expect(host.querySelector('[data-side="left"] .foss-earth-tab-button')?.textContent).toBe("Debug");
     await logSize(860);
     expect(document.documentElement.dataset.dockLayout).toBe("dual");
     expect(document.documentElement.style.getPropertyValue("--foss-log-center")).toBe("640px");
     expect(host.querySelector('[data-side="left"] .foss-earth-tab-button')?.textContent).toBe("Debug");
     await logSize(960);
     await act(async () => api.current!.toggleTab("debug"));
-    await act(async () => api.current!.openOrSelectTab("debug"));
     await logSize(860);
     expect(host.querySelector('[aria-label="Open left panel"]')).not.toBeNull();
-    expect(host.querySelector('[data-side="right"] .foss-earth-tab-button')?.textContent).toBe("Debug");
+    expect(host.querySelector('[data-side="right"] .foss-earth-tab-button')).toBeNull();
   } finally { await act(async () => root.unmount()); }
 });
 
@@ -305,10 +300,10 @@ it("opens or selects a tab on the left when both slots fit, and on the right whe
     await act(async () => overlayApiRef.current!.openOrSelectTab("debug"));
     expect(left.dataset.collapsed).toBe("false");
     expect(left.querySelector(".foss-earth-tab-shell-selected .foss-earth-tab-button")?.textContent).toBe("Debug");
-    width = 700;
+    width = 390;
     await act(async () => window.dispatchEvent(new Event("resize")));
     expect(host.querySelector('[data-side="left"]')).toBeNull();
-    expect(document.documentElement.dataset.dockLayout).toBe("single");
+    expect(document.documentElement.dataset.dockLayout).toBe("stacked");
     const right = host.querySelector<HTMLElement>('[data-side="right"]')!;
     expect(right.querySelector(".foss-earth-tab-button")?.textContent).toBe("Debug");
     await act(async () => right.querySelector<HTMLButtonElement>('[aria-label="Close Debug tab"]')!.click());
@@ -740,10 +735,9 @@ it("saves the layout a wide window on the globe would show, even while folded or
   try {
     await act(async () => first.api.current!.openOrSelectTab("location"));
     await act(async () => first.api.current!.openOrSelectTab("map"));
-    // A wide log folds both tabs onto the right; what is saved keeps them on the left.
-    await act(async () => {
-      window.dispatchEvent(new CustomEvent<GameLogSizeChange>(GAME_LOG_SIZE_EVENT, { detail: { width: 960, resized: true } }));
-    });
+    // A phone folds both tabs onto the right; what is saved keeps them on the left.
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(390);
+    await act(async () => window.dispatchEvent(new Event("resize")));
     expect(first.host.querySelector('[data-side="left"]')).toBeNull();
     expect(saved().primary).toMatchObject({ tabs: ["location", "map"], activeTab: "map" });
     // Inside a panorama the map's tabs are hidden; what is saved still has them.
@@ -755,10 +749,41 @@ it("saves the layout a wide window on the globe would show, even while folded or
 
   // The reload lands on the globe in a wide window.
   snapshot = { title: null, onScreen: false };
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(1280);
   const second = await mount();
   try {
     expect(Array.from(second.host.querySelectorAll('[data-side="left"] .foss-earth-tab-button'), (button) => button.textContent)).toEqual(["Location", "Map"]);
     expect(second.host.querySelector('[data-side="left"] .foss-earth-tab-shell-selected .foss-earth-tab-button')?.textContent).toBe("Map");
     expect(second.host.querySelector('[data-side="right"] .foss-earth-tab-button')).toBeNull();
   } finally { await act(async () => second.root.unmount()); }
+});
+
+it("gives the only split window the full width on a screen that could hold two", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  const api: { current: ShellHandle<"map"> | null } = { current: null };
+  try {
+    await act(async () => root.render(<SharedWindowOverlay<"map">
+      tabDefinitions={[{ id: "map", label: "Map" }]}
+      renderTabContent={() => <p>Map</p>}
+      context={{ active: false, ready: true, baseOnlyTabs: new Set(), contextOnlyTabs: new Set(), entryTabId: "map" }}
+      restorableTabs={new Set(["map"])} storage={null} overlayApiRef={api}
+      geometry={{ observeWidth(_element, listener) { listener(1200); return () => {}; }, observeHeight(_element, listener) { listener(240); return () => {}; }, menuBottom: () => null }}
+      logSize={{ getWidth: () => null, subscribe: () => () => {} }}
+      layoutPort={browserOverlayLayout(document.documentElement)}
+      presentation={{ choice: "split", onChoice: () => {}, tabsBehindToolbar: false, toolbarEdge: "bottom" }}
+    />));
+    await act(async () => api.current!.openOrSelectTab("map"));
+    const panel = host.querySelector<HTMLElement>(".foss-earth-dock-panel")!;
+    expect(panel.dataset.side).toBe("left");
+    expect(panel.style.width).toBe("1200px");
+    expect(document.querySelector(".foss-earth-dock-panel-resize-handle")?.getAttribute("data-axes")).toBe("height");
+    expect(document.querySelector(".foss-earth-dock-panel-resize-handle")?.getAttribute("data-lifted")).toBe("true");
+    expect(host.querySelector(".foss-earth-dock-panel[data-side='right']")).toBeNull();
+    expect(host.querySelector(".foss-earth-workspace-slot-launcher-right")).not.toBeNull();
+    expect(document.documentElement.dataset.worldPresentation).toBe("split");
+    expect(document.documentElement.dataset.toolbarEdge).toBe("bottom");
+  } finally { await act(async () => root.unmount()); }
 });

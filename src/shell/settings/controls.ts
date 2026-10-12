@@ -245,6 +245,26 @@ function createChoiceIcon(document: Document, icon: NonNullable<ParameterChoice[
     svg.append(shape);
     return svg;
   }
+  if (icon === "bar-top" || icon === "bar-bottom") {
+    const frame = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    frame.setAttribute("x", "4");
+    frame.setAttribute("y", "3.5");
+    frame.setAttribute("width", "16");
+    frame.setAttribute("height", "17");
+    frame.setAttribute("rx", "2");
+    frame.setAttribute("fill", "none");
+    frame.setAttribute("stroke", "currentColor");
+    frame.setAttribute("stroke-width", "1.8");
+    const bar = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    bar.setAttribute("x", "7");
+    bar.setAttribute("y", icon === "bar-top" ? "6" : "14.5");
+    bar.setAttribute("width", "10");
+    bar.setAttribute("height", "3");
+    bar.setAttribute("rx", "0.6");
+    bar.setAttribute("fill", "currentColor");
+    svg.append(frame, bar);
+    return svg;
+  }
   const add = (d: string): void => {
     const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
     path.setAttribute("d", d);
@@ -331,9 +351,20 @@ function createAutoCustomSlider(document: Document, settings: SettingsRegistry, 
   return { element, update, destroy() { slider.destroy(); element.remove(); } };
 }
 
+/** The two ends of a switch. An Auto choice stays valid and is not drawn on the track. */
+function switchEnds(choices: readonly ParameterChoice[]): { ends: readonly [ParameterChoice, ParameterChoice]; automatic: ParameterChoice | null } | null {
+  const automatic = choices.find(choice => choice.id === "auto") ?? null;
+  const ends = choices.filter(choice => choice.id !== "auto");
+  const first = ends[0];
+  const second = ends[1];
+  if (!first || !second || ends.length !== 2) return null;
+  return { ends: [first, second], automatic };
+}
+
 function createChoiceSlider(document: Document, settings: SettingsRegistry, spec: ParameterSpec): ParameterControlHandle {
-  const choices = settings.inspect(spec.id).choices;
-  if (choices.length !== 2) return createChoicePills(document, settings, spec);
+  const parsed = switchEnds(settings.inspect(spec.id).choices);
+  if (!parsed) return createChoicePills(document, settings, spec);
+  const { ends, automatic } = parsed;
   const element = document.createElement("div");
   element.className = "foss-earth-parameter foss-earth-parameter--inline";
   element.dataset.parameter = spec.id;
@@ -343,22 +374,30 @@ function createChoiceSlider(document: Document, settings: SettingsRegistry, spec
   const slider = createTwoPositionSlider({ document,
     label: spec.label,
     options: [
-      { label: choices[0].label, icon: choices[0].shortLabel },
-      { label: choices[1].label, icon: choices[1].shortLabel },
+      { label: ends[0].label, icon: ends[0].shortLabel },
+      { label: ends[1].label, icon: ends[1].shortLabel },
     ],
-    onInput: index => { settings.set(spec.id, choices[index].id); update(); },
+    onInput: index => { settings.set(spec.id, ends[index].id); update(); },
   });
+  if (ends.some(choice => (choice.shortLabel ?? choice.label).length > 4)) slider.element.style.width = "156px";
   readout.append(slider.element);
   const note = createNote(document);
   element.append(header, note);
   const start = settings.get(spec.id);
+  // Auto follows the presentation the shell is actually using.
+  const shownEnd = (): 0 | 1 => element.ownerDocument.documentElement.dataset.worldPresentation === ends[1].id ? 1 : 0;
   const update = (): void => {
     const state = settings.inspect(spec.id);
-    slider.update(state.value === choices[0].id ? 0 : 1, Boolean(spec.readOnly) || state.provenance === "host");
+    const following = automatic !== null && state.value === automatic.id;
+    const index = state.value === ends[1].id ? 1 : state.value === ends[0].id ? 0 : shownEnd();
+    slider.update(index, Boolean(spec.readOnly) || state.provenance === "host");
+    if (following) slider.input.setAttribute("aria-valuetext", automatic.label);
     setNote(note, noteFor(state, start));
   };
+  const presentation = new MutationObserver(update);
+  presentation.observe(element.ownerDocument.documentElement, { attributes: true, attributeFilter: ["data-world-presentation"] });
   update();
-  return { element, update, destroy() { slider.destroy(); element.remove(); } };
+  return { element, update, destroy() { presentation.disconnect(); slider.destroy(); element.remove(); } };
 }
 
 /** A heading and pills, one per choice. */

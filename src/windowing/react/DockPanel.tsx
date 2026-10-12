@@ -1,4 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type DragEventHandler, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { panelHeightLimit } from "./panelHeight.js";
+import { usePresentationHold } from "./presentationHold.js";
 
 function cx(...parts: Array<string | null | undefined | false>): string {
   return parts.filter(Boolean).join(" ");
@@ -11,6 +14,8 @@ interface ResizeDragState {
   startH: number;
   pointerId: number;
   moved: boolean;
+  /** The pointer has moved far enough that this drag is resizing, not a click. */
+  resizing: boolean;
   fitKey: string | number | null;
 }
 
@@ -54,7 +59,7 @@ export interface DockPanelProps {
   header?: ReactNode;
   children?: ReactNode;
   classNames?: DockPanelClassNames;
-  topOffsetPx?: number;
+  topOffsetPx?: number | string;
   edgeOffsetPx?: number;
   expandedMaxHeightCss?: string;
   minWidth?: number;
@@ -63,13 +68,19 @@ export interface DockPanelProps {
   /** A temporary height for one content visit; its measurer returns the desired body height. */
   contentFit?: { key: string | number; measure(body: HTMLElement): number | null };
   maxHeightPaddingPx?: number;
+  /** Extra ceiling as a fraction of the visual viewport, such as half a phone. */
+  maxHeightRatio?: number;
   resizeClickThresholdPx?: number;
   resizeAriaLabel?: string;
   resizeTitle?: string;
   /** "height" for a panel as wide as the screen: its grip sits mid-bottom and changes only the height. */
   resizeAxes?: "both" | "height";
+  /** Split paints the grip above the toolbar. The toolbar otherwise covers the half that sits on the window. */
+  liftResizeHandle?: boolean;
   onDragOver?: DragEventHandler<HTMLDivElement>;
   onDrop?: DragEventHandler<HTMLDivElement>;
+  /** A still press on the resize grip. Moving resizes, as before. */
+  onHoldPresentation?: (point: { x: number; y: number }) => void;
 }
 
 export function DockPanel(props: DockPanelProps) {
@@ -92,22 +103,39 @@ export function DockPanel(props: DockPanelProps) {
     initialHeight = 512,
     contentFit,
     maxHeightPaddingPx = 80,
+    maxHeightRatio,
     resizeClickThresholdPx = 6,
     resizeAriaLabel = "Resize panel, click to minimize",
     resizeTitle = "Drag to resize, click to minimize",
     resizeAxes = "both",
+    liftResizeHandle = false,
     onDragOver,
     onDrop,
+    onHoldPresentation,
   } = props;
+  const hold = usePresentationHold(onHoldPresentation);
 
   const isRightPanel = side === "right";
   const resolvedTop = topOffsetPx ?? 12;
-  const resolvedMaxHeight = expandedMaxHeightCss ?? "calc(100vh - 1.5rem)";
-
+  const resolvedMaxHeight = expandedMaxHeightCss ?? `calc(100dvh - ${maxHeightPaddingPx}px)`;
+  const topPx = typeof resolvedTop === "number" ? resolvedTop : 0;
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const heightLimit = (): number => {
+    const view = containerRef.current?.ownerDocument.defaultView;
+    const viewport = view?.visualViewport?.height ?? view?.innerHeight ?? 0;
+    if (viewport <= 0) return Number.POSITIVE_INFINITY;
+    const cap = maxHeightRatio && viewport > 0 ? viewport * maxHeightRatio : undefined;
+    return panelHeightLimit(viewport, topPx, maxHeightPaddingPx, minHeight, cap);
+  };
+  const finishResize = (drag: ResizeDragState | null) => {
+    if (!drag?.resizing) return;
+    drag.resizing = false;
+    containerRef.current?.ownerDocument.defaultView?.dispatchEvent(new Event("foss-earth-panel-resize-end"));
+  };
   const headerRef = useRef<HTMLDivElement | null>(null);
   const bodyRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<ResizeDragState | null>(null);
+  const gripRef = useRef<HTMLDivElement | null>(null);
   const [panelHeight, setPanelHeight] = useState(initialHeight);
   const [fitState, setFitState] = useState<ContentFitState | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -145,6 +173,29 @@ export function DockPanel(props: DockPanelProps) {
     return () => { resize?.disconnect(); mutations.disconnect(); view.removeEventListener("resize", measure); };
   }, [collapsed, fitKey, measureFit, width]);
 
+  useLayoutEffect(() => {
+    if (collapsed) return;
+    const view = containerRef.current?.ownerDocument.defaultView;
+    if (!view) return;
+    const clamp = (): void => {
+      const maxH = heightLimit();
+      if (!Number.isFinite(maxH)) return;
+      setPanelHeight((height) => (height > maxH ? maxH : height));
+      setFitState((current) => (
+        current?.manualHeight != null && current.manualHeight > maxH ? { ...current, manualHeight: maxH } : current
+      ));
+    };
+    clamp();
+    view.addEventListener("resize", clamp);
+    view.document.addEventListener("fullscreenchange", clamp);
+    view.visualViewport?.addEventListener("resize", clamp);
+    return () => {
+      view.removeEventListener("resize", clamp);
+      view.document.removeEventListener("fullscreenchange", clamp);
+      view.visualViewport?.removeEventListener("resize", clamp);
+    };
+  }, [collapsed, maxHeightPaddingPx, maxHeightRatio, minHeight, topPx]);
+
   useEffect(() => {
     const handleDragStart = (event: Event) => {
       const sourceSide = (event as CustomEvent<{ side?: "left" | "right" }>).detail?.side;
@@ -176,10 +227,12 @@ export function DockPanel(props: DockPanelProps) {
       startH: rect.height,
       pointerId: event.pointerId,
       moved: false,
+      resizing: false,
       fitKey: contentFit?.key ?? null,
     };
 
-    event.currentTarget.setPointerCapture(event.pointerId);
+    hold.arm(event.clientX, event.clientY);
+    event.currentTarget.setPointerCapture?.(event.pointerId);
   };
 
   const onHandlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -190,22 +243,28 @@ export function DockPanel(props: DockPanelProps) {
       Math.abs(event.clientX - drag.startX) > resizeClickThresholdPx
       || Math.abs(event.clientY - drag.startY) > resizeClickThresholdPx
     ) {
+      if (!drag.resizing) {
+        drag.resizing = true;
+        containerRef.current?.ownerDocument.defaultView?.dispatchEvent(new Event("foss-earth-panel-resize-start"));
+      }
       drag.moved = true;
+      hold.cancel();
     }
 
     if (resizeAxes === "both") {
       const deltaX = event.clientX - drag.startX;
       const rawW = drag.startW + (isRightPanel ? -deltaX : deltaX);
       if (rawW < minWidth) {
+        finishResize(drag);
         onCollapsedChange(true);
         dragRef.current = null;
-        event.currentTarget.releasePointerCapture(event.pointerId);
+        event.currentTarget.releasePointerCapture?.(event.pointerId);
         return;
       }
       onWidthChange(Math.min(Math.max(minWidth, maxWidth), rawW));
     }
 
-    const maxH = Math.max(minHeight, window.innerHeight - maxHeightPaddingPx);
+    const maxH = heightLimit();
     const resizedHeight = Math.max(minHeight, Math.min(maxH, drag.startH + (event.clientY - drag.startY)));
     const resizeFitKey = drag.fitKey;
     if (resizeFitKey !== null) {
@@ -221,18 +280,55 @@ export function DockPanel(props: DockPanelProps) {
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
 
-    if (!drag.moved) {
-      onCollapsedChange(true);
-    }
+    const wasHold = hold.take();
+    if (!drag.moved && !wasHold) onCollapsedChange(true);
+    finishResize(drag);
 
     dragRef.current = null;
-    event.currentTarget.releasePointerCapture(event.pointerId);
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
   };
 
   // The browser took the pointer, as for a page gesture: the drag ends where it is, and it was no click.
   const onHandlePointerCancel = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (dragRef.current?.pointerId === event.pointerId) dragRef.current = null;
+    const drag = dragRef.current;
+    if (drag?.pointerId !== event.pointerId) return;
+    finishResize(drag);
+    dragRef.current = null;
   };
+
+  useLayoutEffect(() => {
+    const grip = gripRef.current;
+    const panel = containerRef.current;
+    if (!liftResizeHandle || !grip || !panel) return;
+    const place = (): void => {
+      const rect = panel.getBoundingClientRect();
+      const size = 24;
+      const hang = 13;
+      // The circle is centered on the panel's bottom border, matching the in-panel grip.
+      const top = rect.bottom - size / 2;
+      const left = resizeAxes === "height"
+        ? rect.left + rect.width / 2 - size / 2
+        : side === "right"
+          ? rect.left - hang
+          : rect.right - (size - hang);
+      grip.style.left = `${left}px`;
+      grip.style.top = `${top}px`;
+    };
+    place();
+    const view = panel.ownerDocument.defaultView;
+    const Observer = view?.ResizeObserver;
+    const observer = typeof Observer === "function" ? new Observer(place) : null;
+    observer?.observe(panel);
+    view?.addEventListener("resize", place);
+    view?.visualViewport?.addEventListener("resize", place);
+    return () => {
+      observer?.disconnect();
+      view?.removeEventListener("resize", place);
+      view?.visualViewport?.removeEventListener("resize", place);
+      grip.style.left = "";
+      grip.style.top = "";
+    };
+  }, [liftResizeHandle, resizeAxes, side, collapsed, panelHeight, width]);
 
   const positionStyle: CSSProperties = {
     position: "absolute",
@@ -267,6 +363,7 @@ export function DockPanel(props: DockPanelProps) {
       onDrop={onDrop}
       data-side={side}
       data-collapsed={collapsed ? "true" : "false"}
+      data-occlude-world=""
     >
       {/* The contents clip to the rounded corners; the grip sits across the edge, outside this. */}
       <div className="foss-earth-dock-panel-clip">
@@ -290,38 +387,45 @@ export function DockPanel(props: DockPanelProps) {
         )}
       </div>
 
-      {collapsed ? null : (
-        <div
-          role="separator"
-          aria-label={resizeAriaLabel}
-          title={resizeTitle}
-          onPointerDown={onHandlePointerDown}
-          onPointerMove={onHandlePointerMove}
-          onPointerUp={onHandlePointerUp}
-          onPointerCancel={onHandlePointerCancel}
-          data-axes={resizeAxes}
-          className={cx(
-            "foss-earth-dock-panel-resize-handle",
-            classNames?.resizeHandle,
-            isRightPanel ? classNames?.resizeHandleForRightPanel : classNames?.resizeHandleForLeftPanel,
-          )}
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 16 16"
-            className={cx("foss-earth-dock-panel-resize-dots", classNames?.resizeDots)}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
+      {collapsed ? null : (() => {
+        const handle = (
+          <div
+            ref={gripRef}
+            role="separator"
+            aria-label={resizeAriaLabel}
+            title={resizeTitle}
+            onPointerDown={onHandlePointerDown}
+            onPointerMove={onHandlePointerMove}
+            onPointerUp={onHandlePointerUp}
+            onPointerCancel={onHandlePointerCancel}
+            onContextMenu={onHoldPresentation ? (event) => event.preventDefault() : undefined}
+            data-axes={resizeAxes}
+            data-side={side}
+            data-lifted={liftResizeHandle ? "true" : undefined}
+            className={cx(
+              "foss-earth-dock-panel-resize-handle",
+              classNames?.resizeHandle,
+              isRightPanel ? classNames?.resizeHandleForRightPanel : classNames?.resizeHandleForLeftPanel,
+            )}
           >
-            <path d={RESIZE_ICON_PATHS[resizeAxes === "height" ? "height" : side]} />
-          </svg>
-        </div>
-      )}
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 16 16"
+              className={cx("foss-earth-dock-panel-resize-dots", classNames?.resizeDots)}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d={RESIZE_ICON_PATHS[resizeAxes === "height" ? "height" : side]} />
+            </svg>
+          </div>
+        );
+        return liftResizeHandle ? createPortal(handle, containerRef.current?.ownerDocument.body ?? document.body) : handle;
+      })()}
     </div>
   );
 }

@@ -102,7 +102,7 @@ export interface ParameterChoice {
   /** Compact visible label; the full label remains the accessible name and value text. */
   shortLabel?: string;
   /** Compact icon instead of text; the full label remains the accessible name and value text. */
-  icon?: "line" | "circle" | "sun" | "moon";
+  icon?: "line" | "circle" | "sun" | "moon" | "bar-top" | "bar-bottom";
   description?: string;
 }
 

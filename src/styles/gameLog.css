@@ -38,13 +38,34 @@
 }
 
 /*
- * Two windows: fixed to the viewport center, even with unequal dock widths.
- * WindowOverlay allocates enough room on both sides of that center.
+ * The log floats only in the widest arrangement, centered between the two windows.
+ * Every other arrangement puts it in a tab, so the copy left on the page stays hidden.
  */
 html[data-dock-layout="dual"] .game-log {
   left: var(--foss-log-center);
   transform: translateX(-50%);
 }
+html[data-log-visible="false"] body > #app-log { display: none !important; }
+
+/* Inside its tab the log fills the panel and keeps every line, including ones that would have faded over the world. */
+html[data-log-visible="false"] .foss-earth-dock-panel .game-log {
+  position: relative;
+  z-index: auto;
+  top: auto;
+  right: auto;
+  left: auto;
+  transform: none;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  pointer-events: auto;
+}
+.foss-earth-log-tab { height: 100%; min-height: 0; }
+.foss-earth-dock-panel .game-log__resize,
+.foss-earth-dock-panel .game-log__peek { display: none; }
+.foss-earth-dock-panel .game-log:not([data-open]) .game-log__lines > [data-fading] { opacity: 1; }
+.foss-earth-dock-panel .game-log:not([data-open]) .game-log__lines > [data-expired] { display: grid; }
 
 /* Beside a window on the left, the log keeps to the right edge, its lines too. */
 html[data-dock-layout="single"][data-dock-side="left"] .game-log {

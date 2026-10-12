@@ -10,8 +10,14 @@ export function AdoptedElement({ element, className }: { element: HTMLElement; c
   useLayoutEffect(() => {
     const host = hostRef.current;
     if (!host) return;
+    const parent = element.parentElement;
+    const next = element.nextSibling;
     host.append(element);
-    return () => element.remove();
+    return () => {
+      // Back where the host kept it, so a log can float again when its tab closes.
+      if (parent?.isConnected) parent.insertBefore(element, next);
+      else element.remove();
+    };
   }, [element]);
   return <div ref={hostRef} className={className} />;
 }

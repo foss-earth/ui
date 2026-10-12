@@ -5,8 +5,9 @@ import { useWindowWorkspace } from "../windowing/react/useWindowWorkspace.js";
 import type { WindowTabDefinition, WindowWorkspaceState, WindowSlotId } from "../windowing/core/types.js";
 import type { SettingsStorage } from "../settings/registry.js";
 import { loadSavedWorkspace, saveWorkspace } from "../browser/workspace.js";
-import { browserOverlayGeometry } from "../browser/overlay.js";
-import { resolveDockLayout, type DockLayoutMode, type DockResizePriority, type DockSide } from "./dockLayout.js";
+import { browserOverlayGeometry, lowestSplitBand, publishSplitBand } from "../browser/overlay.js";
+import { chosenToolbarEdge, resolveDockLayout, type DockLayoutMode, type DockResizePriority, type DockSide, type ToolbarEdgeChoice, type WorldPresentationChoice } from "./dockLayout.js";
+import { PresentationMenu } from "../windowing/react/presentationHold.js";
 import { foldWorkspace, restoreWorkspace, forgetCompactWorkspaceTab, type CompactWorkspaceMemory } from "./compactWorkspace.js";
 import { hideWorkspaceTabs, restoreWorkspaceTabs, type HiddenTab } from "../windowing/core/contextTabs.js";
 import type { OverlayContextPolicy, WindowOverlayHandle, WindowOverlayGeometry, WindowOverlayLogSize, WindowOverlayLayoutPort } from "../windowing/core/overlayPorts.js";
@@ -24,6 +25,23 @@ export interface WindowOverlayProps<TabId extends string> {
   overlayApiRef?: { current: WindowOverlayHandle<TabId> | null };
   onBeforeCloseTab?(tabId: TabId): boolean | void;
   focus?: { onOpen?(tabId: TabId): void; onClose?(tabId: TabId): void };
+  /**
+   * Overlay floats the windows on a full-screen world. Split gives them the top
+   * of the screen and draws the world only underneath. Auto follows the width.
+   */
+  presentation?: {
+    choice: WorldPresentationChoice;
+    onChoice(choice: "overlay" | "split"): void;
+    /** Off keeps a solid strip behind the toolbar. On lets the window show through it. */
+    tabsBehindToolbar: boolean;
+    /** Top is above the tabs. Bottom is the window's edge with the world. Auto follows a phone. */
+    toolbarEdge?: ToolbarEdgeChoice;
+    /**
+     * Release keeps the drawing buffer until a split drag, or a browser-window
+     * resize, ends. Live resizes it on every movement. Omitted stays live.
+     */
+    worldResize?: "live" | "release";
+  };
 }
 /** Where the tabs a context hid are, so each comes back where it was when its context returns. */
 interface OverlayContextMemory<TabId extends string> {
@@ -53,7 +71,7 @@ function baseWorkspace<TabId extends string>(
   return { state: panelBack ? setWorkspaceSlotCollapsed(restored, opened.slotId, opened.collapsed) : restored, hidden: hidden.hidden };
 }
 
-export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTabs, renderTabContent, context, restorableTabs, storage, geometry, logSize, layoutPort, onTabVisibility, overlayApiRef, onBeforeCloseTab, focus }: WindowOverlayProps<TabId>) {
+export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTabs, renderTabContent, context, restorableTabs, storage, geometry, logSize, layoutPort, onTabVisibility, overlayApiRef, onBeforeCloseTab, focus, presentation }: WindowOverlayProps<TabId>) {
   const inContext = context.active;
   const tabDefinitions = suppliedTabs.map(tab => ({ ...tab, available: tab.available !== false && (context.contextOnlyTabs.has(tab.id) ? inContext : !(inContext && context.baseOnlyTabs.has(tab.id))) }));
   const overlayRef = useRef<HTMLDivElement | null>(null);
@@ -80,16 +98,16 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
   };
   const [logWidth, setLogWidth] = useState<number | null>(() => logSize.getWidth());
   const [resizePriority, setResizePriority] = useState<DockResizePriority>(logWidth === null ? "windows" : "log");
-  const [layoutMode, setLayoutMode] = useState<DockLayoutMode>("single");
+  const [layoutMode, setLayoutMode] = useState<DockLayoutMode>("columns");
   useLayoutEffect(() => logSize.subscribe(({ width, resized }) => {
     setLogWidth(width); if (resized) setResizePriority("log");
   }), [logSize]);
   const [primaryAddOpen, setPrimaryAddOpen] = useState(false);
   const [secondaryAddOpen, setSecondaryAddOpen] = useState(false);
   const [availableWidth, setAvailableWidth] = useState(0);
-  const [stackHeight, setStackHeight] = useState(30);
-  // A window widened out of two, which stays alone on its side until narrowed back (resolveDockLayout).
+  // Which window fills a phone. A resize on a wider screen records it; both windows stay until then.
   const [widened, setWidened] = useState<DockSide | null>(null);
+  const [holdAt, setHoldAt] = useState<{ x: number; y: number } | null>(null);
 
   useLayoutEffect(() => {
     const element = overlayRef.current;
@@ -103,11 +121,12 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
     logWidth,
     priority: resizePriority,
     previousMode: layoutMode,
-    stackHeight,
     widened: widened ?? undefined,
+    presentation: presentation?.choice,
+    open: { left: workspace.state.primary.tabs.length > 0, right: workspace.state.secondary.tabs.length > 0 },
   });
-  // The windows on screen: both, or the one there is room for, which holds the other's tabs meanwhile.
-  const shown: WindowSlotId | "both" = layout.mode === "dual" ? "both" : layout.side === "left" ? "primary" : "secondary";
+  // Both windows, except on a phone, where the one there is room for holds the other's tabs meanwhile.
+  const shown: WindowSlotId | "both" = layout.mode === "stacked" ? (layout.side === "left" ? "primary" : "secondary") : "both";
   const preferredSlot: WindowSlotId = shown === "both" ? "primary" : shown;
   const visibleTabs = new Set<TabId>();
   for (const slot of shown === "both" ? [workspace.state.primary, workspace.state.secondary] : [workspace.state[shown]]) {
@@ -121,16 +140,15 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
     for (const tab of visibleTabs) if (!previouslyVisible.current.has(tab)) onTabVisibility?.(tab, true);
     previouslyVisible.current = visibleTabs;
   });
-  // Remember actual transitions so resizing a single right window cannot force
-  // a wide log into the center by shrinking it solely to create another window.
+  // Remember actual transitions so a widened log stays a tab until its width fits again.
   if (layoutMode !== layout.mode) setLayoutMode(layout.mode);
-  // A resize of one of two windows names it (resizeWindow); that holds only if the other no longer fits.
+  // Back in the wide arrangement, a phone uses the right window the next time it folds.
   if (layout.mode === "dual" && widened !== null) setWidened(null);
 
   const resizeWindow = (slotId: WindowSlotId, width: number): void => {
     setResizePriority("windows");
-    // Widened past the room for both, a window stays on its side and the log moves beside it, then under it.
-    if (layout.mode === "dual") setWidened(slotId === "primary" ? "left" : "right");
+    // Remember which window fills the screen if it later becomes a phone.
+    if (layout.mode === "dual" || layout.mode === "columns") setWidened(slotId === "primary" ? "left" : "right");
     workspace.setState((current) => {
       // Start from what the user sees when switching from resizing the log.
       // Otherwise an untouched dock can jump back to its old preferred width.
@@ -142,17 +160,76 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
     });
   };
 
-  const stackSlot = workspace.state[layout.side === "left" ? "primary" : "secondary"];
+  const toolbarEdge = chosenToolbarEdge(presentation?.toolbarEdge, layout.mode === "stacked");
+  const primarySlot = workspace.state.primary;
+  const secondarySlot = workspace.state.secondary;
   useLayoutEffect(() => {
-    if (layout.mode !== "stacked" || availableWidth <= 0) return;
-    const dock = overlayRef.current?.querySelector<HTMLElement>(`.foss-earth-dock-panel[data-side=${layout.side}], .foss-earth-workspace-slot-launcher-${layout.side}`);
-    if (!dock) return;
-    if (geometry.observeHeight) return geometry.observeHeight(dock, setStackHeight);
-    const view = dock.ownerDocument.defaultView;
-    return view ? browserOverlayGeometry(view, geometry.menuBottom).observeHeight!(dock, setStackHeight) : undefined;
-  }, [geometry, availableWidth, layout.mode, layout.side, stackSlot.collapsed, stackSlot.activeTab, stackSlot.tabs.length]);
+    const overlay = overlayRef.current;
+    const root = overlay?.ownerDocument.documentElement;
+    if (!root || layout.presentation !== "split" || availableWidth <= 0 || !overlay) {
+      if (root) {
+        publishSplitBand(root, null);
+        root.style.removeProperty("--foss-canvas-top");
+      }
+      return;
+    }
+    const deferDraw = presentation?.worldResize === "release";
+    const bands = (): HTMLElement[] => [...overlay.querySelectorAll<HTMLElement>(".foss-earth-dock-panel, .foss-earth-workspace-slot-launcher")];
+    let panelHeld = false;
+    const publish = (): void => {
+      publishSplitBand(root, lowestSplitBand(bands()), toolbarEdge);
+      if (!deferDraw) {
+        root.style.removeProperty("--foss-canvas-top");
+        return;
+      }
+      // The toolbar follows the window. The drawing buffer waits out the drag.
+      if (panelHeld || root.dataset.worldDrawHeld === "true") return;
+      const top = root.style.getPropertyValue("--foss-world-top");
+      if (top) root.style.setProperty("--foss-canvas-top", top);
+      else root.style.removeProperty("--foss-canvas-top");
+    };
+    const view = overlay.ownerDocument.defaultView;
+    const observeHeight = geometry.observeHeight ?? (view ? browserOverlayGeometry(view, geometry.menuBottom).observeHeight : undefined);
+    const elements = bands();
+    const onResizeStart = (): void => { panelHeld = true; };
+    const onResizeEnd = (): void => { panelHeld = false; publish(); };
+    if (deferDraw && view) {
+      view.addEventListener("foss-earth-panel-resize-start", onResizeStart);
+      view.addEventListener("foss-earth-panel-resize-end", onResizeEnd);
+      view.addEventListener("foss-earth-world-draw-commit", onResizeEnd);
+    }
+    if (elements.length === 0 || !observeHeight) {
+      publish();
+      return () => {
+        view?.removeEventListener("foss-earth-panel-resize-start", onResizeStart);
+        view?.removeEventListener("foss-earth-panel-resize-end", onResizeEnd);
+        view?.removeEventListener("foss-earth-world-draw-commit", onResizeEnd);
+      };
+    }
+    const stops = elements.map(element => observeHeight(element, publish));
+    return () => {
+      for (const stop of stops) stop();
+      view?.removeEventListener("foss-earth-panel-resize-start", onResizeStart);
+      view?.removeEventListener("foss-earth-panel-resize-end", onResizeEnd);
+      view?.removeEventListener("foss-earth-world-draw-commit", onResizeEnd);
+    };
+  }, [geometry, availableWidth, layout.presentation, toolbarEdge, presentation?.worldResize, primarySlot.collapsed, primarySlot.activeTab, primarySlot.tabs.length, secondarySlot.collapsed, secondarySlot.activeTab, secondarySlot.tabs.length]);
 
-  useLayoutEffect(() => { layoutPort.publish(layout); }, [layoutPort, layout.mode, layout.side, layout.primaryWidth, layout.secondaryWidth, layout.logLeft, layout.logTop, layout.logCenter, layout.logWidth, layout.maxWindowWidth]);
+  useLayoutEffect(() => { layoutPort.publish(layout); }, [layoutPort, layout.mode, layout.presentation, layout.logVisible, layout.side, layout.primaryWidth, layout.secondaryWidth, layout.logLeft, layout.logTop, layout.logCenter, layout.logWidth, layout.maxWindowWidth]);
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    if (presentation?.tabsBehindToolbar) root.dataset.tabsBehindToolbar = "true";
+    else delete root.dataset.tabsBehindToolbar;
+    if (layout.presentation === "split") root.dataset.toolbarEdge = toolbarEdge;
+    else delete root.dataset.toolbarEdge;
+    if (presentation?.worldResize === "live" || presentation?.worldResize === "release") root.dataset.worldResize = presentation.worldResize;
+    else delete root.dataset.worldResize;
+    return () => {
+      delete root.dataset.tabsBehindToolbar;
+      delete root.dataset.toolbarEdge;
+      delete root.dataset.worldResize;
+    };
+  }, [presentation?.tabsBehindToolbar, presentation?.worldResize, layout.presentation, toolbarEdge]);
   useLayoutEffect(() => {
     if (availableWidth <= 0) return;
     let state = workspace.state;
@@ -169,8 +246,21 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
     if (state !== workspace.state) workspace.setState(state);
   }, [availableWidth, shown, workspace]);
 
+  const definedIds = tabDefinitions.map((tab) => tab.id).join("\0");
+  useLayoutEffect(() => {
+    const known = new Set(definedIds.split("\0").filter(Boolean));
+    let next = workspace.state;
+    for (const slotId of ["primary", "secondary"] as const) {
+      for (const tabId of next[slotId].tabs) {
+        if (!known.has(tabId)) next = closeTabInWorkspace(next, slotId, tabId);
+      }
+    }
+    if (next !== workspace.state) workspace.setState(next);
+  }, [definedIds, workspace.state]);
+
   useLayoutEffect(() => () => {
     layoutPort.clear();
+    publishSplitBand(document.documentElement, null);
     for (const tab of previouslyVisible.current) visibilityCallback.current?.(tab, false);
     previouslyVisible.current = new Set();
   }, [layoutPort]);
@@ -267,11 +357,17 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
   });
 
 
-  // The window with the log under it is at most half the screen tall; a phone's fills the row, so only its height changes.
-  const stackedPanel = layout.mode === "stacked"
-    ? { expandedMaxHeightCss: "50dvh", resizeAxes: layout.windowWidthFixed ? "height" as const : "both" as const }
+  // A window that fills the width changes only its height. A phone also stays at most half the screen.
+  const stackedPanel = layout.presentation === "split" && layout.windowWidthFixed
+    ? {
+        ...(layout.mode === "stacked" ? { expandedMaxHeightCss: "50dvh", maxHeightRatio: 0.5 } : {}),
+        resizeAxes: "height" as const,
+        edgeOffsetPx: 0,
+        topOffsetPx: "env(safe-area-inset-top, 0px)",
+      }
     : undefined;
   const panelProps = (slotId: WindowSlotId) => ({
+    liftResizeHandle: layout.presentation === "split",
     ...(layout.side === (slotId === "primary" ? "left" : "right") ? stackedPanel : undefined),
     ...(inContext && context.ready && context.measureEntry && workspace.state[slotId].activeTab === context.entryTabId
       ? { contentFit: { key: contextVisit.current, measure: context.measureEntry } }
@@ -300,6 +396,7 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
         onBeforeCloseTab={beforeCloseTab}
         menuContainer={overlayElement}
         menuBottom={geometry.menuBottom}
+        onHoldPresentation={presentation ? setHoldAt : undefined}
       />
       <WorkspaceDockSlot<TabId>
         side="right"
@@ -321,7 +418,16 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
         onBeforeCloseTab={beforeCloseTab}
         menuContainer={overlayElement}
         menuBottom={geometry.menuBottom}
+        onHoldPresentation={presentation ? setHoldAt : undefined}
       />
+      {holdAt && presentation ? (
+        <PresentationMenu
+          point={holdAt}
+          value={layout.presentation}
+          onChange={presentation.onChoice}
+          onClose={() => setHoldAt(null)}
+        />
+      ) : null}
     </div>
   );
 }
