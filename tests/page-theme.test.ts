@@ -22,7 +22,7 @@ describe("standalone branded page modes", () => {
     toggle.click();
     expect(page.getTheme()).toBe("dark");
     expect(toggle.getAttribute("aria-pressed")).toBe("true");
-    expect(toggle.textContent).toBe("Light mode");
+    expect(toggle.textContent).toBe("\u263C");
     expect(storage.data.get(SHARED_THEME_STORAGE_KEY)).toBe("dark");
     const settings = createSettingsRegistry({ storage }); settings.register(UI_PARAMETERS);
     const viewer = createThemeController(settings, { root: document.createElement("section"), storage, eventTarget: null, mediaQuery: null });
@@ -45,6 +45,24 @@ describe("standalone branded page modes", () => {
     expect(page.getTheme()).toBe("dark");
     page.setTheme("light");
     expect(storage.getItem("foss-earth.settings.v1")).toBe(previous);
+    page.dispose();
+  });
+  it("follows the system while the shared choice is auto", () => {
+    const callbacks = new Set<(event: MediaQueryListEvent) => void>();
+    const media = {
+      matches: true,
+      addEventListener(_type: string, listener: EventListenerOrEventListenerObject) { callbacks.add(listener as (event: MediaQueryListEvent) => void); },
+      removeEventListener(_type: string, listener: EventListenerOrEventListenerObject) { callbacks.delete(listener as (event: MediaQueryListEvent) => void); },
+    };
+    const storage = memoryStorage();
+    storage.data.set(SHARED_THEME_STORAGE_KEY, "auto");
+    const root = document.createElement("section");
+    const page = initializePageTheme({ root, storage, eventTarget: null, mediaQuery: media });
+    expect(page.getTheme()).toBe("dark");
+    media.matches = false;
+    for (const callback of callbacks) callback({ matches: false } as MediaQueryListEvent);
+    expect(page.getTheme()).toBe("light");
+    expect(storage.data.get(SHARED_THEME_STORAGE_KEY)).toBe("auto");
     page.dispose();
   });
   it("follows system changes until chosen and resumes on removal of the saved mode", () => {

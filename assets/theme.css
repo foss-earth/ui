@@ -4,46 +4,48 @@
 [data-ui-theme="umn"] {
   color-scheme: light;
   --ui-font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --ui-page: #faf8f5;
-  --ui-surface: #fff;
-  --ui-surface-raised: #f2ece7;
-  --ui-text: #26201e;
-  --ui-muted: #514844;
-  --ui-border: #d8cec8;
+  /* Surfaces are official maroon #7a0019 mixed into white, the light pair of the dark tint. */
+  --ui-page: #eedfe2;
+  --ui-surface: #f9f3f4;
+  --ui-surface-raised: #f4e9eb;
+  --ui-text: #2a1015;
+  --ui-muted: #5e4f52;
+  --ui-border: #c69ca4;
   --ui-accent: #7a0019;
-  --ui-accent-hover: #a00025;
+  --ui-accent-hover: #5b0013;
   --ui-accent-contrast: #fff;
-  --ui-accent-soft: rgba(122, 0, 25, 0.08);
+  --ui-accent-soft: rgba(122, 0, 25, 0.1);
   --ui-brand: #7a0019;
   --ui-gold: #ffcc33;
-  --ui-header: #7a0019;
+  --ui-header: #900021;
   --ui-header-text: #fff;
-  --ui-header-muted: #fff0bd;
+  --ui-header-muted: #ffde7a;
   --ui-header-border: var(--ui-gold);
-  --ui-shadow: 0 10px 30px rgba(65, 30, 20, 0.16);
+  --ui-shadow: 0 10px 30px rgba(91, 0, 19, 0.14);
   --ui-success: #236043;
   --ui-success-soft: #e5f1e9;
   --ui-error: #9a231f;
   --ui-error-soft: #fce7e3;
   --ui-warning: #775000;
   --ui-warning-soft: #fff1c1;
-  --ui-track: #bfb1a8;
-  --ui-track-shade: rgba(250, 248, 245, 0.72);
+  --ui-track: #b8929a;
+  --ui-track-shade: rgba(238, 223, 226, 0.72);
 }
 
 [data-ui-theme="umn"][data-theme="dark"] {
   color-scheme: dark;
-  --ui-page: #181315;
-  --ui-surface: #241c1f;
-  --ui-surface-raised: #33262b;
-  --ui-text: #faf4ed;
-  --ui-muted: #d0beb9;
-  --ui-border: #5c454a;
+  /* The same maroon, mixed into near-black. Hue stays 348°, not the previous plum. */
+  --ui-page: #19090d;
+  --ui-surface: #1f1114;
+  --ui-surface-raised: #271a1d;
+  --ui-text: #f6f0f1;
+  --ui-muted: #ba9ba0;
+  --ui-border: #603c46;
   --ui-accent: #ffcc33;
-  --ui-accent-hover: #ffe080;
-  --ui-accent-contrast: #281b00;
-  --ui-accent-soft: rgba(255, 204, 51, 0.12);
-  --ui-header: #3b0b18;
+  --ui-accent-hover: #ffde7a;
+  --ui-accent-contrast: #5b0013;
+  --ui-accent-soft: rgba(255, 204, 51, 0.14);
+  --ui-header: #2c0810;
   --ui-shadow: 0 12px 34px rgba(0, 0, 0, 0.35);
   --ui-success: #abd7b9;
   --ui-success-soft: #183529;
@@ -51,25 +53,25 @@
   --ui-error-soft: #4c2328;
   --ui-warning: #ffe08b;
   --ui-warning-soft: #423316;
-  --ui-track: #8a747a;
-  --ui-track-shade: rgba(24, 19, 21, 0.72);
+  --ui-track: #5c3940;
+  --ui-track-shade: rgba(25, 9, 13, 0.72);
 }
 
 /* Before the opt-in runtime initializes, match the device preference. */
 @media (prefers-color-scheme: dark) {
   [data-ui-theme="umn"]:not([data-theme]) {
     color-scheme: dark;
-    --ui-page: #181315;
-    --ui-surface: #241c1f;
-    --ui-surface-raised: #33262b;
-    --ui-text: #faf4ed;
-    --ui-muted: #d0beb9;
-    --ui-border: #5c454a;
+    --ui-page: #19090d;
+    --ui-surface: #1f1114;
+    --ui-surface-raised: #271a1d;
+    --ui-text: #f6f0f1;
+    --ui-muted: #ba9ba0;
+    --ui-border: #603c46;
     --ui-accent: #ffcc33;
-    --ui-accent-hover: #ffe080;
-    --ui-accent-contrast: #281b00;
-    --ui-accent-soft: rgba(255, 204, 51, 0.12);
-    --ui-header: #3b0b18;
+    --ui-accent-hover: #ffde7a;
+    --ui-accent-contrast: #5b0013;
+    --ui-accent-soft: rgba(255, 204, 51, 0.14);
+    --ui-header: #2c0810;
     --ui-shadow: 0 12px 34px rgba(0, 0, 0, 0.35);
   }
 }
@@ -136,6 +138,25 @@
 }
 
 [data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-two-position-slider:focus-within {
+  outline-color: var(--ui-accent);
+}
+
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-parameter--compact-choice > .foss-earth-parameter__header {
+  border-color: var(--ui-border);
+  background: var(--ui-surface);
+}
+
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-parameter--compact-choice .foss-earth-parameter__pills {
+  border-color: var(--ui-border);
+  background: var(--ui-page);
+}
+
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-parameter--compact-choice .foss-earth-parameter__pills > .foss-earth-choice:has(input:checked) {
+  background: var(--ui-accent-soft);
+  box-shadow: inset 0 0 0 1px var(--ui-accent);
+}
+
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-parameter--compact-choice .foss-earth-parameter__pills > .foss-earth-choice:focus-within {
   outline-color: var(--ui-accent);
 }
 

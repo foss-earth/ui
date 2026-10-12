@@ -1,13 +1,12 @@
 import type { SettingsRegistry } from "../../settings/registry.js";
 import type { NumberRange, ParameterChoice, ParameterSpec, ParameterState, ParameterValue } from "../../settings/types.js";
 import { formatNumber, formatQuantity, formatValue, isNumberRange, sameValue } from "../../settings/values.js";
-import { createExternalLinkIcon } from "../externalLinkIcon.js";
 import { createTrack, type TrackHandle } from "./track.js";
 import { createTwoPositionSlider } from "./twoPositionSlider.js";
 import { createHelpTooltip } from "../helpTooltip.js";
 
 export interface ParameterControlHandle {
-  /** The control and its compact help and source actions. */
+  /** The control, with help last and the source link in that explanation. */
   element: HTMLElement;
   /** Re-reads the registry. Cheap when nothing changed. */
   update(): void;
@@ -131,15 +130,16 @@ function withParameterActions(document: Document, settings: SettingsRegistry, sp
   explanation.append(code);
   const url = settings.sourceUrl(spec.id);
   const source = document.createElement(url ? "a" : "span");
-  source.className = "foss-earth-choice foss-earth-parameter__action foss-earth-parameter__icon-action foss-earth-parameter-row__source";
-  source.title = `The code that reads ${spec.id}: ${spec.source}.${url ? " Opens in a new tab." : ""}`;
-  source.setAttribute("aria-label", `Source for ${spec.label}: ${spec.source}${url ? ", opens in a new tab" : ""}`);
-  source.append(createExternalLinkIcon(document));
+  source.className = "foss-earth-parameter-row__source";
+  source.textContent = spec.source;
   if (url) {
-    (source as HTMLAnchorElement).href = url;
-    (source as HTMLAnchorElement).target = "_blank";
-    (source as HTMLAnchorElement).rel = "noopener noreferrer";
+    const link = source as HTMLAnchorElement;
+    link.href = url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.title = `The code that reads ${spec.id}. Opens in a new tab.`;
   }
+  explanation.append(source);
   let header = control.element.querySelector<HTMLElement>(".foss-earth-parameter__header");
   const heading = control.element.querySelector<HTMLElement>(".foss-earth-choices__heading, .foss-earth-parameter__label");
   if (!header && heading) {
@@ -148,9 +148,8 @@ function withParameterActions(document: Document, settings: SettingsRegistry, sp
     heading.before(header);
     header.append(heading);
   }
-  if (heading) heading.before(help);
+  if (heading) heading.after(help);
   else (header ?? control.element).append(help);
-  (header ?? control.element).append(source);
   control.element.append(explanation);
   const updateActions = (): void => {
     const state = settings.inspect(spec.id);
@@ -185,26 +184,81 @@ function pill(document: Document, type: "radio" | "checkbox", name: string, valu
   return { element, input, text };
 }
 
+function createParameterMark(document: Document, mark: NonNullable<ParameterSpec["mark"]>): SVGSVGElement {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("class", "foss-earth-parameter__mark");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("focusable", "false");
+  const add = (d: string, width = "1.8"): void => {
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", d);
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke", "currentColor");
+    path.setAttribute("stroke-width", width);
+    path.setAttribute("stroke-linecap", "round");
+    path.setAttribute("stroke-linejoin", "round");
+    svg.append(path);
+  };
+  if (mark === "polygon") {
+    add("M12 3.5 20 9.1 17 20H7L4 9.1Z", "2");
+  } else if (mark === "gear") {
+    add("M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z");
+    add("M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z");
+  } else {
+    for (const d of [
+      "M8 2.5 9.8 4.3",
+      "M14.2 4.3 16 2.5",
+      "M9 7.2V6a3 3 0 0 1 6 0v1.2",
+      "M12 20.5c-3.3 0-6-2.6-6-5.8v-3.2A3.5 3.5 0 0 1 9.5 8h5A3.5 3.5 0 0 1 18 11.5v3.2c0 3.2-2.7 5.8-6 5.8Z",
+      "M12 20.5V11",
+      "M6.6 9.2C4.8 9 3.2 7.4 3.2 5.4",
+      "M6 13.2H2.2",
+      "M3.4 20.8c0-2 1.6-3.7 3.6-3.8",
+      "M17.4 9.2c1.8-.2 3.4-1.8 3.4-3.8",
+      "M18 13.2h3.8",
+      "M17 17c2 .1 3.6 1.8 3.6 3.8",
+    ]) add(d);
+  }
+  return svg;
+}
+
+function setParameterLabel(document: Document, element: HTMLElement, spec: ParameterSpec): void {
+  const nodes: Node[] = [];
+  if (spec.mark) nodes.push(createParameterMark(document, spec.mark));
+  nodes.push(document.createTextNode(spec.label));
+  element.replaceChildren(...nodes);
+}
+
 function createChoiceIcon(document: Document, icon: NonNullable<ParameterChoice["icon"]>): SVGSVGElement {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("viewBox", "0 0 24 24");
   svg.setAttribute("class", "foss-earth-choice__icon");
   svg.setAttribute("aria-hidden", "true");
   svg.setAttribute("focusable", "false");
-  if (icon === "toggle-on") {
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    path.setAttribute("fill", "currentColor");
-    path.setAttribute("fill-rule", "evenodd");
-    // Filled track, with the right-hand knob cut out so it contrasts in either theme.
-    path.setAttribute("d", "M8 5a7 7 0 0 0 0 14h8a7 7 0 0 0 0-14H8Zm8 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z");
-    svg.append(path);
-  } else {
-    const track = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-    for (const [name, value] of Object.entries({ x: "2", y: "6", width: "20", height: "12", rx: "6", fill: "none", stroke: "currentColor", "stroke-width": "2" })) track.setAttribute(name, value);
-    const knob = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    for (const [name, value] of Object.entries({ cx: "8", cy: "12", r: "3", fill: "currentColor" })) knob.setAttribute(name, value);
-    svg.append(track, knob);
+  if (icon === "line" || icon === "circle") {
+    const shape = document.createElementNS("http://www.w3.org/2000/svg", icon === "line" ? "rect" : "circle");
+    const attributes = icon === "line"
+      ? { x: "11", y: "3", width: "2", height: "18", rx: "1", fill: "currentColor" }
+      : { cx: "12", cy: "12", r: "7", fill: "none", stroke: "currentColor", "stroke-width": "2" };
+    for (const [name, value] of Object.entries(attributes)) shape.setAttribute(name, value);
+    svg.append(shape);
+    return svg;
   }
+  const add = (d: string): void => {
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", d);
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke", "currentColor");
+    path.setAttribute("stroke-width", "1.8");
+    path.setAttribute("stroke-linecap", "round");
+    path.setAttribute("stroke-linejoin", "round");
+    svg.append(path);
+  };
+  if (icon === "sun") {
+    add("M12 17.2a5.2 5.2 0 1 0 0-10.4 5.2 5.2 0 0 0 0 10.4Z");
+    for (const d of ["M12 2.4v2.2", "M12 19.4v2.2", "M4.7 4.7l1.6 1.6", "M17.7 17.7l1.6 1.6", "M2.4 12h2.2", "M19.4 12h2.2", "M4.7 19.3l1.6-1.6", "M17.7 6.3l1.6-1.6"]) add(d);
+  } else add("M21 14.5A8.5 8.5 0 1 1 9.5 3a6.5 6.5 0 0 0 11.5 11.5Z");
   return svg;
 }
 
@@ -234,7 +288,7 @@ function createSwitch(document: Document, settings: SettingsRegistry, spec: Para
   const heading = document.createElement("label");
   heading.className = "foss-earth-parameter__label";
   heading.htmlFor = toggle.input.id;
-  heading.textContent = spec.label;
+  setParameterLabel(document, heading, spec);
   const header = document.createElement("div");
   header.className = "foss-earth-parameter__header";
   header.append(toggle.element, heading);
@@ -317,7 +371,7 @@ function createChoicePills(document: Document, settings: SettingsRegistry, spec:
   element.setAttribute("aria-label", spec.label);
   const heading = document.createElement("div");
   heading.className = "foss-earth-choices__heading";
-  heading.textContent = spec.label;
+  setParameterLabel(document, heading, spec);
   heading.title = describeTitle(spec);
   const header = document.createElement("div");
   header.className = "foss-earth-parameter__header";
@@ -325,7 +379,9 @@ function createChoicePills(document: Document, settings: SettingsRegistry, spec:
   const pills = document.createElement("span");
   pills.className = "foss-earth-parameter__pills";
   const note = createNote(document);
-  element.append(header, pills, note);
+  element.classList.add("foss-earth-parameter--compact-choice");
+  header.prepend(pills);
+  element.append(header, note);
   const start = settings.get(spec.id);
   let shownChoices: ParameterState["choices"] | null = null;
   const onChange = (event: Event): void => {
@@ -339,10 +395,6 @@ function createChoicePills(document: Document, settings: SettingsRegistry, spec:
     const state = settings.inspect(spec.id);
     if (state.choices !== shownChoices) {
       shownChoices = state.choices;
-      const compact = state.choices.length > 0 && state.choices.every(choice => choice.shortLabel !== undefined || choice.icon !== undefined);
-      element.classList.toggle("foss-earth-parameter--compact-choice", compact);
-      if (compact) header.prepend(pills);
-      else header.after(pills);
       pills.replaceChildren(...state.choices.map(choice => choicePill(document, name, choice).element));
     }
     for (const input of pills.querySelectorAll<HTMLInputElement>("input")) {
@@ -353,6 +405,13 @@ function createChoicePills(document: Document, settings: SettingsRegistry, spec:
   };
   update();
   return { element, update, destroy: () => { element.removeEventListener("change", onChange); element.remove(); } };
+}
+
+/** Shrink a number box to the digits it is showing. */
+function fitNumberField(field: HTMLInputElement): void {
+  const chars = Math.max(1, field.value.length);
+  field.size = chars;
+  field.style.setProperty("--field-chars", String(chars));
 }
 
 /** The number a field shows: a fraction as a percentage. */
@@ -366,12 +425,20 @@ function fromField(spec: ParameterSpec, text: string): number | null {
   return spec.unit === "fraction" ? value / 100 : value;
 }
 
+/** Field, label and help stay one phrase; the track follows and wraps when its length does not fit. */
+function placeSlider(header: HTMLElement, readout: HTMLElement, reading: HTMLElement, label: HTMLElement, track: HTMLElement): void {
+  const line = header.ownerDocument.createElement("span");
+  line.className = "foss-earth-parameter__slider-line";
+  line.append(readout, reading, label);
+  header.append(line, track);
+}
+
 function createHeader(document: Document, spec: ParameterSpec): { header: HTMLElement; readout: HTMLElement; reading: HTMLElement } {
   const header = document.createElement("div");
   header.className = "foss-earth-parameter__header";
   const label = document.createElement("span");
   label.className = "foss-earth-parameter__label";
-  label.textContent = spec.label;
+  setParameterLabel(document, label, spec);
   label.title = describeTitle(spec);
   const readout = document.createElement("span");
   readout.className = "foss-earth-parameter__readout";
@@ -436,7 +503,7 @@ function createNumberField(document: Document, settings: SettingsRegistry, spec:
 function createValueTrack(document: Document, settings: SettingsRegistry, spec: ParameterSpec): ParameterControlHandle {
   const name = `foss-earth-parameter-${++controlCount}`;
   const element = document.createElement("div");
-  element.className = "foss-earth-parameter foss-earth-parameter--line";
+  element.className = "foss-earth-parameter foss-earth-parameter--slider";
   element.dataset.parameter = spec.id;
   const { header, readout, reading } = createHeader(document, spec);
   const field = document.createElement("input");
@@ -465,7 +532,8 @@ function createValueTrack(document: Document, settings: SettingsRegistry, spec: 
   named.hidden = namedPills.length === 0;
   named.append(...namedPills.map(option => option.element), ...(numberPill ? [numberPill.element] : []));
   const note = createNote(document);
-  element.append(header, track.element, named, note);
+  placeSlider(header, readout, reading, header.querySelector(".foss-earth-parameter__label")!, track.element);
+  element.append(header, named, note);
 
   const onNamed = (event: Event): void => {
     const input = event.target as HTMLInputElement | null;
@@ -487,7 +555,9 @@ function createValueTrack(document: Document, settings: SettingsRegistry, spec: 
     if (!result.ok) setNote(note, result.reason, true);
     else update();
   };
+  const onFieldInput = (): void => { fitNumberField(field); };
   field.addEventListener("change", onField);
+  field.addEventListener("input", onFieldInput);
 
   const update = (): void => {
     const state = settings.inspect(spec.id);
@@ -519,6 +589,7 @@ function createValueTrack(document: Document, settings: SettingsRegistry, spec: 
     field.hidden = number === null;
     field.disabled = locked;
     if (document.activeElement !== field && number !== null) field.value = fieldNumber(spec, number);
+    if (number !== null && document.activeElement !== field) fitNumberField(field);
     unit.textContent = number === null ? formatValue(spec, value, state.choices) : spec.unit === "fraction" ? "%" : formatQuantity(spec.unit, 1).replace(/^1\s?/, "");
     showReading(settings, spec.id, reading);
     setNote(note, noteFor(state, start));
@@ -530,6 +601,7 @@ function createValueTrack(document: Document, settings: SettingsRegistry, spec: 
     destroy() {
       named.removeEventListener("change", onNamed);
       field.removeEventListener("change", onField);
+      field.removeEventListener("input", onFieldInput);
       track.destroy();
       element.remove();
     },
@@ -539,7 +611,7 @@ function createValueTrack(document: Document, settings: SettingsRegistry, spec: 
 /** A range track: one track, a thumb for each end; a thumb stops at the other rather than passing it. */
 function createRangeTrack(document: Document, settings: SettingsRegistry, spec: ParameterSpec): ParameterControlHandle {
   const element = document.createElement("div");
-  element.className = "foss-earth-parameter foss-earth-parameter--line";
+  element.className = "foss-earth-parameter foss-earth-parameter--slider";
   element.dataset.parameter = spec.id;
   const { header, readout, reading } = createHeader(document, spec);
   const note = createNote(document);
@@ -565,7 +637,8 @@ function createRangeTrack(document: Document, settings: SettingsRegistry, spec: 
     },
     onCommit: () => update(),
   });
-  element.append(header, track.element, note);
+  placeSlider(header, readout, reading, header.querySelector(".foss-earth-parameter__label")!, track.element);
+  element.append(header, note);
   const update = (): void => {
     const state = settings.inspect(spec.id);
     const value = isNumberRange(state.value) ? state.value : { min: 0, max: 0 };

@@ -121,6 +121,27 @@ export function createSavePresetControl(settings: SettingsRegistry, filter: Sett
   };
 }
 
+/** One Save as preset for a tab, covering every parameter homed there. Hidden when none can be saved. */
+export function createTabPresetSave(settings: SettingsRegistry, tab: string, what: string, document: Document): SavePresetHandle {
+  const element = document.createElement("div");
+  element.className = "foss-earth-tab-preset";
+  const save = createSavePresetControl(settings, { tab }, what, document);
+  element.append(save.element);
+  const sync = (): void => {
+    element.hidden = !settings.list({ tab }).some(spec => !spec.session && !spec.sensitive && !spec.readOnly);
+  };
+  sync();
+  const stop = settings.subscribe(() => sync());
+  return {
+    element,
+    destroy() {
+      stop();
+      save.destroy();
+      element.remove();
+    },
+  };
+}
+
 export interface PresetsSectionHandle {
   element: HTMLElement;
   destroy(): void;

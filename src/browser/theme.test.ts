@@ -84,6 +84,26 @@ describe("host theme instance and legacy record", () => {
     expect(root.hasAttribute("data-ui-theme")).toBe(false);
     expect(root.dataset.theme).toBe("dark");
   });
+  it("keeps Auto as the choice and follows the system appearance", () => {
+    const storage = memoryStorage();
+    const settings = createSettingsRegistry({ storage }); settings.register(UI_PARAMETERS);
+    const media = systemPreference(true);
+    const root = document.createElement("section");
+    const controller = createThemeController(settings, { root, storage, mediaQuery: media, eventTarget: null });
+    settings.set("interface.theme", "auto");
+    expect(controller.getTheme()).toBe("dark");
+    expect(root.dataset.theme).toBe("dark");
+    expect(storage.data.get(SHARED_THEME_STORAGE_KEY)).toBe("auto");
+    media.change(false);
+    expect(controller.getTheme()).toBe("light");
+    expect(settings.get("interface.theme")).toBe("auto");
+    expect(storage.data.get(SHARED_THEME_STORAGE_KEY)).toBe("auto");
+    controller.setTheme("dark");
+    media.change(false);
+    expect(controller.getTheme()).toBe("dark");
+    expect(settings.get("interface.theme")).toBe("dark");
+    controller.dispose();
+  });
   it("seeds the shared key from existing saved settings and tolerates inaccessible storage", () => {
     const storage = memoryStorage();
     const settings = createSettingsRegistry({ storage }); settings.register(UI_PARAMETERS);

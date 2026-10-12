@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createSettingsRegistry, type SettingsStorage } from "../../settings/registry.js";
 import type { ParameterSpec, SettingsPreset } from "../../settings/types.js";
 import { createParameterSection as createInjectedParameterSection, type ParameterSectionOptions } from "./parameterSection.js";
-import { createPresetsSection } from "./presetsSection.js";
+import { createPresetsSection, createTabPresetSave } from "./presetsSection.js";
 
 import { testReadingRefresh } from "../../../tests/fixtures/readingRefresh.js";
 const readingRefresh = testReadingRefresh();
@@ -89,18 +89,21 @@ describe("presets", () => {
     expect(status(panel.element).textContent).toBe("Matches Defaults");
   });
 
-  it("saves a section as a preset, then renames, exports and deletes it", () => {
+  it("saves a tab as a preset, then renames, exports and deletes it", () => {
     const { settings, panel, loading, block, button, status } = setup();
     settings.set("t.budget", 256);
     settings.set("t.key", "a secret");
     expect(status(loading.element).textContent).toBe("Custom");
+    expect(loading.element.querySelector(".foss-earth-preset-save")).toBeNull();
 
-    const save = loading.element.querySelector<HTMLElement>(".foss-earth-preset-save")!;
+    const tabSave = createTabPresetSave(settings, "map", "Map", document);
+    document.body.append(tabSave.element);
+    const save = tabSave.element;
     button(save, "Save as preset").click();
     const name = save.querySelector<HTMLInputElement>("input")!;
     name.value = "Big budget";
     button(save, "Save").click();
-    expect(save.querySelector("[role=status]")!.textContent).toMatch(/^Saved 2 values of .+ as “Big budget”/);
+    expect(save.querySelector("[role=status]")!.textContent).toMatch(/^Saved 2 values of Map as “Big budget”/);
 
     const saved = settings.listPresets().find(preset => preset.name === "Big budget")!;
     expect(saved.values).toEqual({ "t.budget": 256, "t.cap": "off" });
@@ -127,6 +130,7 @@ describe("presets", () => {
     expect(settings.listPresets().some(preset => preset.id === saved.id)).toBe(false);
     expect(block(saved.id)).toBeNull();
     expect(status(loading.element).textContent).toBe("Custom");
+    tabSave.destroy();
   });
 
   it("imports an exported preset as the user's, and says why a file is refused", async () => {
@@ -157,7 +161,10 @@ describe("presets", () => {
     const settings = createSettingsRegistry({ storage: memoryStorage() });
     settings.register([{ ...base, id: "s.key", label: "Key", description: "A secret.", unit: "none", kind: "text", default: "", sensitive: true, home: { tab: "map", section: "source", level: "main" } }]);
     const section = createParameterSection(settings, { tab: "map", section: "source" });
-    expect(section.element.querySelector<HTMLElement>(".foss-earth-preset-save")!.hidden).toBe(true);
+    const save = createTabPresetSave(settings, "map", "Map", document);
+    expect(section.element.querySelector(".foss-earth-preset-save")).toBeNull();
+    expect(save.element.hidden).toBe(true);
     expect(section.element.querySelector<HTMLElement>(".foss-earth-preset-status")!.hidden).toBe(true);
+    save.destroy();
   });
 });

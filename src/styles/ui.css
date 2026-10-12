@@ -15,6 +15,7 @@
 /* Settings and Controls tabs: one collapsible section per group. */
 .foss-earth-panel-sections {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 4px;
   padding: 6px;
 }
@@ -398,7 +399,13 @@
 
 .foss-earth-parameter-section {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 6px;
+}
+
+.foss-earth-parameter-section__main {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .foss-earth-parameter-section__main[hidden],
@@ -412,7 +419,7 @@
   display: none;
 }
 
-/* Controls first, then help, the label and the source at their own widths. */
+/* The control, then its label, then help. */
 .foss-earth-parameter--inline {
   display: flex;
   flex-wrap: wrap;
@@ -421,13 +428,56 @@
   max-width: 100%;
 }
 
-/* Tracks, text fields and choice groups take a whole line. */
+/* Text fields take a whole line. A slider is a phrase: field, label, help, then a track of a set length that wraps under them when the row is shorter than that length. */
 .foss-earth-parameter--line {
   display: grid;
   flex-basis: 100%;
   gap: 4px;
   min-width: 0;
   font-size: 12px;
+}
+
+.foss-earth-parameter--slider {
+  --foss-earth-slider-length: 120px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  flex-basis: 100%;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  font-size: 12px;
+}
+
+.foss-earth-parameter--slider > .foss-earth-parameter__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 100%;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.foss-earth-parameter__slider-line {
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.foss-earth-parameter--slider .foss-earth-track {
+  flex: 0 0 var(--foss-earth-slider-length);
+  width: var(--foss-earth-slider-length);
+  min-width: min(var(--foss-earth-slider-length), 100%);
+  max-width: 100%;
+}
+
+.foss-earth-parameter--slider .foss-earth-parameter__named {
+  flex: 1 1 100%;
 }
 
 .foss-earth-parameter--group {
@@ -487,12 +537,23 @@
 
 .foss-earth-parameter--compact-choice > .foss-earth-parameter__header {
   flex-basis: auto;
+  flex-wrap: nowrap;
+  min-width: 0;
   align-items: center;
   justify-content: flex-start;
   gap: 4px;
+  max-width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 10px;
+  padding: 3px 6px;
+  background: rgba(148, 163, 184, 0.08);
 }
 
 .foss-earth-parameter--compact-choice .foss-earth-choices__heading {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
   margin-right: 2px;
   font-size: 12px;
   font-weight: 400;
@@ -501,11 +562,54 @@
   opacity: 1;
 }
 
+.foss-earth-parameter--compact-choice .foss-earth-parameter__help-button {
+  flex: none;
+}
+
+/* Position readout names the control, then offers the switch. */
+[data-settings-section="interface/position"] .foss-earth-parameter--compact-choice > .foss-earth-parameter__header > .foss-earth-choices__heading {
+  order: -1;
+}
+
+/* Toolbar and position readout: the text/switch cards flow as a paragraph and
+   stack when the row is narrower than a card. */
+[data-settings-section="interface/toolbar"] .foss-earth-parameter-section__main,
+[data-settings-section="interface/position"] .foss-earth-parameter-section__main {
+  align-items: flex-start;
+  align-content: flex-start;
+}
+
+[data-settings-section="interface/toolbar"] .foss-earth-parameter--compact-choice,
+[data-settings-section="interface/position"] .foss-earth-parameter--compact-choice {
+  flex: 0 1 auto;
+  width: max-content;
+  max-width: 100%;
+}
+
+[data-settings-section="interface/toolbar"] .foss-earth-parameter--compact-choice > .foss-earth-parameter__header,
+[data-settings-section="interface/position"] .foss-earth-parameter--compact-choice > .foss-earth-parameter__header {
+  flex-wrap: wrap;
+  width: max-content;
+  max-width: 100%;
+}
+
+.foss-earth-parameter__mark {
+  display: block;
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+
 .foss-earth-parameter--compact-choice .foss-earth-parameter__pills > .foss-earth-choice {
   position: relative;
   justify-content: center;
-  min-width: 28px;
-  padding: 2px 2.5px;
+  min-width: 1.6em;
+  min-height: 22px;
+  padding: 1px 5px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  box-shadow: none;
 }
 
 .foss-earth-choice__icon {
@@ -523,8 +627,26 @@
 }
 
 .foss-earth-parameter--compact-choice .foss-earth-parameter__pills {
-  flex: none;
-  flex-wrap: nowrap;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  width: max-content;
+  min-width: 0;
+  max-width: 100%;
+  gap: 0;
+  padding: 2px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.18);
+}
+
+.foss-earth-parameter--compact-choice .foss-earth-parameter__pills > .foss-earth-choice:has(input:checked) {
+  background: rgba(56, 189, 248, 0.32);
+  box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.65);
+}
+
+.foss-earth-parameter--compact-choice .foss-earth-parameter__pills > .foss-earth-choice:focus-within {
+  outline: 2px solid var(--globe-accent, #60a5fa);
+  outline-offset: 1px;
 }
 
 .foss-earth-parameter__inline-field {
@@ -644,6 +766,9 @@
 }
 
 .foss-earth-parameter__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-weight: 600;
 }
 
@@ -735,9 +860,29 @@
   line-height: 1.4;
 }
 
-/* Save as preset joins the row it sits in. */
+/* Save as preset joins the row it sits in. A tab has one, under its sections. */
 .foss-earth-preset-save {
   display: contents;
+}
+
+.foss-earth-tab-preset {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 8px;
+}
+
+.foss-earth-panel-sections .foss-earth-tab-preset {
+  padding: 2px 0 2px;
+}
+
+.foss-earth-tab-preset-host:has(> .foss-earth-tab-preset[hidden]) {
+  display: none;
+}
+
+.foss-earth-tab-preset[hidden] {
+  display: none;
 }
 
 .foss-earth-preset-save[hidden],
@@ -786,6 +931,7 @@
 
 .foss-earth-parameter-row__source {
   color: rgba(147, 197, 253, 0.92);
+  overflow-wrap: anywhere;
 }
 
 .foss-earth-parameter-row__id {
@@ -820,6 +966,45 @@
   background: rgba(15, 23, 42, 0.03);
 }
 
+/* Log numbers shrink to the digits. Yellow in light, dark maroon in dark. */
+[data-settings-section="interface/log"] .foss-earth-parameter__field {
+  width: calc(var(--field-chars, 2) * 1ch + 12px);
+  min-width: calc(1ch + 12px);
+  max-width: 100%;
+  padding: 2px 4px;
+  border: 1px solid #7a0019;
+  outline: 1px solid #7a0019;
+  outline-offset: 1px;
+  background: rgba(122, 0, 25, 0.35);
+  text-align: center;
+}
+
+[data-settings-section="interface/log"] .foss-earth-parameter__field::-webkit-inner-spin-button,
+[data-settings-section="interface/log"] .foss-earth-parameter__field::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+:root[data-theme="light"] [data-settings-section="interface/log"] .foss-earth-parameter__field {
+  border-color: #e6b325;
+  outline-color: #e6b325;
+  background: rgba(255, 204, 51, 0.45);
+}
+
+[data-ui-theme]:not([data-ui-theme="earth"]) [data-settings-section="interface/log"] .foss-earth-parameter__field {
+  border-color: #7a0019;
+  outline: 1px solid #7a0019;
+  background: rgba(122, 0, 25, 0.35);
+  color: inherit;
+}
+
+:root[data-theme="light"] [data-ui-theme]:not([data-ui-theme="earth"]) [data-settings-section="interface/log"] .foss-earth-parameter__field {
+  border-color: #e6b325;
+  outline-color: #e6b325;
+  background: rgba(255, 204, 51, 0.45);
+  color: inherit;
+}
+
 :root[data-theme="light"] .foss-earth-parameter__help {
   border-color: rgba(71, 85, 105, 0.3);
   background: #f8fafc;
@@ -842,6 +1027,20 @@
 :root[data-theme="light"] .foss-earth-choice:has(input:checked) {
   border-color: #1d4ed8;
   background: rgba(29, 78, 216, 0.08);
+}
+
+:root[data-theme="light"] .foss-earth-parameter--compact-choice .foss-earth-parameter__pills {
+  background: rgba(15, 23, 42, 0.04);
+}
+
+:root[data-theme="light"] .foss-earth-parameter--compact-choice .foss-earth-parameter__pills > .foss-earth-choice:has(input:checked) {
+  border-color: transparent;
+  background: rgba(29, 78, 216, 0.12);
+  box-shadow: inset 0 0 0 1px #1d4ed8;
+}
+
+:root[data-theme="light"] .foss-earth-parameter--compact-choice > .foss-earth-parameter__header {
+  background: rgba(255, 255, 255, 0.72);
 }
 
 :root[data-theme="light"] .foss-earth-choice__credit {

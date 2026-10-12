@@ -18,11 +18,14 @@ export function initializePageTheme(ports) {
   let disposed = false;
   let current;
   try {
-    chosen = mode(storage?.getItem(SHARED_THEME_STORAGE_KEY));
+    const raw = storage?.getItem(SHARED_THEME_STORAGE_KEY);
+    // Auto, and a missing choice, follow the device. Light and dark are explicit.
+    if (raw !== "auto") chosen = mode(raw);
     // Existing viewer preferences also seed pages before the shared key exists.
-    if (!chosen) {
+    if (!chosen && raw !== "auto") {
       const record = JSON.parse(storage?.getItem("foss-earth.settings.v1") ?? "null");
-      if (record?.version === 1) chosen = mode(record.values?.["interface.theme"]);
+      const saved = record?.version === 1 ? record.values?.["interface.theme"] : null;
+      if (saved !== "auto") chosen = mode(saved);
     }
   } catch { /* A page still has a usable theme with unavailable storage. */ }
   const toggles = [...root.querySelectorAll("[data-theme-toggle]")];
@@ -36,7 +39,8 @@ export function initializePageTheme(ports) {
       toggle.setAttribute("aria-label", theme === "dark" ? "Switch to light mode" : "Switch to dark mode");
       toggle.setAttribute("title", theme === "dark" ? "Switch to light mode" : "Switch to dark mode");
       const label = toggle.querySelector("[data-theme-label]");
-      if (label) label.textContent = theme === "dark" ? "Light mode" : "Dark mode";
+      // Same marks as the globe toolbar: sun offers light, moon offers dark.
+      if (label) label.textContent = theme === "dark" ? "\u263C" : "\u263E";
     }
     ports.onChange?.(theme);
   };
@@ -51,7 +55,7 @@ export function initializePageTheme(ports) {
   const onToggle = () => { toggleTheme(); };
   const onStorage = event => {
     if (event.key !== SHARED_THEME_STORAGE_KEY || (event.storageArea && event.storageArea !== storage)) return;
-    chosen = mode(event.newValue);
+    chosen = event.newValue === "auto" ? null : mode(event.newValue);
     apply(chosen ?? (media?.matches ? "dark" : "light"));
   };
   const onSystem = event => { if (!chosen) apply(event.matches ? "dark" : "light"); };

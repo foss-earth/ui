@@ -2,7 +2,7 @@ import type { SettingsRegistry, SettingsStorage } from "../../settings/registry.
 import { loadPanelSectionsOpen, savePanelSectionsOpen } from "../panelSectionsOpen.js";
 import { createParameterControl, isStandaloneParameterControl, type ParameterControlHandle } from "./controls.js";
 import { createParameterList, createSettingsTransfer, type ParameterListHandle, type SettingsTransferHandle } from "./parameterList.js";
-import { createPresetStatus, createSavePresetControl } from "./presetsSection.js";
+import { createPresetStatus } from "./presetsSection.js";
 
 export interface ParameterSectionOptions {
   /** Host-owned DOM realm; every control uses this document. */
@@ -39,9 +39,10 @@ function presentationStorage(document: Document, storage: SettingsStorage | null
 /**
  * One section of a tab: whether its values match a preset, its own controls,
  * a control for each main-level parameter homed here that they don't cover
- * (hosts' included), Save as preset, and the Show all parameters toggle, which
- * lists every parameter of the section with its value, default, provenance,
- * help and source, and exports, imports and resets the section.
+ * (hosts' included), and, when the section has parameters homed at level
+ * "all", the Show all parameters toggle. That list is only those extra
+ * parameters, with value, default, provenance, help and source, plus export,
+ * import and reset for the section. Saving a preset belongs to the tab.
  */
 export function createParameterSection(settings: SettingsRegistry, options: ParameterSectionOptions): ParameterSectionHandle {
   if (!options.refresh || typeof options.refresh.subscribe !== "function") throw new TypeError("A shared host reading refresh subscription is required.");
@@ -73,13 +74,25 @@ export function createParameterSection(settings: SettingsRegistry, options: Para
   toggleLabel.append(toggle, toggleText);
   const toggleRow = document.createElement("div");
   toggleRow.className = "foss-earth-choices foss-earth-parameter-section__footer";
-  if (options.showAll !== false) toggleRow.append(toggleLabel);
-  const savePreset = createSavePresetControl(settings, { tab, section }, settings.getSectionTitle(tab, section), document);
-  toggleRow.append(savePreset.element);
   element.append(toggleRow);
   let list: ParameterListHandle | null = null;
   let transfer: SettingsTransferHandle | null = null;
   let visibilityDependencies = new Set<string>();
+
+  const showAll = (open: boolean): void => {
+    if (!toggleLabel.isConnected) open = false;
+    toggle.checked = open;
+    if (open && !list) {
+      list = createParameterList(settings, { tab, section, level: "all" }, document);
+      transfer = createSettingsTransfer(settings, { tab, section }, `${tab}-${section}`, document);
+      element.append(list.element, transfer.element);
+    } else if (!open && list) {
+      list.destroy();
+      transfer?.destroy();
+      list = null;
+      transfer = null;
+    }
+  };
 
   const syncMain = (): void => {
     const specs = settings.list({ tab, section, level: "main" });
@@ -101,25 +114,15 @@ export function createParameterSection(settings: SettingsRegistry, options: Para
       previous = control.element;
     }
     auto.hidden = controls.size === 0;
-    // Secrets, read-only and URL-only values are never saved in a preset.
-    const saveable = settings.list({ tab, section }).some(spec => !spec.session && !spec.sensitive && !spec.readOnly);
-    savePreset.element.hidden = !saveable;
-    toggleRow.hidden = !saveable && options.showAll === false;
-    presetStatus.update();
-  };
-
-  const showAll = (open: boolean): void => {
-    toggle.checked = open;
-    if (open && !list) {
-      list = createParameterList(settings, { tab, section }, document);
-      transfer = createSettingsTransfer(settings, { tab, section }, `${tab}-${section}`, document);
-      element.append(list.element, transfer.element);
-    } else if (!open && list) {
-      list.destroy();
-      transfer?.destroy();
-      list = null;
-      transfer = null;
+    const showExtras = options.showAll !== false && settings.list({ tab, section, level: "all" }).length > 0;
+    if (showExtras) {
+      if (!toggleLabel.isConnected) toggleRow.append(toggleLabel);
+    } else if (toggleLabel.isConnected) {
+      toggleLabel.remove();
+      showAll(false);
     }
+    toggleRow.hidden = !showExtras;
+    presetStatus.update();
   };
   const onToggle = (): void => {
     savePanelSectionsOpen({ ...loadPanelSectionsOpen(panelStorage), [allKey]: toggle.checked }, panelStorage);
@@ -172,7 +175,6 @@ export function createParameterSection(settings: SettingsRegistry, options: Para
       unsubscribe();
       stopReadings();
       toggle.removeEventListener("change", onToggle);
-      savePreset.destroy();
       for (const control of controls.values()) control.destroy();
       controls.clear();
       list?.destroy();

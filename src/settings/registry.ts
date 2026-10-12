@@ -196,7 +196,7 @@ function matches(spec: ParameterSpec, filter: SettingsFilter | undefined): boole
   if (filter.tab !== undefined && spec.home.tab !== filter.tab) return false;
   if (filter.section !== undefined && spec.home.section !== filter.section) return false;
   if (filter.prefix !== undefined && !spec.id.startsWith(filter.prefix)) return false;
-  if (filter.level === "main" && spec.home.level !== "main") return false;
+  if (filter.level !== undefined && spec.home.level !== filter.level) return false;
   return true;
 }
 
@@ -902,6 +902,12 @@ export function createSettingsRegistry(options: SettingsRegistryOptions = {}): S
     sourceUrl(id) {
       const spec = specs.get(id);
       if (!spec) return null;
+      const owned = /^@foss-earth\/([a-z0-9-]+)(?:\/(.+))?$/.exec(spec.source);
+      if (owned) {
+        const rest = owned[2];
+        const path = !rest ? "" : rest.startsWith("src/") ? rest : `src/${rest}.ts`;
+        return path ? `https://github.com/foss-earth/${owned[1]}/blob/main/${path}` : `https://github.com/foss-earth/${owned[1]}`;
+      }
       let best: string | null = null;
       let length = -1;
       for (const [prefix, base] of sourceBases) {

@@ -21,9 +21,11 @@ export interface SectionsPanelProps {
   sections: readonly PanelSection[];
   /** The host's section-state storage. Omitted preserves browser persistence. */
   storage?: SettingsStorage | null;
+  /** Drawn once under the sections, such as the tab's Save as preset. */
+  footer?: ReactNode;
 }
 
-export function SectionsPanel({ sections, storage }: SectionsPanelProps) {
+export function SectionsPanel({ sections, storage, footer }: SectionsPanelProps) {
   const [chosen, setChosen] = useState(() => loadPanelSectionsOpen(storage));
   const isOpen = (section: PanelSection): boolean => chosen[section.id] ?? section.defaultOpen ?? false;
   const toggle = (section: PanelSection, open: boolean): void => {
@@ -50,6 +52,7 @@ export function SectionsPanel({ sections, storage }: SectionsPanelProps) {
             : <div className="foss-earth-panel-section__body">{section.render?.()}</div>}
         </details>
       ))}
+      {footer}
     </div>
   );
 }

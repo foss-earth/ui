@@ -32,8 +32,10 @@ export function setUiThemePreset(root: HTMLElement, preset: UiThemePreset): void
   else root.setAttribute("data-ui-theme", preset);
 }
 
-function themeValue(value: unknown): GlobeTheme | null {
-  return value === "light" || value === "dark" ? value : null;
+type ThemeChoice = GlobeTheme | "auto";
+
+function storedChoice(value: unknown): ThemeChoice | null {
+  return value === "light" || value === "dark" || value === "auto" ? value : null;
 }
 
 function rootStorage(root: HTMLElement): SettingsStorage | null {
@@ -59,18 +61,27 @@ export function createThemeController(settings: SettingsRegistry, ports: ThemePo
   let disposed = false;
   let followingSystem = false;
   let applyingSystem = false;
-  let saved: GlobeTheme | null = null;
-  try { saved = themeValue(storage?.getItem(SHARED_THEME_STORAGE_KEY)); } catch { /* Storage is best effort. */ }
+  let saved: ThemeChoice | null = null;
+  try { saved = storedChoice(storage?.getItem(SHARED_THEME_STORAGE_KEY)); } catch { /* Storage is best effort. */ }
   const initial = settings.inspect(id);
   if (ports.preset) setUiThemePreset(ports.root, ports.preset);
   if (saved) settings.set(id, saved);
   else if (!initial.layers.saved && media) {
     followingSystem = true;
-    settings.setHostDefault(id, media.matches ? "dark" : "light", "The device's light or dark appearance.");
+    settings.setHostDefault(id, "auto", "The device's light or dark appearance.");
   }
-  const read = (): GlobeTheme => settings.get(id) === "light" ? "light" : "dark";
-  const persist = (theme: GlobeTheme): void => {
-    try { storage?.setItem(SHARED_THEME_STORAGE_KEY, theme); } catch { /* Mode still applies when saving fails. */ }
+  const readChoice = (): ThemeChoice => {
+    const value = settings.get(id);
+    return value === "light" || value === "auto" ? value : "dark";
+  };
+  const resolve = (choice: ThemeChoice): GlobeTheme => choice === "auto" ? (media?.matches ? "dark" : "light") : choice;
+  const read = (): GlobeTheme => resolve(readChoice());
+  const persist = (choice: ThemeChoice): void => {
+    try { storage?.setItem(SHARED_THEME_STORAGE_KEY, choice); } catch { /* Mode still applies when saving fails. */ }
+  };
+  const notify = (theme: GlobeTheme): void => {
+    ports.onChange?.(theme);
+    for (const listener of [...listeners]) listener(theme);
   };
   const apply = (): GlobeTheme => {
     const theme = read();
@@ -80,29 +91,40 @@ export function createThemeController(settings: SettingsRegistry, ports: ThemePo
     return theme;
   };
   apply();
-  if (!saved && initial.layers.saved) persist(read());
+  if (!saved && initial.layers.saved) persist(readChoice());
   const stop = settings.watch(id, () => {
     if (disposed) return;
+    const choice = readChoice();
     const theme = apply();
-    if (!applyingSystem) { followingSystem = false; persist(theme); }
-    ports.onChange?.(theme);
-    for (const listener of [...listeners]) listener(theme);
+    if (!applyingSystem) {
+      if (choice !== "auto") followingSystem = false;
+      persist(choice);
+    }
+    notify(theme);
   });
   const set = (theme: GlobeTheme): void => {
     if (disposed) throw new Error("Theme controller is disposed.");
     if (theme === "light" || theme === "dark") {
       followingSystem = false;
       settings.set(id, theme);
-      persist(read());
+      persist(readChoice());
     }
   };
   const onStorage = (event: StorageEvent): void => {
     if (event.key !== SHARED_THEME_STORAGE_KEY || (event.storageArea && event.storageArea !== storage)) return;
-    const next = themeValue(event.newValue);
-    if (next) set(next);
+    const next = storedChoice(event.newValue);
+    if (next === "auto") settings.set(id, next);
+    else if (next) set(next);
   };
   const onSystem = (event: MediaQueryListEvent): void => {
-    if (!followingSystem || disposed) return;
+    if (disposed) return;
+    if (readChoice() === "auto") {
+      const previous = ports.root.getAttribute("data-theme");
+      const theme = apply();
+      if (theme !== previous) notify(theme);
+      return;
+    }
+    if (!followingSystem) return;
     applyingSystem = true;
     try { settings.setHostDefault(id, event.matches ? "dark" : "light", "The device's light or dark appearance."); }
     finally { applyingSystem = false; }

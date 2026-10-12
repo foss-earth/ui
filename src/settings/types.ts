@@ -102,7 +102,7 @@ export interface ParameterChoice {
   /** Compact visible label; the full label remains the accessible name and value text. */
   shortLabel?: string;
   /** Compact icon instead of text; the full label remains the accessible name and value text. */
-  icon?: "toggle-on" | "toggle-off";
+  icon?: "line" | "circle" | "sun" | "moon";
   description?: string;
 }
 
@@ -118,6 +118,8 @@ export interface ParameterSpec<T extends ParameterValue = ParameterValue> {
   /** Stable, dotted and prefixed by owner: "map.imagery.gpuBudget", "osfs.flight.minimum". */
   id: string;
   label: string;
+  /** Drawn before the label: the same mark as the toolbar control it describes. */
+  mark?: "bug" | "polygon" | "gear";
   /** One sentence: what changes when this changes. */
   description: string;
   unit: ParameterUnit;
@@ -205,8 +207,8 @@ export interface SettingsFilter {
   section?: string;
   /** Ids starting with this, such as "osfs." or "map.imagery.". */
   prefix?: string;
-  /** Only parameters shown at this level; "main" excludes "all"-level ones. */
-  level?: "main";
+  /** Only parameters whose home level is this. "all" is the extra list under Show all parameters. */
+  level?: "main" | "all";
 }
 
 /** A preset: a named list of parameter values, copied when applied. */

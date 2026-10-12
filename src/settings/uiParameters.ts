@@ -14,7 +14,7 @@ export const UI_PARAMETERS: readonly ParameterSpec[] = [
     defaultReason: "On 2026-10-03 the UMN tour kept crashing on an iPhone, and nothing said what it had been doing, on which renderer, or which version of the app it was (docs/diagnostics.md).",
     home: { tab: SETTINGS_TAB, section: "diagnostics", level: "main" },
     appliesLive: true,
-    source: "src/diagnostics/sessionTrail.ts",
+    source: "@foss-earth/ui/src/diagnostics/sessionTrail.ts",
   },
 {
     id: "diagnostics.trailSteps",
@@ -29,25 +29,25 @@ export const UI_PARAMETERS: readonly ParameterSpec[] = [
     defaultReason: "Opening an example scene and entering its 360 image is 16 steps (docs/diagnostics.md), so 80 hold a visit of many images, with each kind of trouble as one step however often it comes. They are 24 KB at most, written to this device as a step is added.",
     home: { tab: SETTINGS_TAB, section: "diagnostics", level: "main" },
     appliesLive: true,
-    source: "src/diagnostics/sessionTrail.ts",
+    source: "@foss-earth/ui/src/diagnostics/sessionTrail.ts",
   },
 {
     id: "interface.theme",
     label: "Theme",
-    description: "Light or dark panels and toolbar.",
+    description: "Light, dark, or the device's own appearance for panels and the toolbar.",
     unit: "none",
     kind: "choice",
-    choiceControl: "two-position",
     choices: [
-      { id: "light", label: "Light", shortLabel: "☼" },
-      { id: "dark", label: "Dark", shortLabel: "☾" },
+      { id: "light", label: "Light", icon: "sun" },
+      { id: "auto", label: "Auto", shortLabel: "A", description: "Follow this device's light or dark appearance." },
+      { id: "dark", label: "Dark", icon: "moon" },
     ],
     default: "dark",
     persistDefault: true,
     defaultReason: "A dark frame keeps attention on the map.",
-    home: { tab: INTERFACE_TAB, section: "toolbar", level: "main" },
+    home: { tab: INTERFACE_TAB, section: "theme", level: "main" },
     appliesLive: true,
-    source: "src/theme/theme.ts",
+    source: "@foss-earth/ui/src/browser/theme.ts",
   },
 {
     id: "interface.log.lineDuration",
@@ -62,7 +62,7 @@ export const UI_PARAMETERS: readonly ParameterSpec[] = [
     defaultReason: "Long enough to read a line twice, before this became a parameter.",
     home: { tab: INTERFACE_TAB, section: "log", level: "main" },
     appliesLive: true,
-    source: "src/log/createGameLog.ts",
+    source: "@foss-earth/ui/src/log/createGameLog.ts",
   },
 {
     id: "interface.log.maxLines",
@@ -77,6 +77,6 @@ export const UI_PARAMETERS: readonly ParameterSpec[] = [
     defaultReason: "What the log kept before this became a parameter.",
     home: { tab: INTERFACE_TAB, section: "log", level: "main" },
     appliesLive: true,
-    source: "src/log/createGameLog.ts",
+    source: "@foss-earth/ui/src/log/createGameLog.ts",
   }];
 export const THEME_LEGACY_MIGRATION: LegacyMigration = { key: "foss-earth.theme", migrate: raw => raw === "light" || raw === "dark" ? { "interface.theme": raw } : null };

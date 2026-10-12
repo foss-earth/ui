@@ -463,6 +463,18 @@ describe("settings registry", () => {
     expect(() => settings.register([budget])).toThrow(/already registered/);
   });
 
+  it("links a package path to that package and a host path to the configured base", () => {
+    const settings = createSettingsRegistry({ storage: null, sourceBase: "https://github.com/foss-earth/app/blob/main/" });
+    settings.register([
+      { ...budget, id: "test.host", source: "src/app/createGlobeApp.ts" },
+      { ...budget, id: "test.theme", source: "@foss-earth/ui/src/browser/theme.ts" },
+      { ...budget, id: "test.scenes", source: "@foss-earth/scenes/browser" },
+    ]);
+    expect(settings.sourceUrl("test.host")).toBe("https://github.com/foss-earth/app/blob/main/src/app/createGlobeApp.ts");
+    expect(settings.sourceUrl("test.theme")).toBe("https://github.com/foss-earth/ui/blob/main/src/browser/theme.ts");
+    expect(settings.sourceUrl("test.scenes")).toBe("https://github.com/foss-earth/scenes/blob/main/src/browser.ts");
+  });
+
   it("works without storage and says so", () => {
     const settings = createSettingsRegistry({ storage: null });
     settings.register([budget]);

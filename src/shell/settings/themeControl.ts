@@ -3,7 +3,7 @@ import { createParameterControl, type ParameterControlHandle } from "./controls.
 
 const THEME_ID = "interface.theme";
 
-/** A sun/moon slider in the theme's home, Interface → Toolbar. */
+/** Light, Auto and Dark, in their own section above Interface → Toolbar. */
 export function createThemeControl(settings: SettingsRegistry, document: Document): ParameterControlHandle {
   const control = createParameterControl(settings, THEME_ID, document);
   control.element.classList.add("foss-earth-theme-control");
