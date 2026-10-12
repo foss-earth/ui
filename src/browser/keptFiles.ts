@@ -48,25 +48,34 @@ export function createKeptFilesClient(options: KeptFilesClientOptions): KeptFile
   const message = (type: string, urls?: string[]) => ({ type, ...(urls ? { urls } : {}),
     ...(options.messageIdentity ? { identity: options.messageIdentity } : {}) });
   async function keep(): Promise<void> {
-    await container!.register(workerUrl!, { scope, updateViaCache: "none" });
+    const registration = await container!.register(workerUrl!, { scope, updateViaCache: "none" });
     if (disposed || !policy.enabled()) return;
-    // Registration itself is awaited. `ready` only observes activation and can
-    // be abandoned on opt-out/disposal without claiming native retirement.
-    const ready = await new Promise<ServiceWorkerRegistration | null>((resolve, reject) => {
-      const cancel = () => { cancelReady.delete(cancel); resolve(null); };
+    // A worker for a broader old scope can already satisfy container.ready.
+    // Observe this registration's worker instead; cancelling stops observation,
+    // while the native registration/activation continues independently.
+    const active = await new Promise<ServiceWorker | null>((resolve, reject) => {
+      const worker = [registration.active, registration.waiting, registration.installing]
+        .find(candidate => candidate?.scriptURL === workerUrl);
+      if (!worker) { reject(new Error("The registered worker belongs to another deployment.")); return; }
+      const cleanup = (): void => { cancelReady.delete(cancel); worker.removeEventListener("statechange", changed); };
+      const cancel = (): void => { cleanup(); resolve(null); };
+      const changed = (): void => {
+        if (disposed || !policy.enabled()) { cancel(); return; }
+        if (worker.state === "activated") { cleanup(); resolve(worker); }
+        else if (worker.state === "redundant") { cleanup(); reject(new Error("The app's worker became redundant before activation.")); }
+      };
       cancelReady.add(cancel);
-      void container!.ready.then(value => { cancelReady.delete(cancel); resolve(value); }, error => { cancelReady.delete(cancel); reject(error); });
-      if (disposed || !policy.enabled()) cancel();
+      worker.addEventListener("statechange", changed);
+      changed();
     });
     if (disposed || !policy.enabled()) return;
-    if (!ready) return;
-    if (!ours(ready)) throw new Error("The ready worker belongs to another deployment.");
+    if (!active) return;
     stopObserving();
     const observe = (): void => {
       stopLoaded();
       const controller = container!.controller;
-      const active = controller?.scriptURL === workerUrl ? controller : ready.active;
-      stopLoaded = environment.observeLoaded(urls => active?.postMessage(message("foss-earth-keep", urls)));
+      const target = controller?.scriptURL === workerUrl ? controller : active;
+      stopLoaded = environment.observeLoaded(urls => target.postMessage(message("foss-earth-keep", urls)));
     };
     let stopChanges = (): void => {};
     stopObserving = () => {

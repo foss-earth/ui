@@ -43,6 +43,7 @@ export const UI_PARAMETERS: readonly ParameterSpec[] = [
       { id: "dark", label: "Dark", shortLabel: "☾" },
     ],
     default: "dark",
+    persistDefault: true,
     defaultReason: "A dark frame keeps attention on the map.",
     home: { tab: INTERFACE_TAB, section: "toolbar", level: "main" },
     appliesLive: true,

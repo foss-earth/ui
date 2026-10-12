@@ -59,6 +59,16 @@ const RESIZE_CLICK_PX = 6;
 const MIN_WIDTH = 160;
 const MIN_HEIGHT = 128;
 const ICONS: Record<GameLogTone, string> = { info: "›", progress: "›", success: "✓", warning: "!", error: "✕" };
+const TRASH_ICON = `<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.75 4.25h10.5M6.25 4.25v-1.5h3.5v1.5M4 4.25l.6 9h6.8l.6-9M6.75 6.75v4.5M9.25 6.75v4.5"/></svg>`;
+/** A sideways drag this far is a swipe, not a click or a scroll. */
+const SWIPE_START_PX = 8;
+/** A swipe deletes a line past this share of its width, kept between these distances so a wide line needs no long swipe. */
+const SWIPE_DELETE_SHARE = 0.35;
+const SWIPE_DELETE_PX = { min: 64, max: 120 };
+/** How long a swiped line takes to slide out. */
+const DISMISS_MS = 160;
+/** A trackpad swipe that stops short of deleting springs back after this pause. */
+const WHEEL_SETTLE_MS = 150;
 
 
 function previewText(text: string): string {
@@ -129,7 +139,14 @@ export function createGameLog(settings: SettingsRegistry, ports: GameLogPorts): 
   resize.title = "Drag to resize, click to minimize";
   // The dock grips' arrows (DockPanel); log.css shows the one for where the grip is.
   resize.innerHTML = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="game-log__resize-corner" d="M10.75 2.75v8h-8M8.25 5.25l2.5-2.5 2.5 2.5M5.25 8.25l-2.5 2.5 2.5 2.5"/><path class="game-log__resize-corner-left" d="M5.25 2.75v8h8M2.75 5.25l2.5-2.5 2.5 2.5M10.75 8.25l2.5 2.5-2.5 2.5"/><path class="game-log__resize-height" d="M8 2.5v11M5.5 5 8 2.5 10.5 5M5.5 11 8 13.5 10.5 11"/></svg>`;
-  element.append(peek, lines, resize);
+  // Under the newest-first lines, at the bottom: deletes every message.
+  const clear = document.createElement("button");
+  clear.type = "button";
+  clear.className = "game-log__clear";
+  clear.setAttribute("aria-label", "Delete all messages");
+  clear.title = "Delete all messages";
+  clear.innerHTML = `${TRASH_ICON}<span>Delete all</span>`;
+  element.append(peek, lines, clear, resize);
 
   let busy = false;
   let open = false;
@@ -142,6 +159,7 @@ export function createGameLog(settings: SettingsRegistry, ports: GameLogPorts): 
     previous: LogSize | null; centered: boolean; rightAligned: boolean; widthFixed: boolean;
   } | null = null;
   const timers = new Map<Element, unknown>();
+  const swipeTimers = new Map<Element, unknown>();
 
   const requestWidth = (width: number | null, resized = false): void => {
     ports.onSize({ width, resized });
@@ -205,10 +223,16 @@ export function createGameLog(settings: SettingsRegistry, ports: GameLogPorts): 
     if (rows.length > 0 && rows.every((row) => row.hasAttribute("data-expired"))) setMinimized(true);
   };
 
-  const removeRow = (row: HTMLElement): void => {
-    if (destroyed || row.parentElement !== lines) return;
+  const forgetTimers = (row: Element): void => {
     ports.timers.clear(timers.get(row));
     timers.delete(row);
+    ports.timers.clear(swipeTimers.get(row));
+    swipeTimers.delete(row);
+  };
+
+  const removeRow = (row: HTMLElement): void => {
+    if (destroyed || row.parentElement !== lines) return;
+    forgetTimers(row);
     row.remove();
     syncPeek();
     syncScrollable();
@@ -217,6 +241,8 @@ export function createGameLog(settings: SettingsRegistry, ports: GameLogPorts): 
   };
 
   const schedule = (row: HTMLElement): void => {
+    // A line sliding out keeps the timer that deletes it.
+    if (row.hasAttribute("data-dismissed")) return;
     ports.timers.clear(timers.get(row));
     timers.delete(row);
     row.removeAttribute("data-fading");
@@ -239,6 +265,52 @@ export function createGameLog(settings: SettingsRegistry, ports: GameLogPorts): 
     }, lineMs()));
   };
 
+  /** How far a line must be swiped to delete it. */
+  const swipeDistance = (row: HTMLElement): number => Math.min(SWIPE_DELETE_PX.max, Math.max(SWIPE_DELETE_PX.min, row.offsetWidth * SWIPE_DELETE_SHARE));
+
+  /** A line follows a swipe, fading as it goes. */
+  const follow = (row: HTMLElement, dx: number): void => {
+    row.setAttribute("data-swiping", "");
+    row.style.transform = `translateX(${dx}px)`;
+    row.style.opacity = String(Math.max(0.25, 1 - Math.abs(dx) / Math.max(1, row.offsetWidth)));
+  };
+
+  /** Slides a line out to the side it was swiped to, then deletes it. */
+  const dismiss = (row: HTMLElement, direction: number): void => {
+    if (destroyed || row.parentElement !== lines || row.hasAttribute("data-dismissed")) return;
+    forgetTimers(row);
+    row.setAttribute("data-dismissed", "");
+    row.removeAttribute("data-swiping");
+    row.style.transform = `translateX(${direction * (row.offsetWidth + 24)}px)`;
+    row.style.opacity = "0";
+    timers.set(row, ports.timers.set(() => removeRow(row), DISMISS_MS));
+  };
+
+  /** Where a swipe ends: far enough deletes the line, short of that it springs back. */
+  const settleSwipe = (row: HTMLElement, dx: number): void => {
+    if (destroyed || row.hasAttribute("data-dismissed")) return;
+    if (Math.abs(dx) >= swipeDistance(row)) {
+      dismiss(row, Math.sign(dx));
+      return;
+    }
+    row.removeAttribute("data-swiping");
+    row.style.transform = "";
+    row.style.opacity = "";
+  };
+
+  const clearAll = (): void => {
+    if (destroyed) return;
+    for (const row of lines.children) forgetTimers(row);
+    lines.replaceChildren();
+    // Nothing is left to read in the history.
+    open = false;
+    element.removeAttribute("data-open");
+    syncPeek();
+    syncScrollable();
+    setMinimized(false);
+  };
+  clear.addEventListener("click", clearAll);
+
   const print = (entry: GameLogEntry): GameLogLine => {
     const row = document.createElement("div");
     row.className = "game-log__line";
@@ -251,14 +323,78 @@ export function createGameLog(settings: SettingsRegistry, ports: GameLogPorts): 
     const value = span("game-log__value");
     const actions = span("game-log__actions");
     const bar = span("game-log__bar");
-    row.append(icon, text, value, actions, bar);
+    // At the end of the line, as in a chat: deletes this message.
+    const trash = document.createElement("button");
+    trash.type = "button";
+    trash.className = "game-log__delete";
+    trash.setAttribute("aria-label", "Delete message");
+    trash.title = "Delete message";
+    trash.innerHTML = TRASH_ICON;
+    trash.addEventListener("click", () => removeRow(row));
+    row.append(icon, text, value, trash, actions, bar);
 
     let content = "";
     let removed = false;
     let revision = 0;
+    // A sideways swipe, by touch, pen or mouse, deletes the line.
+    let swipe: { pointerId: number; x: number; y: number; dx: number; active: boolean } | null = null;
+    // The click that ends a swipe is not a request to copy.
+    let swiped = false;
+    const controls = (event: Event): boolean => event.composedPath().some(target => target === actions || target === trash);
+    row.addEventListener("pointerdown", (event) => {
+      swiped = false;
+      if (destroyed || event.button !== 0 || controls(event)) return;
+      swipe = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, dx: 0, active: false };
+    });
+    row.addEventListener("pointermove", (event) => {
+      if (destroyed || !swipe || swipe.pointerId !== event.pointerId || row.hasAttribute("data-dismissed")) return;
+      const dx = event.clientX - swipe.x, dy = event.clientY - swipe.y;
+      if (!swipe.active) {
+        // A vertical move is the history scrolling.
+        if (Math.abs(dy) > SWIPE_START_PX && Math.abs(dy) >= Math.abs(dx)) { swipe = null; return; }
+        if (Math.abs(dx) <= SWIPE_START_PX) return;
+        swipe.active = true;
+        row.setPointerCapture?.(event.pointerId);
+        // A mouse drag may have begun selecting the text it now moves.
+        document.getSelection()?.removeAllRanges();
+      }
+      swipe.dx = dx;
+      follow(row, dx);
+    });
+    const endSwipe = (event: PointerEvent, cancelled: boolean): void => {
+      if (!swipe || swipe.pointerId !== event.pointerId) return;
+      const { active, dx } = swipe;
+      swipe = null;
+      if (row.hasPointerCapture?.(event.pointerId)) row.releasePointerCapture(event.pointerId);
+      if (!active) return;
+      swiped = true;
+      settleSwipe(row, cancelled ? 0 : dx);
+    };
+    row.addEventListener("pointerup", event => endSwipe(event, false));
+    row.addEventListener("pointercancel", event => endSwipe(event, true));
+    // A trackpad's two-finger swipe arrives as sideways wheel movement.
+    let wheelDx = 0;
+    row.addEventListener("wheel", (event) => {
+      if (destroyed || row.parentElement !== lines || row.hasAttribute("data-dismissed") || Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return;
+      event.preventDefault();
+      wheelDx -= event.deltaX;
+      ports.timers.clear(swipeTimers.get(row));
+      swipeTimers.delete(row);
+      if (Math.abs(wheelDx) >= swipeDistance(row)) {
+        dismiss(row, Math.sign(wheelDx));
+        return;
+      }
+      follow(row, wheelDx);
+      swipeTimers.set(row, ports.timers.set(() => {
+        swipeTimers.delete(row);
+        wheelDx = 0;
+        settleSwipe(row, 0);
+      }, WHEEL_SETTLE_MS));
+    }, { passive: false });
     row.addEventListener("click", (event) => {
       // An action may replace its own button before this click bubbles here.
-      if (event.composedPath().includes(actions)) return;
+      if (controls(event)) return;
+      if (swiped) { swiped = false; return; }
       if (destroyed || row.parentElement !== lines) return;
       const copiedRevision = revision;
       void copyText(content).then(
@@ -275,7 +411,7 @@ export function createGameLog(settings: SettingsRegistry, ports: GameLogPorts): 
     });
 
     const update = (next: GameLogEntry): void => {
-      if (destroyed || removed || (row.parentElement !== lines && revision > 0)) return;
+      if (destroyed || removed || row.hasAttribute("data-dismissed") || (row.parentElement !== lines && revision > 0)) return;
       content = next.text;
       revision++;
       const tone = next.tone ?? "info";
@@ -328,8 +464,7 @@ export function createGameLog(settings: SettingsRegistry, ports: GameLogPorts): 
       if (readingHistory) lines.scrollTop += lines.scrollHeight - previousHeight;
       while (lines.childElementCount > maxLines()) {
         const oldest = lines.lastElementChild!;
-        ports.timers.clear(timers.get(oldest));
-        timers.delete(oldest);
+        forgetTimers(oldest);
         oldest.remove();
       }
       syncScrollable();
@@ -445,8 +580,9 @@ export function createGameLog(settings: SettingsRegistry, ports: GameLogPorts): 
       if (destroyed) return;
       destroyed = true;
       drag = null;
-      for (const timer of timers.values()) ports.timers.clear(timer);
+      for (const timer of [...timers.values(), ...swipeTimers.values()]) ports.timers.clear(timer);
       timers.clear();
+      swipeTimers.clear();
       element.remove();
       requestWidth(null);
     },

@@ -1,0 +1,230 @@
+/* Public design tokens. Select a palette with data-ui-theme; data-theme chooses
+   its light/dark mode. Hosts may override tokens to create their own palette.
+   Unbranded Earth hosts keep their existing stylesheet colors. */
+[data-ui-theme="umn"] {
+  color-scheme: light;
+  --ui-font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --ui-page: #faf8f5;
+  --ui-surface: #fff;
+  --ui-surface-raised: #f2ece7;
+  --ui-text: #26201e;
+  --ui-muted: #514844;
+  --ui-border: #d8cec8;
+  --ui-accent: #7a0019;
+  --ui-accent-hover: #a00025;
+  --ui-accent-contrast: #fff;
+  --ui-accent-soft: rgba(122, 0, 25, 0.08);
+  --ui-brand: #7a0019;
+  --ui-gold: #ffcc33;
+  --ui-header: #7a0019;
+  --ui-header-text: #fff;
+  --ui-header-muted: #fff0bd;
+  --ui-header-border: var(--ui-gold);
+  --ui-shadow: 0 10px 30px rgba(65, 30, 20, 0.16);
+  --ui-success: #236043;
+  --ui-success-soft: #e5f1e9;
+  --ui-error: #9a231f;
+  --ui-error-soft: #fce7e3;
+  --ui-warning: #775000;
+  --ui-warning-soft: #fff1c1;
+  --ui-track: #bfb1a8;
+  --ui-track-shade: rgba(250, 248, 245, 0.72);
+}
+
+[data-ui-theme="umn"][data-theme="dark"] {
+  color-scheme: dark;
+  --ui-page: #181315;
+  --ui-surface: #241c1f;
+  --ui-surface-raised: #33262b;
+  --ui-text: #faf4ed;
+  --ui-muted: #d0beb9;
+  --ui-border: #5c454a;
+  --ui-accent: #ffcc33;
+  --ui-accent-hover: #ffe080;
+  --ui-accent-contrast: #281b00;
+  --ui-accent-soft: rgba(255, 204, 51, 0.12);
+  --ui-header: #3b0b18;
+  --ui-shadow: 0 12px 34px rgba(0, 0, 0, 0.35);
+  --ui-success: #abd7b9;
+  --ui-success-soft: #183529;
+  --ui-error: #ffb8aa;
+  --ui-error-soft: #4c2328;
+  --ui-warning: #ffe08b;
+  --ui-warning-soft: #423316;
+  --ui-track: #8a747a;
+  --ui-track-shade: rgba(24, 19, 21, 0.72);
+}
+
+/* Before the opt-in runtime initializes, match the device preference. */
+@media (prefers-color-scheme: dark) {
+  [data-ui-theme="umn"]:not([data-theme]) {
+    color-scheme: dark;
+    --ui-page: #181315;
+    --ui-surface: #241c1f;
+    --ui-surface-raised: #33262b;
+    --ui-text: #faf4ed;
+    --ui-muted: #d0beb9;
+    --ui-border: #5c454a;
+    --ui-accent: #ffcc33;
+    --ui-accent-hover: #ffe080;
+    --ui-accent-contrast: #281b00;
+    --ui-accent-soft: rgba(255, 204, 51, 0.12);
+    --ui-header: #3b0b18;
+    --ui-shadow: 0 12px 34px rgba(0, 0, 0, 0.35);
+  }
+}
+
+[data-ui-theme]:not([data-ui-theme="earth"]) {
+  --globe-accent: var(--ui-accent);
+  --globe-accent-bright: var(--ui-accent);
+  --globe-accent-hover: var(--ui-accent-hover);
+}
+
+/* Shared components consume tokens. These overrides also bridge feature-owned
+   styles that predate the token API; load this sheet after their CSS. */
+[data-ui-theme]:not([data-ui-theme="earth"]) :is(.foss-earth-dock-panel, .foss-earth-panel-launcher-button, .foss-earth-window-menu, .foss-earth-window-menu-floating, .foss-earth-parameter__help) {
+  border-color: var(--ui-border);
+  background: var(--ui-surface);
+  color: var(--ui-text);
+  box-shadow: var(--ui-shadow);
+  font-family: var(--ui-font);
+}
+
+[data-ui-theme]:not([data-ui-theme="earth"]) :is(.foss-earth-dock-panel-body, .foss-earth-tab-shell-selected, .foss-earth-dock-panel-resize-handle) {
+  background: var(--ui-surface);
+  color: var(--ui-text);
+}
+
+[data-ui-theme]:not([data-ui-theme="earth"]) :is(.foss-earth-tab-button, .foss-earth-tab-close, .foss-earth-tab-add, .foss-earth-window-menu-item) {
+  color: var(--ui-text);
+}
+
+[data-ui-theme]:not([data-ui-theme="earth"]) :is(.foss-earth-tab-strip, .foss-earth-tab-add, .foss-earth-two-position-slider__track) {
+  background: var(--ui-surface-raised);
+}
+
+[data-ui-theme]:not([data-ui-theme="earth"]) :is(.foss-earth-tab-shell:hover, .foss-earth-tab-shell:has(.foss-earth-tab-button:focus-visible), .foss-earth-tab-close:hover, .foss-earth-tab-add:hover, .foss-earth-panel-launcher-button:hover, .foss-earth-window-menu-item:hover) {
+  background: var(--ui-accent-soft);
+}
+
+[data-ui-theme]:not([data-ui-theme="earth"]) :is(.foss-earth-panel-section, .foss-earth-choice, .foss-earth-parameter__field, .foss-earth-parameter__text, .foss-earth-settings-transfer__text, .foss-earth-empty-tab-drop-target, .foss-earth-two-position-slider__track) {
+  border-color: var(--ui-border);
+}
+
+[data-ui-theme]:not([data-ui-theme="earth"]) :is(.foss-earth-panel-section, .foss-earth-parameter__field, .foss-earth-parameter__text, .foss-earth-settings-transfer__text) {
+  background: var(--ui-surface-raised);
+  color: var(--ui-text);
+}
+
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-choice:has(input:checked) {
+  border-color: var(--ui-accent);
+  background: var(--ui-accent-soft);
+}
+
+[data-ui-theme]:not([data-ui-theme="earth"]) :is(.foss-earth-choice__credit, .foss-earth-parameter-row__source, .foss-earth-about__link, .foss-earth-about__above, .foss-earth-location-panel a, .map-source-hud__credit, .scene-credit-chip .foss-earth-external-link-icon) {
+  color: var(--ui-accent);
+}
+
+[data-ui-theme]:not([data-ui-theme="earth"]) :is(.foss-earth-choice__credit:hover, .foss-earth-parameter__action:hover:not(:disabled), .map-source-hud__provider:hover, .map-source-hud__credit:hover) {
+  background: var(--ui-accent-soft);
+  color: var(--ui-accent-hover);
+}
+
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-two-position-slider__thumb {
+  background: var(--ui-accent-soft);
+  box-shadow: 0 0 0 1px var(--ui-accent);
+}
+
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-two-position-slider:focus-within {
+  outline-color: var(--ui-accent);
+}
+
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-track__colours { background: var(--ui-track); }
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-track--detail .foss-earth-track__colours { background: linear-gradient(90deg, #46db8f 0%, #f6d365 55%, #ff6b6b 100%); }
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-track__shade { background: var(--ui-track-shade); }
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-track__stripe { background: repeating-linear-gradient(135deg, var(--ui-track-shade) 0 3px, transparent 3px 6px); }
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-track__tick { background: var(--ui-text); }
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-track__thumb::-webkit-slider-thumb { border-color: var(--ui-surface); }
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-track__thumb::-moz-range-thumb { border-color: var(--ui-surface); }
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-track__thumb--default::-webkit-slider-thumb { border-color: var(--ui-text); }
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-track__thumb--default::-moz-range-thumb { border-color: var(--ui-text); }
+
+[data-ui-theme]:not([data-ui-theme="earth"]) :is(.foss-earth-map-cache-section progress, .foss-earth-status-section progress, .foss-earth-mesh-inspector__selection input) { accent-color: var(--ui-accent); }
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-mesh-inspector__selection:has(input:checked),
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-mesh-inspector__selection:has(input:indeterminate) { border-color: var(--ui-accent); }
+[data-ui-theme]:not([data-ui-theme="earth"]) :is(.foss-earth-preset, .foss-earth-about__parts) { border-color: var(--ui-border); }
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-about__commit { background: var(--ui-surface-raised); }
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-about__flag { color: var(--ui-warning); border-color: var(--ui-warning); }
+[data-ui-theme]:not([data-ui-theme="earth"]) :is(.foss-earth-report-only, .globe-shell) { background: var(--ui-page); color: var(--ui-text); }
+
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-location-panel {
+  --location-border: var(--ui-border);
+  --location-field: var(--ui-surface-raised);
+  --location-hover: var(--ui-accent-soft);
+}
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-location-panel .foss-earth-location-play { background: var(--ui-accent-soft); }
+
+[data-ui-theme]:not([data-ui-theme="earth"]) :is(.hud-chip, .hud-circle-button) {
+  color: var(--ui-text);
+  border-color: var(--ui-border);
+  background: var(--ui-surface);
+  box-shadow: var(--ui-shadow);
+}
+[data-ui-theme]:not([data-ui-theme="earth"]) :is(.hud-chip-button:hover, .hud-circle-button:hover, .hud-chip-button:active, .hud-circle-button:active) {
+  border-color: var(--ui-accent);
+  background: var(--ui-surface-raised);
+}
+[data-ui-theme]:not([data-ui-theme="earth"]) :is(.perf-chip--fps .perf-chip__unit, .map-download-speed) { color: var(--ui-muted); }
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-panorama-return { color: var(--ui-accent-contrast); border-color: var(--ui-accent); background: var(--ui-accent); }
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-panorama-return:hover { background: var(--ui-accent-hover); }
+
+/* Retain meaningful capability/status colors instead of recoloring them as branding. */
+[data-ui-theme]:not([data-ui-theme="earth"]) .hud-chip--good { color: var(--ui-success); border-color: var(--ui-success); background: var(--ui-success-soft); }
+[data-ui-theme]:not([data-ui-theme="earth"]) .hud-chip--bad { color: var(--ui-error); border-color: var(--ui-error); background: var(--ui-error-soft); }
+[data-ui-theme]:not([data-ui-theme="earth"]) .hud-chip--fallback { color: var(--ui-warning); border-color: var(--ui-warning); background: var(--ui-warning-soft); }
+
+[data-ui-theme]:not([data-ui-theme="earth"]) :is(.hud-chip.is-streaming, .hud-chip.hud-chip--gpu.is-rendering, .hud-chip-group.is-active .perf-chip[data-perf-metric="fps"]) {
+  border-color: transparent;
+  background: linear-gradient(var(--hud-activity-fill, var(--ui-surface)), var(--hud-activity-fill, var(--ui-surface))) padding-box,
+    conic-gradient(from var(--hud-spin-angle), transparent 0deg 210deg, var(--ui-accent) 280deg, var(--ui-gold) 320deg 340deg, var(--ui-accent) 355deg, transparent 360deg) border-box;
+}
+[data-ui-theme]:not([data-ui-theme="earth"]) :is(.hud-chip.hud-chip--gpu.is-rendering, .hud-chip-group.is-active .perf-chip[data-perf-metric="fps"]) {
+  --hud-activity-fill: var(--ui-success-soft);
+  color: var(--ui-success);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-ui-theme]:not([data-ui-theme="earth"]) :is(.hud-chip.is-streaming, .hud-chip.hud-chip--gpu.is-rendering, .hud-chip-group.is-active .perf-chip[data-perf-metric="fps"]) {
+    background: var(--hud-activity-fill, var(--ui-surface));
+    border-color: var(--ui-accent);
+  }
+}
+
+[data-ui-theme]:not([data-ui-theme="earth"]) .game-log { --game-log-accent: var(--ui-accent); color: var(--ui-text); }
+[data-ui-theme]:not([data-ui-theme="earth"]) :is(.game-log[data-open], .game-log[data-sized], .game-log__peek, .game-log__line, .game-log__clear, .game-log__resize) {
+  background: var(--ui-surface);
+  color: var(--ui-text);
+  border-color: var(--ui-border);
+  text-shadow: none;
+}
+[data-ui-theme]:not([data-ui-theme="earth"]) .game-log[data-sized] { box-shadow: var(--ui-shadow); }
+[data-ui-theme]:not([data-ui-theme="earth"]) :is(.game-log__delete, .game-log__value, .game-log__icon) { color: var(--ui-muted); }
+[data-ui-theme]:not([data-ui-theme="earth"]) :is(.game-log__delete:hover, .game-log__delete:focus-visible, .game-log__clear:hover, .game-log__clear:focus-visible) { color: var(--ui-text); background: var(--ui-accent-soft); }
+[data-ui-theme]:not([data-ui-theme="earth"]) :is(.game-log__delete:focus-visible, .game-log__clear:focus-visible, .game-log__text:focus-visible, .game-log__actions button:focus-visible) { outline-color: var(--ui-accent); }
+[data-ui-theme]:not([data-ui-theme="earth"]) .game-log__actions button { color: var(--ui-accent-contrast); }
+[data-ui-theme]:not([data-ui-theme="earth"]) .game-log__actions button[aria-pressed="false"] { color: var(--ui-accent); }
+[data-ui-theme]:not([data-ui-theme="earth"]) .game-log__bar { background: var(--ui-border); }
+[data-ui-theme]:not([data-ui-theme="earth"]) .game-log__line[data-tone="error"] { background: var(--ui-error-soft); }
+[data-ui-theme]:not([data-ui-theme="earth"]) :is(.game-log__line[data-tone="error"] .game-log__icon, .game-log__line[data-tone="error"] .game-log__text, .game-log__peek[data-tone="error"] .game-log__icon) { color: var(--ui-error); }
+[data-ui-theme]:not([data-ui-theme="earth"]) :is(.game-log__line[data-tone="success"] .game-log__icon, .game-log__peek[data-tone="success"] .game-log__icon) { color: var(--ui-success); }
+
+/* Inputs and gesture help are feature-owned but share the same surface palette. */
+[data-ui-theme]:not([data-ui-theme="earth"]) :is(.input-mode-toggle-row, .gesture-card, .gesture-value-input) { background: var(--ui-surface-raised); border-color: var(--ui-border); }
+[data-ui-theme]:not([data-ui-theme="earth"]) :is(.input-mode-toggle-option, .gesture-icon, .gesture-icon svg, .gesture-label, .gesture-trigger-icon, .gesture-reset-btn, .gesture-play-btn, .gesture-arrow, .gesture-action-icon, .gesture-action-icon svg, .gesture-action-label) { color: var(--ui-muted); }
+[data-ui-theme]:not([data-ui-theme="earth"]) :is(.gesture-card-bg, .gesture-value-input) { color: var(--ui-text); }
+[data-ui-theme]:not([data-ui-theme="earth"]) :is(.input-mode-toggle-option.is-active, .input-mode-button--auto) { background: var(--ui-accent-soft); color: var(--ui-accent); border-color: var(--ui-accent); outline-color: var(--ui-accent); }
+[data-ui-theme]:not([data-ui-theme="earth"]) :is(.gesture-reset-btn:hover, .gesture-play-btn:hover, .input-mode-toggle-option:hover) { background: var(--ui-accent-soft); color: var(--ui-text); }
+
+@media (forced-colors: active) {
+  [data-ui-theme]:not([data-ui-theme="earth"]) { --ui-page: Canvas; --ui-surface: Canvas; --ui-surface-raised: Canvas; --ui-text: CanvasText; --ui-muted: CanvasText; --ui-border: CanvasText; --ui-accent: LinkText; --ui-accent-hover: LinkText; --ui-accent-contrast: Canvas; --ui-header: Canvas; --ui-header-text: CanvasText; --ui-header-muted: CanvasText; --ui-header-border: CanvasText; }
+}

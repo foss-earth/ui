@@ -405,6 +405,113 @@ describe("game log", () => {
   });
 });
 
+describe("deleting game log messages", () => {
+  const pointer = (target: Element, type: string, clientX: number, clientY = 10) =>
+    target.dispatchEvent(new PointerEvent(type, { button: 0, clientX, clientY, pointerId: 7, bubbles: true }));
+  /** A drag across a line; a browser follows a drag that ends on it with a click. */
+  const swipe = (row: Element, dx: number, dy = 0, click = true) => {
+    pointer(row, "pointerdown", 100);
+    for (let step = 1; step <= 4; step++) pointer(row, "pointermove", 100 + (dx * step) / 4, 10 + (dy * step) / 4);
+    pointer(row, "pointerup", 100 + dx, 10 + dy);
+    if (click) row.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  };
+
+  it("deletes one message from the trash button at its end, without copying it", () => {
+    const writeText = vi.fn(async () => {});
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    log = createGameLog();
+    log.print({ text: "First" });
+    log.print({ text: "Second", tone: "warning" });
+    const trash = rows()[0].querySelector<HTMLButtonElement>(".game-log__delete")!;
+    expect(trash.getAttribute("aria-label")).toBe("Delete message");
+    expect(trash.textContent).toBe("");
+    expect(rows()[0].lastElementChild?.previousElementSibling?.previousElementSibling).toBe(trash);
+    trash.click();
+    expect(rows().map(row => row.textContent)).toEqual(["›First"]);
+    expect(writeText).not.toHaveBeenCalled();
+  });
+
+  it("deletes a message swiped far enough to either side, and springs back from a short or vertical one", () => {
+    vi.useFakeTimers();
+    const writeText = vi.fn(async () => {});
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    log = createGameLog();
+    const line = log.print({ text: "Kept" });
+    log.print({ text: "Left" });
+    log.print({ text: "Right" });
+
+    swipe(rows()[0], 90);
+    expect(rows()[0].hasAttribute("data-dismissed")).toBe(true);
+    vi.advanceTimersByTime(200);
+    swipe(rows()[0], -90);
+    vi.advanceTimersByTime(200);
+    expect(rows().map(row => row.textContent)).toEqual(["›Kept"]);
+
+    const kept = rows()[0];
+    swipe(kept, 30);
+    expect(kept.style.transform).toBe("");
+    expect(kept.hasAttribute("data-swiping")).toBe(false);
+    // A vertical drag scrolls the history: the browser cancels it, and no click follows.
+    swipe(kept, 4, 120, false);
+    expect(kept.style.transform).toBe("");
+    expect(rows()).toHaveLength(1);
+    // Neither the swipes nor their closing clicks copied anything.
+    expect(writeText).not.toHaveBeenCalled();
+    line.update({ text: "Kept, updated" });
+    expect(rows()[0].textContent).toBe("›Kept, updated");
+  });
+
+  it("deletes a message from a trackpad's sideways swipe, and springs back when it stops short", () => {
+    vi.useFakeTimers();
+    log = createGameLog();
+    log.print({ text: "Kept" });
+    log.print({ text: "Swiped" });
+    const wheel = (row: Element, deltaX: number, deltaY = 0) => row.dispatchEvent(new WheelEvent("wheel", { deltaX, deltaY, bubbles: true, cancelable: true }));
+
+    const swiped = rows()[0];
+    wheel(swiped, -40);
+    expect(swiped.style.transform).toBe("translateX(40px)");
+    wheel(swiped, -40);
+    expect(swiped.hasAttribute("data-dismissed")).toBe(true);
+    vi.advanceTimersByTime(200);
+    expect(rows().map(row => row.textContent)).toEqual(["›Kept"]);
+
+    const kept = rows()[0];
+    wheel(kept, 30);
+    wheel(kept, 2, 40);
+    expect(kept.style.transform).toBe("translateX(-30px)");
+    vi.advanceTimersByTime(200);
+    expect(kept.style.transform).toBe("");
+    expect(rows()).toHaveLength(1);
+  });
+
+  it("deletes every message, history included, from the button below them", () => {
+    vi.useFakeTimers();
+    log = createGameLog();
+    const progress = log.print({ text: "Downloading", tone: "progress", progress: 0.2 });
+    log.print({ text: "Older" });
+    vi.advanceTimersByTime(GAME_LOG_LINE_MS + GAME_LOG_FADE_MS);
+    log.print({ text: "Newer" });
+    log.setOpen(true);
+    const clear = log.element.querySelector<HTMLButtonElement>(".game-log__clear")!;
+    expect(clear.previousElementSibling).toBe(log.element.querySelector(".game-log__lines"));
+    expect(clear.getAttribute("aria-label")).toBe("Delete all messages");
+
+    clear.click();
+    expect(rows()).toHaveLength(0);
+    expect(log.isOpen()).toBe(false);
+    expect(log.isMinimized()).toBe(false);
+    expect(log.element.querySelector<HTMLElement>(".game-log__peek")!.hidden).toBe(true);
+    // A deleted line stays deleted; new messages show as usual.
+    progress.update({ text: "Downloading", tone: "progress", progress: 0.6 });
+    expect(rows()).toHaveLength(0);
+    log.print({ text: "Fresh" });
+    expect(showing()).toEqual(["›Fresh"]);
+    log.destroy();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
 function createGameLog(settings = (() => { const current = createSettingsRegistry({ storage: null }); current.register(INTERFACE_PARAMETERS); return current; })()): GameLog {
   return createInjectedGameLog(settings, {
     element: document.getElementById("app-log")!,

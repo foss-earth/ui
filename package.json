@@ -6,6 +6,16 @@
   "license": "AGPL-3.0-only",
   "type": "module",
   "exports": {
+    "./theme.css": {
+      "types": "./assets/theme-css.d.ts",
+      "source": "./assets/theme.css",
+      "default": "./assets/theme.css"
+    },
+    "./theme-page.js": {
+      "types": "./assets/theme-page.d.ts",
+      "source": "./assets/theme-page.js",
+      "default": "./assets/theme-page.js"
+    },
     ".": {
       "source": "./src/index.ts",
       "types": "./dist/index.d.ts",
@@ -71,6 +81,7 @@
     }
   },
   "files": [
+    "assets",
     "dist",
     "LICENSE",
     "NOTICE",
