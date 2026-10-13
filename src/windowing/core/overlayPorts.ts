@@ -13,6 +13,7 @@ export interface OverlayContextPolicy<TabId extends string> {
 export interface WindowOverlayHandle<TabId extends string> {
   openOrSelectTab(tabId: TabId): void;
   toggleTab(tabId: TabId): void;
+  closeTab(tabId: TabId): void;
 }
 export interface WindowOverlayGeometry {
   observeWidth(element: HTMLElement, listener: (width: number) => void): () => void;

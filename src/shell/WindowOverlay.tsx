@@ -337,6 +337,13 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
       ));
       focus?.onOpen?.(tabId);
     };
+    const closeTab = (tabId: TabId): void => {
+      const { state } = workspace;
+      const slotId = slotIdForOpenTab(state, tabId);
+      if (!slotId || !state[slotId].tabs.includes(tabId)) return;
+      if (beforeCloseTab(tabId) === false) return;
+      updateWorkspace(closeTabInWorkspace(state, slotId, tabId));
+    };
     overlayApiRef.current = {
       openOrSelectTab,
       toggleTab(tabId) {
@@ -347,9 +354,9 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
           return;
         }
         // Closing from a toolbar button asks first, as the tab's own close button does.
-        if (beforeCloseTab(tabId) === false) return;
-        updateWorkspace(closeTabInWorkspace(state, slotId, tabId));
+        closeTab(tabId);
       },
+      closeTab,
     };
     return () => {
       overlayApiRef.current = null;
