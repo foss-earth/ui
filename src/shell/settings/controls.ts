@@ -379,7 +379,9 @@ function createChoiceSlider(document: Document, settings: SettingsRegistry, spec
     ],
     onInput: index => { settings.set(spec.id, ends[index].id); update(); },
   });
-  if (ends.some(choice => (choice.shortLabel ?? choice.label).length > 4)) slider.element.style.width = "156px";
+  const longest = Math.max(...ends.map(choice => (choice.shortLabel ?? choice.label).length));
+  if (longest > 10) slider.element.style.width = "248px";
+  else if (longest > 4) slider.element.style.width = "156px";
   readout.append(slider.element);
   const note = createNote(document);
   element.append(header, note);

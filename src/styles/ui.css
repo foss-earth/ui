@@ -697,7 +697,10 @@
 .foss-earth-two-position-slider__option {
   position: relative;
   width: 50%;
+  overflow: hidden;
   text-align: center;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   pointer-events: none;
 }
 
