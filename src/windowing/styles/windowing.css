@@ -210,7 +210,7 @@ html[data-world-presentation="split"] .foss-earth-workspace-slot-launcher {
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.24);
 }
 
-/* Drawn outside the panel, which clips at its edges: in front of the panels, the globe and a panorama. */
+/* Drawn outside the panel, which clips at its edges: in front of the panels, the globe and a sphere. */
 .foss-earth-window-menu.foss-earth-window-menu-floating {
   z-index: 40;
   box-sizing: border-box;
@@ -286,6 +286,56 @@ html[data-world-presentation="split"] .foss-earth-workspace-slot-launcher {
   overflow: auto;
 }
 
+/* A surface tab's body is drawn by the host through the panel, so the panel neither paints nor blurs behind it; its tab strip keeps the panel's backing. */
+.foss-earth-dock-panel[data-surface="true"] {
+  background: transparent;
+  backdrop-filter: none;
+}
+.foss-earth-dock-panel[data-surface="true"] .foss-earth-dock-panel-header {
+  background: rgba(8, 15, 27, 0.94);
+  backdrop-filter: blur(14px);
+}
+.foss-earth-dock-panel-body-surface {
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+  background: transparent;
+}
+
+/* A window whose body is shared shows only its tab strip, which meets the shared body. */
+.foss-earth-dock-panel[data-bodyless="true"] {
+  border-bottom: 0;
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+/* Two windows' shared surface: under both tab strips and across the space between them, with nothing painted behind it. */
+.foss-earth-joined-surface {
+  z-index: 10;
+  display: flex;
+  box-sizing: border-box;
+  flex-direction: column;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-top: 0;
+  border-radius: 0 0 10px 10px;
+  background: transparent;
+}
+.foss-earth-joined-surface-body {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: inherit;
+}
+html[data-world-presentation="split"] .foss-earth-joined-surface {
+  border-right: 0;
+  border-left: 0;
+  border-radius: 0;
+}
+html[data-world-presentation="split"]:not([data-toolbar-edge="top"]):not([data-tabs-behind-toolbar="true"]) .foss-earth-joined-surface[data-toolbar-host="true"] {
+  padding-bottom: var(--foss-hud-bar-height, 28px);
+}
+
 .foss-earth-dock-panel-resize-handle {
   /* A circle centered on the panel's outer corner, past its 1 px border, in the opposite color to the panel. */
   position: absolute;
@@ -322,6 +372,12 @@ html[data-world-presentation="split"] .foss-earth-workspace-slot-launcher {
 
 /* A panel as wide as the screen changes only its height, from the middle of its bottom edge. */
 .foss-earth-dock-panel .foss-earth-dock-panel-resize-handle[data-axes="height"] {
+  right: auto;
+  left: calc(50% - 12px);
+  cursor: ns-resize;
+}
+
+.foss-earth-joined-surface-resize-handle:not([data-lifted="true"]) {
   right: auto;
   left: calc(50% - 12px);
   cursor: ns-resize;
@@ -385,6 +441,41 @@ html[data-world-presentation="split"] .foss-earth-workspace-slot-launcher {
   right: 6px;
 }
 
+/* Compact image rows stack both logical strips. Labels name the side; folding does not. */
+.foss-earth-window-overlay[data-image-compact="true"] {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+.foss-earth-compact-row {
+  display: flex;
+  align-items: flex-end;
+  min-width: 0;
+  gap: 4px;
+}
+.foss-earth-compact-row > .foss-earth-tab-strip {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.foss-earth-compact-row-label {
+  flex: 0 0 auto;
+  align-self: center;
+  padding: 0 6px;
+  font-size: 12px;
+}
+.foss-earth-window-overlay[data-image-compact="true"] .foss-earth-dock-panel .foss-earth-dock-panel-resize-handle[data-axes="height"] {
+  bottom: 0;
+}
+.foss-earth-window-overlay[data-image-compact="true"] .foss-earth-workspace-slot-launcher-left,
+.foss-earth-window-overlay[data-image-compact="true"] .foss-earth-workspace-slot-launcher-right,
+html[data-world-presentation="split"] .foss-earth-window-overlay[data-image-compact="true"] .foss-earth-workspace-slot-launcher-left,
+html[data-world-presentation="split"] .foss-earth-window-overlay[data-image-compact="true"] .foss-earth-workspace-slot-launcher-right {
+  position: relative;
+  top: auto;
+  right: auto;
+  left: auto;
+}
+
 :root[data-theme="dark"] .foss-earth-dock-panel,
 :root[data-theme="dark"] .foss-earth-panel-launcher-button,
 :root[data-theme="dark"] .foss-earth-window-menu {
@@ -406,6 +497,15 @@ html[data-world-presentation="split"] .foss-earth-workspace-slot-launcher {
 }
 
 :root[data-theme="light"] .foss-earth-dock-panel-body {
+  background: #fff;
+}
+
+:root[data-theme="light"] .foss-earth-dock-panel[data-surface="true"],
+:root[data-theme="light"] .foss-earth-dock-panel-body-surface {
+  background: transparent;
+}
+
+:root[data-theme="light"] .foss-earth-dock-panel[data-surface="true"] .foss-earth-dock-panel-header {
   background: #fff;
 }
 

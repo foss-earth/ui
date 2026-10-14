@@ -30,3 +30,5 @@ export * from "./theme.js";
 export * from "./overlay.js";
 export * from "./viewportInsets.js";
 export * from "./deviceContext.js";
+export * from "./surfaceGeometry.js";
+export * from "./browserData.js";

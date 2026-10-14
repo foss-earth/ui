@@ -9,7 +9,7 @@ afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); document.body.rep
 /**
  * The panel around a tab strip clips what passes its edges (overflow: hidden).
  * With many tabs the + button sits at the strip's right end, so a menu drawn
- * inside the panel was cut off there, and the globe or the panorama showed
+ * inside the panel was cut off there, and the globe or the sphere showed
  * where it should have been.
  */
 it("draws the + menu outside the panel that clips it, fixed to the window where the button is", async () => {
@@ -61,7 +61,7 @@ it("draws the + menu outside the panel that clips it, fixed to the window where 
 
 /**
  * Escape closed nothing: the + menu stayed open until a click elsewhere. It
- * now closes the menu and nothing else, so a panorama behind it is not left
+ * now closes the menu and nothing else, so a sphere behind it is not left
  * and no key binding reads the key, and focus goes back to the + button.
  */
 it("closes the + menu on Escape, and the key goes no further", async () => {
@@ -155,5 +155,59 @@ it("ends the + menu above the host's toolbar, in more columns when it has more t
     expect(menu.style.maxHeight).toBe("540px");
     expect(menu.style.gridTemplateRows).toBe("");
     expect(menu.style.gridAutoFlow).toBe("");
+  } finally { await act(async () => root.unmount()); }
+});
+
+/**
+ * A tab opened into a full strip was selected past its right end: the strip
+ * stayed where it was, and the new tab's title could not be seen. The strip
+ * now scrolls just enough to show the selected tab, and only when the
+ * selection or the tabs change.
+ */
+it("brings the selected tab into view, and leaves a strip scrolled by hand alone otherwise", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const panel = document.createElement("div");
+  document.body.append(panel);
+  // Tabs 100 px wide in a 250 px strip, laid out at the strip's scroll offset.
+  let scrollLeft = 0;
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+    if (this.classList.contains("foss-earth-tab-strip-list")) return new DOMRect(0, 0, 250, 30);
+    const shells = [...(this.parentElement?.children ?? [])];
+    return this.classList.contains("foss-earth-tab-shell") ? new DOMRect(shells.indexOf(this) * 100 - scrollLeft, 0, 100, 30) : new DOMRect();
+  });
+  const root = createRoot(panel);
+  const render = (openTabs: string[], activeTab: string, label = (id: string) => id) => act(async () => root.render(<TabStrip
+    openTabs={openTabs}
+    activeTab={activeTab}
+    availableTabs={[]}
+    addMenuOpen={false}
+    onSelectTab={() => {}}
+    onCloseTab={() => {}}
+    onOpenTab={() => {}}
+    onAddMenuOpenChange={() => {}}
+    getLabel={label}
+  />));
+  try {
+    await render(["a", "b"], "a");
+    const list = document.querySelector<HTMLElement>(".foss-earth-tab-strip-list")!;
+    Object.defineProperty(list, "scrollLeft", { get: () => scrollLeft, set: (value: number) => { scrollLeft = value; } });
+
+    // Opened and selected at x 300 to 400: its right edge comes to the strip's.
+    await render(["a", "b", "c", "d"], "d");
+    expect(scrollLeft).toBe(150);
+
+    // Scrolled back by hand, then a label changes: the strip stays.
+    scrollLeft = 0;
+    await render(["a", "b", "c", "d"], "d", (id) => `${id} (loading)`);
+    expect(scrollLeft).toBe(0);
+
+    // Selecting a tab that is already in view scrolls nothing.
+    await render(["a", "b", "c", "d"], "b");
+    expect(scrollLeft).toBe(0);
+
+    // Selecting one before the strip's start brings its left edge to the strip's.
+    scrollLeft = 180;
+    await render(["a", "b", "c", "d"], "a");
+    expect(scrollLeft).toBe(0);
   } finally { await act(async () => root.unmount()); }
 });

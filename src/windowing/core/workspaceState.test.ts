@@ -7,6 +7,7 @@ import {
   openOrSelectTabInWorkspace,
   openTabAndExpandWorkspaceSlot,
   openTabInWorkspace,
+  placeTabInWorkspace,
   selectTabAndExpandWorkspaceSlot,
   selectTabAndToggleWorkspaceSlot,
   setWorkspaceSlotCollapsed,
@@ -181,5 +182,19 @@ describe("window workspace state", () => {
     expect(next.primary.activeTab).toBe("stats");
     expect(next.secondary.tabs).toEqual([]);
     expect(next.secondary.activeTab).toBeNull();
+  });
+
+  it("places a tab without selecting it, and leaves a tab already open where it is", () => {
+    const state = createWindowWorkspaceState<TabId>({
+      primary: { tabs: ["stats"], activeTab: "stats" },
+      secondary: { tabs: ["layers"], activeTab: "layers" },
+    });
+
+    expect(placeTabInWorkspace(state, "primary", "reach", TAB_DEFINITIONS).primary).toMatchObject({ tabs: ["stats", "reach"], activeTab: "stats" });
+    expect(placeTabInWorkspace(state, "primary", "layers", TAB_DEFINITIONS)).toBe(state);
+    expect(placeTabInWorkspace(state, "primary", "reach", TAB_DEFINITIONS.filter(entry => entry.id !== "reach"))).toBe(state);
+    // An empty slot selects what it receives.
+    const empty = createWindowWorkspaceState<TabId>({ secondary: { tabs: ["stats"] } });
+    expect(placeTabInWorkspace(empty, "primary", "reach", TAB_DEFINITIONS).primary.activeTab).toBe("reach");
   });
 });

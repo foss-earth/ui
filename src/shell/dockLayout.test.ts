@@ -203,4 +203,14 @@ describe("shared window and log layout", () => {
       }
     }
   });
+
+  it("keeps the log out of the screen while it is held as a tab, at any width", () => {
+    for (const availableWidth of [848, 1280, 2400]) {
+      const held = resolveDockLayout({ ...preferences, availableWidth, floatingLog: false });
+      expect(held).toMatchObject({ mode: "columns", presentation: "overlay", logVisible: false, primaryWidth: 320, secondaryWidth: 320 });
+      expect(resolveDockLayout({ ...preferences, availableWidth }).mode).toBe("dual");
+    }
+    const prioritized = { ...preferences, logWidth: 900, availableWidth: 1280, priority: "log" as const };
+    expect(resolveDockLayout({ ...prioritized, floatingLog: false }).logVisible).toBe(false);
+  });
 });

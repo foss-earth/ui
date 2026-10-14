@@ -1,5 +1,6 @@
-import { moveTabsBetweenWorkspaceSlots } from "../windowing/core/workspaceState.js";
-import type { WindowSlotId, WindowSlotState, WindowWorkspaceState } from "../windowing/core/types.js";
+import { availableWindowTabs } from "../windowing/core/tabRules.js";
+import { moveTabsBetweenWorkspaceSlots, openOrSelectTabInWorkspace, slotIdForOpenTab } from "../windowing/core/workspaceState.js";
+import type { WindowSlotId, WindowSlotState, WindowTabDefinition, WindowWorkspaceState } from "../windowing/core/types.js";
 
 type SlotPresentation<TabId extends string> = Pick<WindowSlotState<TabId>, "activeTab" | "collapsed">;
 
@@ -111,5 +112,27 @@ export function forgetCompactWorkspaceTab<TabId extends string>(
       ...memory.secondary,
       activeTab: memory.secondary.activeTab === tabId ? null : memory.secondary.activeTab,
     },
+  };
+}
+
+/**
+ * Opens a tab for one side while that side is folded into the other window:
+ * it shows in the window that is there, and goes home to `slotId`, selected,
+ * when the width returns. A tab already open is selected where it is.
+ */
+export function openTabInCompactWorkspace<TabId extends string>(
+  state: WindowWorkspaceState<TabId>,
+  memory: CompactWorkspaceMemory<TabId>,
+  tabId: TabId,
+  slotId: WindowSlotId,
+  definitions: readonly WindowTabDefinition<TabId>[],
+): { state: WindowWorkspaceState<TabId>; memory: CompactWorkspaceMemory<TabId> } {
+  if (!availableWindowTabs(definitions).includes(tabId)) return { state, memory };
+  const existing = slotIdForOpenTab(state, tabId) !== null;
+  const opened = openOrSelectTabInWorkspace(state, tabId, memory.into, definitions);
+  if (existing || slotId === memory.into) return { state: opened, memory };
+  return {
+    state: opened,
+    memory: { ...memory, primary: { ...memory.primary, tabs: [...memory.primary.tabs, tabId], activeTab: tabId } },
   };
 }

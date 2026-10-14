@@ -81,6 +81,23 @@ export interface DockPanelProps {
   onDrop?: DragEventHandler<HTMLDivElement>;
   /** A still press on the resize grip. Moving resizes, as before. */
   onHoldPresentation?: (point: { x: number; y: number }) => void;
+  /**
+   * The body is a surface the host draws, such as a photograph: no padding or
+   * scrolling, and the panel neither paints nor blurs behind it.
+   */
+  surface?: boolean;
+  /**
+   * Only the header shows; another element draws the body, as when two
+   * windows share one. The panel keeps its own height for when it returns.
+   */
+  bodyless?: boolean;
+  /** A press or focus anywhere in the panel. */
+  onActivate?: () => void;
+  /**
+   * Stacks with its siblings instead of floating at a corner. A compact image
+   * row uses this so both logical strips stay on screen.
+   */
+  flow?: boolean;
 }
 
 export function DockPanel(props: DockPanelProps) {
@@ -112,6 +129,10 @@ export function DockPanel(props: DockPanelProps) {
     onDragOver,
     onDrop,
     onHoldPresentation,
+    surface = false,
+    bodyless = false,
+    onActivate,
+    flow = false,
   } = props;
   const hold = usePresentationHold(onHoldPresentation);
 
@@ -172,7 +193,7 @@ export function DockPanel(props: DockPanelProps) {
     measure();
     view.addEventListener("resize", measure);
     return () => { resize?.disconnect(); mutations.disconnect(); view.removeEventListener("resize", measure); };
-  }, [collapsed, fitKey, measureFit, width]);
+  }, [collapsed, bodyless, fitKey, measureFit, width]);
 
   useLayoutEffect(() => {
     if (collapsed) return;
@@ -305,8 +326,9 @@ export function DockPanel(props: DockPanelProps) {
       const rect = panel.getBoundingClientRect();
       const size = 24;
       const hang = 13;
-      // The circle is centered on the panel's bottom border, matching the in-panel grip.
-      const top = rect.bottom - size / 2;
+      // Centered on the bottom border, above a toolbar. A stacked row keeps the circle inside
+      // this panel so it does not cover the next strip's tabs.
+      const top = rect.bottom - (flow ? size : size / 2);
       const left = resizeAxes === "height"
         ? rect.left + rect.width / 2 - size / 2
         : side === "right"
@@ -329,20 +351,22 @@ export function DockPanel(props: DockPanelProps) {
       grip.style.left = "";
       grip.style.top = "";
     };
-  }, [liftResizeHandle, resizeAxes, side, collapsed, panelHeight, width]);
+  }, [liftResizeHandle, resizeAxes, side, collapsed, bodyless, panelHeight, width, flow]);
 
-  const positionStyle: CSSProperties = {
-    position: "absolute",
-    top: resolvedTop,
-    ...(isRightPanel ? { right: edgeOffsetPx } : { left: edgeOffsetPx }),
-  };
-
-  const expandedStyle: CSSProperties = collapsed
-    ? { maxWidth: width }
+  const positionStyle: CSSProperties = flow
+    ? { position: "relative", top: 0, left: 0, right: 0, width: "100%" }
     : {
-        width,
+        position: "absolute",
+        top: resolvedTop,
+        ...(isRightPanel ? { right: edgeOffsetPx } : { left: edgeOffsetPx }),
+      };
+
+  const expandedStyle: CSSProperties = collapsed || bodyless
+    ? { maxWidth: flow ? "100%" : width, ...(bodyless ? { width: flow ? "100%" : width } : {}) }
+    : {
+        width: flow ? "100%" : width,
         height: contentFit && fitState?.key === contentFit.key ? fitState.manualHeight ?? fitState.measuredHeight ?? panelHeight : panelHeight,
-        maxWidth,
+        maxWidth: flow ? "100%" : maxWidth,
         maxHeight: resolvedMaxHeight,
       };
 
@@ -362,8 +386,13 @@ export function DockPanel(props: DockPanelProps) {
       }}
       onDragOver={onDragOver}
       onDrop={onDrop}
+      onPointerDownCapture={onActivate}
+      onFocusCapture={onActivate}
       data-side={side}
+      data-flow={flow ? "true" : undefined}
       data-collapsed={collapsed ? "true" : "false"}
+      data-surface={surface && !collapsed && !bodyless ? "true" : undefined}
+      data-bodyless={bodyless && !collapsed ? "true" : undefined}
       data-occlude-world=""
     >
       {/* The contents clip to the rounded corners; the grip sits across the edge, outside this. */}
@@ -381,14 +410,14 @@ export function DockPanel(props: DockPanelProps) {
           </div>
         ) : null}
 
-        {collapsed ? null : (
-          <div ref={bodyRef} className={cx("foss-earth-dock-panel-body", classNames?.body)}>
+        {collapsed || bodyless ? null : (
+          <div ref={bodyRef} className={cx("foss-earth-dock-panel-body", surface && "foss-earth-dock-panel-body-surface", classNames?.body)}>
             {children}
           </div>
         )}
       </div>
 
-      {collapsed ? null : (() => {
+      {collapsed || bodyless ? null : (() => {
         const handle = (
           <div
             ref={gripRef}

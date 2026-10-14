@@ -19,10 +19,10 @@ and a mesh inspector panel.
 | `@foss-earth/ui/windowing` | Slot, workspace and tab actions, tab availability and conflicts, context hide/restore, panel/viewport/dock allocation, compact fold/restore, record parsing and structural overlay ports. |
 | `@foss-earth/ui/contributions` | `createUiContributionRegistry` and the typed host, contribution and lifecycle contracts. |
 | `@foss-earth/ui/diagnostics` | Issue drafts and redaction, error and console capture, report construction, session trail, settings-report redaction, published-version and AppFiles contracts, and the injected diagnostics lifecycle. |
-| `@foss-earth/ui/browser` | Storage and widgets; `createDial`, `wrapTurn` and the `Dial*` types; log, theme, Diagnostics, Bug report, Settings and report views; AppFiles status; clipboard, download, geometry and layout adapters; `trackViewportInsets`. |
+| `@foss-earth/ui/browser` | Storage and widgets; `createDial`, `wrapTurn` and the `Dial*` types; log, theme, Diagnostics, Bug report, Settings and report views; AppFiles status; clipboard, download, geometry and layout adapters; `trackViewportInsets`; browser-data review (`createBrowserDataPanel`, `markBrowserAppReady`, `reportBrowserAppFailure`, `isBrowserRecoveryPage`). |
 | `@foss-earth/ui/react` | Generic windows, tabs, `SectionsPanel`, `AdoptedElement`, `WindowOverlay`, `WindowOverlayProps` and the event-driven `MeshInspectorPanel`. Needs the host's React and React DOM. |
 | `@foss-earth/ui/styles.css`, `windowing.css`, `dial.css`, `log.css`, `status.css`, `mesh-inspector.css` | Generic CSS. `styles.css` imports the dial, log, status and cache-section styles. |
-| `@foss-earth/ui/vite` | Vite helper. |
+| `@foss-earth/ui/vite` | Vite helpers: kept app files, and `browserRecovery({ appId })` for the inline browser-data review. |
 
 All entries ship ESM JavaScript and TypeScript declarations under `dist/`. The
 core entries have no runtime dependencies and no React, renderer or DOM
@@ -73,6 +73,14 @@ port, so all readings share one refresh source. Reading callbacks run only while
 the section is connected and visible, and stop on `destroy()`. They request no
 renderer frames.
 
+## Browser data
+
+`createBrowserDataPanel(document)` is the Browser data tab. It explains the reset and links to `?resetBrowserData=1`. **Keep API keys** starts checked. Uncheck it to drop the saved Google Maps and CARTO keys (`map.source.googleKey` and `map.source.cartoKey` in `foss-earth.settings.v1`). The review page asks for confirmation before deleting anything.
+
+`browserRecovery({ appId })` from `@foss-earth/ui/vite` inlines that review into each HTML page, so it still runs when the application bundle fails to load. `markBrowserAppReady(document)` records a successful start and clears that page's failure count. `reportBrowserAppFailure(document, message?)` records a failed start. A start that is still unfinished after 45 seconds counts as stalled. After two failed or stalled starts of the same page, the inline script offers the review. It does not clear data by itself.
+
+A confirmed reset clears local storage, session storage, IndexedDB, Cache Storage and service worker registrations for the current origin, then reloads when every one of those succeeds. It reports a store it could not clear and leaves the review open. The browser HTTP cache and cookies hidden from JavaScript stay until they are cleared in the browser's own site settings.
+
 ## Contributions and contexts
 
 ```ts
@@ -108,8 +116,8 @@ unmounted and disposed, and `dispose()` attempts every contribution even if one
 cleanup fails.
 
 Hosts register their own tab IDs and context rules. `fixtures/current-tabs.json`
-records the Earth host's tab availability (the globe and panorama contexts) for
-contract tests. The host keeps the active-image close action, panorama entry
+records the Earth host's tab availability (the globe and sphere contexts) for
+contract tests. The host keeps the active-image close action, sphere entry
 readiness, labels, saved-context policy and the concrete panels.
 
 ## Workspace persistence

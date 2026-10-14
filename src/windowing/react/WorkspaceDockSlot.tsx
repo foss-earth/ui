@@ -95,6 +95,12 @@ export interface WorkspaceDockSlotProps<TabId extends string> {
   menuBottom?: () => number | null | undefined;
   /** A still press on a tab or the resize grip. */
   onHoldPresentation?: (point: { x: number; y: number }) => void;
+  /** Another element draws this window's body, shared with the other window: only the tab strip shows. */
+  joined?: boolean;
+  /** The person used this window: the tab they chose or opened, else the one it shows. */
+  onActivate?: (tabId: TabId | null) => void;
+  /** A compact row's side name, shown beside the strip or the empty-side launcher. */
+  rowLabel?: string;
 }
 
 function availableTabsFromWorkspace<TabId extends string>(
@@ -136,6 +142,9 @@ export function WorkspaceDockSlot<TabId extends string>(props: WorkspaceDockSlot
     menuContainer,
     menuBottom,
     onHoldPresentation,
+    joined = false,
+    onActivate,
+    rowLabel,
   } = props;
 
   if (!visible) return null;
@@ -151,6 +160,7 @@ export function WorkspaceDockSlot<TabId extends string>(props: WorkspaceDockSlot
       : openTabInWorkspace(workspaceState, slotId, tabId, tabDefinitions);
     onWorkspaceStateChange(next);
     onAddMenuOpenChange(false);
+    onActivate?.(tabId);
   };
 
   const handleSelectTab = (tabId: TabId) => {
@@ -158,6 +168,7 @@ export function WorkspaceDockSlot<TabId extends string>(props: WorkspaceDockSlot
       ? selectTabAndToggleWorkspaceSlot(workspaceState, slotId, tabId)
       : selectTabInWorkspace(workspaceState, slotId, tabId);
     onWorkspaceStateChange(next);
+    onActivate?.(tabId);
   };
 
   const handleCloseTab = (tabId: TabId) => {
@@ -167,6 +178,7 @@ export function WorkspaceDockSlot<TabId extends string>(props: WorkspaceDockSlot
 
   const handleMoveTab = (tabId: TabId) => {
     onWorkspaceStateChange(openTabAndExpandWorkspaceSlot(workspaceState, slotId, tabId, tabDefinitions));
+    onActivate?.(tabId);
   };
 
   const handleTabDragOver = (event: React.DragEvent<HTMLDivElement>) => {
@@ -202,7 +214,7 @@ export function WorkspaceDockSlot<TabId extends string>(props: WorkspaceDockSlot
   if (openTabs.length === 0) {
     if (!showLauncherWhenEmpty) return null;
 
-    return (
+    const launcher = (
       <PanelLauncher<TabId>
         open={addMenuOpen}
         side={side}
@@ -224,9 +236,17 @@ export function WorkspaceDockSlot<TabId extends string>(props: WorkspaceDockSlot
         menuBottom={menuBottom}
       />
     );
+    if (!rowLabel) return launcher;
+    return (
+      <div className="foss-earth-compact-row" data-side={side}>
+        <span className="foss-earth-compact-row-label">{rowLabel}</span>
+        {launcher}
+      </div>
+    );
   }
 
   if (!activeTab) return null;
+  const surface = tabDefinitions.some(tab => tab.id === activeTab && tab.surface !== undefined);
 
   return (
     <DockPanel
@@ -246,37 +266,43 @@ export function WorkspaceDockSlot<TabId extends string>(props: WorkspaceDockSlot
       onDrop={handleTabDrop}
       classNames={classNames?.dockPanel}
       header={(
-        <TabStrip<TabId>
-          openTabs={openTabs}
-          activeTab={activeTab}
-          addMenuOpen={addMenuOpen}
-          availableTabs={availableTabs}
-          side={side}
-          compact={compactWhenCollapsed && slotState.collapsed}
-          onSelectTab={handleSelectTab}
-          onCloseTab={handleCloseTab}
-          onOpenTab={handleOpenTab}
-          onMoveTab={handleMoveTab}
-          onAddMenuOpenChange={onAddMenuOpenChange}
-          getLabel={getTabLabel}
-          classNames={classNames?.tabStrip}
-          strings={{
-            allTabsOpenText: strings?.allTabsOpenText,
-            addButtonAriaLabel: strings?.openNewTabAriaLabel,
-            addButtonTitle: strings?.openNewTabTitle,
-            closeTabAriaLabel: strings?.closeTabAriaLabel,
-          }}
-          renderAddButtonContent={renderTabAddButtonContent}
-          renderCloseButtonContent={renderTabCloseButtonContent}
-          menuContainer={menuContainer}
-          menuBottom={menuBottom}
-          onHoldPresentation={onHoldPresentation}
-        />
+        <div className={rowLabel ? "foss-earth-compact-row" : undefined}>
+          {rowLabel ? <span className="foss-earth-compact-row-label">{rowLabel}</span> : null}
+          <TabStrip<TabId>
+            openTabs={openTabs}
+            activeTab={activeTab}
+            addMenuOpen={addMenuOpen}
+            availableTabs={availableTabs}
+            side={side}
+            compact={compactWhenCollapsed && slotState.collapsed}
+            onSelectTab={handleSelectTab}
+            onCloseTab={handleCloseTab}
+            onOpenTab={handleOpenTab}
+            onMoveTab={handleMoveTab}
+            onAddMenuOpenChange={onAddMenuOpenChange}
+            getLabel={getTabLabel}
+            classNames={classNames?.tabStrip}
+            strings={{
+              allTabsOpenText: strings?.allTabsOpenText,
+              addButtonAriaLabel: strings?.openNewTabAriaLabel,
+              addButtonTitle: strings?.openNewTabTitle,
+              closeTabAriaLabel: strings?.closeTabAriaLabel,
+            }}
+            renderAddButtonContent={renderTabAddButtonContent}
+            renderCloseButtonContent={renderTabCloseButtonContent}
+            menuContainer={menuContainer}
+            menuBottom={menuBottom}
+            onHoldPresentation={onHoldPresentation}
+          />
+        </div>
       )}
       {...dockPanelProps}
       onHoldPresentation={onHoldPresentation}
+      surface={surface}
+      bodyless={joined}
+      onActivate={onActivate ? () => onActivate(activeTab) : undefined}
     >
-      {renderTabContent(activeTab)}
+      {joined ? null : renderTabContent(activeTab)}
     </DockPanel>
   );
 }

@@ -1,4 +1,6 @@
 import type { resolveDockLayout } from "../../shell/dockLayout.js";
+import type { WindowSlotId } from "./types.js";
+import type { WorkspaceSnapshotSource } from "./workspaceSnapshot.js";
 
 /** Context policy is supplied by the host that owns the tabs and their content. */
 export interface OverlayContextPolicy<TabId extends string> {
@@ -12,8 +14,16 @@ export interface OverlayContextPolicy<TabId extends string> {
 }
 export interface WindowOverlayHandle<TabId extends string> {
   openOrSelectTab(tabId: TabId): void;
+  /**
+   * Opens a tab that is not open yet on `slotId`'s side and selects it there;
+   * an open tab is selected where it is. A tab registered in the same update
+   * opens once its definition arrives.
+   */
+  openTabInSlot(tabId: TabId, slotId: WindowSlotId): void;
   toggleTab(tabId: TabId): void;
   closeTab(tabId: TabId): void;
+  /** The committed logical workspace, for hosts whose content depends on both sides. */
+  readonly workspace: WorkspaceSnapshotSource<TabId>;
 }
 export interface WindowOverlayGeometry {
   observeWidth(element: HTMLElement, listener: (width: number) => void): () => void;

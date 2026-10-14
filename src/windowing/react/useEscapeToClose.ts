@@ -2,7 +2,7 @@ import { useEffect } from "react";
 
 /**
  * While a menu is open, Escape closes it and does nothing else: the window
- * sees the key first, so no panorama is left and no binding reads it. Focus
+ * sees the key first, so no sphere is left and no binding reads it. Focus
  * goes back to `returnFocus`, the button that opened the menu, so a menu
  * item that had it does not drop focus to the page as the menu goes.
  */

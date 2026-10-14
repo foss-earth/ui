@@ -2,7 +2,7 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { FixtureOverlay as WindowOverlay, type FixtureOverlayHandle as WindowOverlayHandle, type PanoramaTabs, type PanoramaTabsSnapshot } from "../../tests/fixtures/earthOverlay.js";
+import { FixtureOverlay as WindowOverlay, type FixtureOverlayHandle as WindowOverlayHandle, type SphereTabs, type SphereTabsSnapshot } from "../../tests/fixtures/earthOverlay.js";
 import { SAVED_WORKSPACE_STORAGE_KEY } from "../browser/workspace.js";
 import { GAME_LOG_SIZE_EVENT, type GameLogSizeChange } from "../log/createGameLog.js";
 import { WindowOverlay as SharedWindowOverlay, type WindowOverlayHandle as ShellHandle } from "./WindowOverlay.js";
@@ -428,9 +428,9 @@ it("adds Map and Renderer tabs showing the elements a host hands over", async ()
 /**
  * Someone wanting to know which version runs looked for an About tab under +,
  * and found none: it was the last section of Settings. It is a tab of its own,
- * offered on the globe and inside a panorama alike.
+ * offered on the globe and inside a sphere alike.
  */
-it("offers an About tab under +, on the globe and in a panorama", async () => {
+it("offers an About tab under +, on the globe and in a sphere", async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(1200);
   vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
@@ -438,11 +438,11 @@ it("offers an About tab under +, on the globe and in a panorama", async () => {
   document.body.append(host);
   const root = createRoot(host);
   const element = (text: string) => Object.assign(document.createElement("div"), { textContent: text });
-  const [aboutTab, panoramaTab, settingsTab, bugReportTab] = ["Built from", "Photograph", "Looking", "Bug form"].map(element);
-  let snapshot: PanoramaTabsSnapshot = { title: null, onScreen: false };
+  const [aboutTab, sphereTab, settingsTab, bugReportTab] = ["Built from", "Photograph", "Looking", "Bug form"].map(element);
+  let snapshot: SphereTabsSnapshot = { title: null, onScreen: false };
   const listeners = new Set<() => void>();
-  const panoramaTabs: PanoramaTabs = {
-    panorama: panoramaTab, settings: settingsTab, leave() {}, destroy() {},
+  const sphereTabs: SphereTabs = {
+    sphere: sphereTab, settings: settingsTab, leave() {}, destroy() {},
     getSnapshot: () => snapshot,
     subscribe(listener) { listeners.add(listener); return () => { listeners.delete(listener); }; },
   };
@@ -452,7 +452,7 @@ it("offers an About tab under +, on the globe and in a panorama", async () => {
     setViewState={() => {}}
     aboutTab={aboutTab}
     bugReportTab={bugReportTab}
-    panoramaTabs={panoramaTabs}
+    sphereTabs={sphereTabs}
     overlayApiRef={overlayApiRef}
   />));
   const menu = async () => {
@@ -507,7 +507,7 @@ it("prepares the Bug report tab only as it becomes visible and toggles it closed
   } finally { await act(async () => root.unmount()); }
 });
 
-it("opens a panorama's tab on entering, hides the map's tabs meanwhile, and leaves the panorama when the tab closes", async () => {
+it("opens a sphere's tab on entering, hides the map's tabs meanwhile, and leaves the sphere when the tab closes", async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(1200);
   vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
@@ -515,12 +515,12 @@ it("opens a panorama's tab on entering, hides the map's tabs meanwhile, and leav
   document.body.append(host);
   const root = createRoot(host);
   const element = (text: string) => Object.assign(document.createElement("div"), { textContent: text });
-  const [mapTab, scenesTab, panoramaTab, settingsTab, skyTab, timeTab] = ["Basemaps", "Scenes list", "Photograph", "Looking", "Atmosphere", "Dials"].map(element);
-  let snapshot: PanoramaTabsSnapshot = { title: null, onScreen: false };
+  const [mapTab, scenesTab, sphereTab, settingsTab, skyTab, timeTab] = ["Basemaps", "Scenes list", "Photograph", "Looking", "Atmosphere", "Dials"].map(element);
+  let snapshot: SphereTabsSnapshot = { title: null, onScreen: false };
   const listeners = new Set<() => void>();
   const leave = vi.fn();
-  const panoramaTabs: PanoramaTabs = {
-    panorama: panoramaTab, settings: settingsTab, leave, destroy() {},
+  const sphereTabs: SphereTabs = {
+    sphere: sphereTab, settings: settingsTab, leave, destroy() {},
     getSnapshot: () => snapshot,
     subscribe(listener) { listeners.add(listener); return () => { listeners.delete(listener); }; },
   };
@@ -533,7 +533,7 @@ it("opens a panorama's tab on entering, hides the map's tabs meanwhile, and leav
     skyTab={skyTab}
     timeTab={timeTab}
     scenesTab={scenesTab}
-    panoramaTabs={panoramaTabs}
+    sphereTabs={sphereTabs}
     overlayApiRef={overlayApiRef}
   />));
   const side = (name: "left" | "right") => Array.from(host.querySelectorAll(`[data-side="${name}"] .foss-earth-tab-button`), (button) => button.textContent);
@@ -553,10 +553,10 @@ it("opens a panorama's tab on entering, hides the map's tabs meanwhile, and leav
     expect(await menu("left")).not.toContain("360 image settings");
     expect(await menu("left")).toEqual(expect.arrayContaining(["Sky", "Date and time"]));
 
-    // Entering: the map's tabs go, and the sky's and its time, which a panorama does not draw; the panorama's opens and shows.
+    // Entering: the map's tabs go, and the sky's and its time, which a sphere does not draw; the sphere's opens and shows.
     await enter("360: Northrop Mall");
     expect(side("left")).toEqual(["360: Northrop Mall"]);
-    expect(host.contains(panoramaTab)).toBe(true);
+    expect(host.contains(sphereTab)).toBe(true);
     expect(await menu("left")).toEqual(expect.arrayContaining(["360 image settings", "Scenes"]));
     for (const hidden of ["Map", "Location", "Sky", "Date and time"]) expect(await menu("left")).not.toContain(hidden);
     await act(async () => overlayApiRef.current!.openOrSelectTab("panorama-settings"));
@@ -566,13 +566,13 @@ it("opens a panorama's tab on entering, hides the map's tabs meanwhile, and leav
     await enter("360: Walter Library");
     expect(side("left")).toEqual(["360: Walter Library", "360 image settings"]);
 
-    // Escape: the panorama's tabs go and the map's come back where they were.
+    // Escape: the sphere's tabs go and the map's come back where they were.
     await enter(null);
     expect(side("left")).toEqual(["Map", "Location"]);
     expect(selected("left")).toBe("Map");
     expect(leave).not.toHaveBeenCalled();
 
-    // Entering again brings back 360 image settings too; closing the panorama's tab leaves it.
+    // Entering again brings back 360 image settings too; closing the sphere's tab leaves it.
     await enter("360: Northrop Mall");
     expect(side("left")).toEqual(["360: Northrop Mall", "360 image settings"]);
     expect(selected("left")).toBe("360: Northrop Mall");
@@ -583,7 +583,7 @@ it("opens a panorama's tab on entering, hides the map's tabs meanwhile, and leav
   } finally { await act(async () => root.unmount()); }
 });
 
-it("opens a panorama's tab minimized while the camera flies in, and shows it once the panorama is on screen", async () => {
+it("opens a sphere's tab minimized while the camera flies in, and shows it once the sphere is on screen", async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(1200);
   vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
@@ -591,22 +591,22 @@ it("opens a panorama's tab minimized while the camera flies in, and shows it onc
   document.body.append(host);
   const root = createRoot(host);
   const element = (text: string) => Object.assign(document.createElement("div"), { textContent: text });
-  const [mapTab, scenesTab, panoramaTab, settingsTab] = ["Basemaps", "Scenes list", "Photograph", "Looking"].map(element);
-  let snapshot: PanoramaTabsSnapshot = { title: null, onScreen: false };
+  const [mapTab, scenesTab, sphereTab, settingsTab] = ["Basemaps", "Scenes list", "Photograph", "Looking"].map(element);
+  let snapshot: SphereTabsSnapshot = { title: null, onScreen: false };
   const listeners = new Set<() => void>();
-  const panoramaTabs: PanoramaTabs = {
-    panorama: panoramaTab, settings: settingsTab, leave() {}, destroy() {},
+  const sphereTabs: SphereTabs = {
+    sphere: sphereTab, settings: settingsTab, leave() {}, destroy() {},
     getSnapshot: () => snapshot,
     subscribe(listener) { listeners.add(listener); return () => { listeners.delete(listener); }; },
   };
-  const show = (next: PanoramaTabsSnapshot) => act(async () => { snapshot = next; for (const listener of listeners) listener(); });
+  const show = (next: SphereTabsSnapshot) => act(async () => { snapshot = next; for (const listener of listeners) listener(); });
   const overlayApiRef: { current: WindowOverlayHandle | null } = { current: null };
   await act(async () => root.render(<WindowOverlay
     getViewState={() => ({ latDeg: 45, lonDeg: -93 })}
     setViewState={() => {}}
     mapTab={mapTab}
     scenesTab={scenesTab}
-    panoramaTabs={panoramaTabs}
+    sphereTabs={sphereTabs}
     overlayApiRef={overlayApiRef}
   />));
   const left = () => host.querySelector<HTMLElement>('[data-side="left"]')!;
@@ -704,20 +704,20 @@ it("comes back after a reload with the same tabs in the same windows, dropping t
   } finally { await act(async () => third.root.unmount()); }
 });
 
-it("saves the layout a wide window on the globe would show, even while folded or inside a panorama", async () => {
+it("saves the layout a wide window on the globe would show, even while folded or inside a sphere", async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(1280);
   vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
   const element = (text: string) => Object.assign(document.createElement("div"), { textContent: text });
-  const [mapTab, panoramaTab, settingsTab] = ["Basemaps", "Photograph", "Looking"].map(element);
-  let snapshot: PanoramaTabsSnapshot = { title: null, onScreen: false };
+  const [mapTab, sphereTab, settingsTab] = ["Basemaps", "Photograph", "Looking"].map(element);
+  let snapshot: SphereTabsSnapshot = { title: null, onScreen: false };
   const listeners = new Set<() => void>();
-  const panoramaTabs: PanoramaTabs = {
-    panorama: panoramaTab, settings: settingsTab, leave() {}, destroy() {},
+  const sphereTabs: SphereTabs = {
+    sphere: sphereTab, settings: settingsTab, leave() {}, destroy() {},
     getSnapshot: () => snapshot,
     subscribe(listener) { listeners.add(listener); return () => { listeners.delete(listener); }; },
   };
-  const show = (next: PanoramaTabsSnapshot) => act(async () => { snapshot = next; for (const listener of listeners) listener(); });
+  const show = (next: SphereTabsSnapshot) => act(async () => { snapshot = next; for (const listener of listeners) listener(); });
   const mount = async () => {
     const host = document.createElement("div");
     document.body.append(host);
@@ -725,7 +725,7 @@ it("saves the layout a wide window on the globe would show, even while folded or
     const api: { current: WindowOverlayHandle | null } = { current: null };
     await act(async () => root.render(<WindowOverlay
       getViewState={() => ({ latDeg: 45, lonDeg: -93 })} setViewState={() => {}}
-      mapTab={mapTab} panoramaTabs={panoramaTabs} overlayApiRef={api}
+      mapTab={mapTab} sphereTabs={sphereTabs} overlayApiRef={api}
     />));
     return { host, root, api };
   };
@@ -740,7 +740,7 @@ it("saves the layout a wide window on the globe would show, even while folded or
     await act(async () => window.dispatchEvent(new Event("resize")));
     expect(first.host.querySelector('[data-side="left"]')).toBeNull();
     expect(saved().primary).toMatchObject({ tabs: ["location", "map"], activeTab: "map" });
-    // Inside a panorama the map's tabs are hidden; what is saved still has them.
+    // Inside a sphere the map's tabs are hidden; what is saved still has them.
     await show({ title: "360: Northrop Mall", onScreen: true });
     expect(first.host.querySelector('[data-side="right"] .foss-earth-tab-button')?.textContent).toBe("360: Northrop Mall");
     expect(saved().primary).toMatchObject({ tabs: ["location", "map"], activeTab: "map" });

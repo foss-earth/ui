@@ -1,6 +1,9 @@
-/** Node-only worker producer; no Git/app roots, stamps, network or module side effects. */
-import { readFileSync } from "node:fs";
+/** Node-only Vite helpers. No Git roots, stamps, network, or work at import time. */
+import { readFileSync, statSync } from "node:fs";
 import { createHash } from "node:crypto";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import typescript from "typescript";
 export const APP_FILES_WORKER = "foss-earth-sw.js";
 const HASHED = /-[\w-]{8}\.[a-z0-9]+$/i;
 const digest = value => createHash("sha256").update(value).digest("hex");
@@ -74,6 +77,33 @@ export function appFiles(options = {}) {
       this.emitFile({ type: "asset", fileName: options.workerFile ?? APP_FILES_WORKER, source: result.source });
       if (options.manifestFile) this.emitFile({ type: "asset", fileName: options.manifestFile, source: JSON.stringify(result.manifest) + "\n" });
       options.onProduced?.(result);
+    },
+  };
+}
+const recoverySource = join(dirname(fileURLToPath(import.meta.url)), "../src/browser/browserData.ts");
+let recoveryCache = { mtimeMs: -1, script: "" };
+function recoveryRuntime() {
+  const mtimeMs = statSync(recoverySource).mtimeMs;
+  if (mtimeMs === recoveryCache.mtimeMs) return recoveryCache.script;
+  const transpiled = typescript.transpileModule(readFileSync(recoverySource, "utf8"), {
+    compilerOptions: { target: typescript.ScriptTarget.ES2023, module: typescript.ModuleKind.ES2022, isolatedModules: true, removeComments: true },
+    fileName: "browserData.ts",
+  }).outputText.replace(/^export /gm, "");
+  if (/^import\s/m.test(transpiled)) throw new Error("Browser recovery runtime must stay free of imports so it can run from inline HTML.");
+  recoveryCache = { mtimeMs, script: transpiled };
+  return transpiled;
+}
+/** Inlines the review so a failed application bundle can still offer it. */
+export function browserRecovery(options = {}) {
+  const appId = options.appId;
+  if (typeof appId !== "string" || !/^[a-z0-9][a-z0-9-]{0,63}$/.test(appId)) throw new TypeError("browserRecovery appId must be a short lowercase identifier.");
+  return {
+    name: "foss-earth-browser-recovery",
+    transformIndexHtml() {
+      const runtime = `"use strict";\n${recoveryRuntime()}\ninstallBrowserRecovery(document, ${JSON.stringify({ appId })});\n`;
+      const jsonText = JSON.stringify(runtime).replace(/</g, "\\u003c");
+      const children = `eval(JSON.parse(${JSON.stringify(jsonText)}))\n`;
+      return [{ tag: "script", attrs: { "data-foss-earth-browser-recovery": appId }, children, injectTo: "head-prepend" }];
     },
   };
 }

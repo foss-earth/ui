@@ -196,8 +196,8 @@
   background: var(--ui-surface-raised);
 }
 [data-ui-theme]:not([data-ui-theme="earth"]) :is(.perf-chip--fps .perf-chip__unit, .map-download-speed) { color: var(--ui-muted); }
-[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-panorama-return { color: var(--ui-accent-contrast); border-color: var(--ui-accent); background: var(--ui-accent); }
-[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-panorama-return:hover { background: var(--ui-accent-hover); }
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-sphere-return { color: var(--ui-accent-contrast); border-color: var(--ui-accent); background: var(--ui-accent); }
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-sphere-return:hover { background: var(--ui-accent-hover); }
 
 /* Retain meaningful capability/status colors instead of recoloring them as branding. */
 [data-ui-theme]:not([data-ui-theme="earth"]) .hud-chip--good { color: var(--ui-success); border-color: var(--ui-success); background: var(--ui-success-soft); }

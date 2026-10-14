@@ -40,6 +40,11 @@ export interface DockLayoutInput {
    * takes the whole width. Absent means both sides are occupied.
    */
   open?: { left: boolean; right: boolean };
+  /**
+   * False keeps the log a tab at every width, as while two images share one
+   * body. Absent lets it float whenever the widest arrangement fits.
+   */
+  floatingLog?: boolean;
 }
 
 export interface DockLayout {
@@ -144,8 +149,9 @@ export function resolveDockLayout(input: DockLayoutInput): DockLayout {
 
   const requestedLog = Math.max(MIN_LOG_WIDTH, input.logWidth ?? 560);
   const logPriority = input.priority === "log" && input.logWidth !== null;
+  const floatingLog = input.floatingLog !== false;
   const fitted = fitColumns(input.primaryWidth, input.secondaryWidth, width);
-  if (logPriority) {
+  if (logPriority && floatingLog) {
     const sideCapacity = (width - requestedLog) / 2 - GAP * 2;
     if (sideCapacity >= MIN_DOCK_WIDTH) {
       const logWidth = requestedLog;
@@ -170,7 +176,7 @@ export function resolveDockLayout(input: DockLayoutInput): DockLayout {
   const centerCapacity = width - 2 * larger - GAP * 4;
   // A log the person widened stays a tab until that width fits again, so the
   // windows do not jump just to bring a too-wide log back to the center.
-  const logFits = !logPriority && centerCapacity >= MIN_LOG_WIDTH && (
+  const logFits = floatingLog && !logPriority && centerCapacity >= MIN_LOG_WIDTH && (
     input.logWidth === null || input.previousMode !== "columns" || centerCapacity + 1e-9 >= requestedLog
   );
   if (logFits) {

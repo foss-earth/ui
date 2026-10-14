@@ -135,6 +135,23 @@ export function openTabInWorkspace<TabId extends string>(
   };
 }
 
+/**
+ * Adds a tab to a slot without selecting it, unless the slot was empty. A tab
+ * already open stays where it is.
+ */
+export function placeTabInWorkspace<TabId extends string>(
+  state: WindowWorkspaceState<TabId>,
+  targetSlotId: WindowSlotId,
+  tabId: TabId,
+  definitions: readonly WindowTabDefinition<TabId>[],
+): WindowWorkspaceState<TabId> {
+  if (slotIdForOpenTab(state, tabId) || !availableWindowTabs(definitions).includes(tabId)) return state;
+  const opened = openTabInWorkspace(state, targetSlotId, tabId, definitions);
+  const previous = state[targetSlotId].activeTab;
+  if (previous === null || !opened[targetSlotId].tabs.includes(previous)) return opened;
+  return selectTabInWorkspace(opened, targetSlotId, previous);
+}
+
 export function closeTabInWorkspace<TabId extends string>(
   state: WindowWorkspaceState<TabId>,
   slotId: WindowSlotId,

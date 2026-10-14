@@ -13,7 +13,7 @@ export interface HiddenTab<TabId extends string> {
 
 /**
  * Takes the tabs a context does not show out of the workspace, such as the
- * Map tab inside a panorama, and says where each was so it can come back.
+ * Map tab inside a sphere, and says where each was so it can come back.
  */
 export function hideWorkspaceTabs<TabId extends string>(
   state: WindowWorkspaceState<TabId>,

@@ -91,7 +91,7 @@ describe("public issue report redaction", () => {
     const report = [
       "Browser: Mozilla/5.0 (Android 15; Mobile; rv:144.0) Gecko/144.0 Firefox/144.0",
       "Renderer: webgl2; GPU: Adreno 740; largest texture 16384 px",
-      ...Array.from({ length: 500 }, (_, index) => `  ${index / 10} s Scene loaded panorama-${index} ${"details ".repeat(50)}`),
+      ...Array.from({ length: 500 }, (_, index) => `  ${index / 10} s Scene loaded sphere-${index} ${"details ".repeat(50)}`),
     ].join("\n");
     expect(report.length).toBeGreaterThan(200_000);
     expect(redactIssueReport(report)).toBe(report);

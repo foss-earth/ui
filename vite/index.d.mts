@@ -26,3 +26,9 @@ export interface AppFilesPlugin {
   generateBundle(this: { warn(message: string): void; emitFile(file: { type: "asset"; fileName: string; source: string }): unknown }, output: unknown, bundle: Record<string, unknown>): void;
 }
 export function appFiles(options?: KeptFilesPlugin): AppFilesPlugin;
+export interface BrowserRecoveryPluginOptions { appId: string }
+export interface BrowserRecoveryPlugin {
+  name: string;
+  transformIndexHtml(): { tag: string; attrs: { "data-foss-earth-browser-recovery": string }; children: string; injectTo: "head-prepend" }[];
+}
+export function browserRecovery(options: BrowserRecoveryPluginOptions): BrowserRecoveryPlugin;

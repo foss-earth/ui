@@ -91,6 +91,7 @@ export function TabStrip<TabId extends string>(props: TabStripProps<TabId>) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const addRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
   const [menuAlignsRight, setMenuAlignsRight] = useState(false);
   const [menuPlace, setMenuPlace] = useState<CSSProperties | null>(null);
 
@@ -138,6 +139,19 @@ export function TabStrip<TabId extends string>(props: TabStripProps<TabId>) {
     };
   }, [addMenuOpen, openTabs.length, availableTabs.length, menuBottom]);
 
+  // A tab opened, moved here or selected where the strip has scrolled past is
+  // brought into view, as a browser's tab strip does. Only the strip scrolls,
+  // and only when the selection or the tabs change, so a strip scrolled by hand
+  // stays where it was through other updates.
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    const shell = list?.querySelector<HTMLElement>(".foss-earth-tab-shell-selected");
+    if (!list || !shell) return;
+    const bounds = list.getBoundingClientRect(), tab = shell.getBoundingClientRect();
+    if (tab.left < bounds.left) list.scrollLeft -= bounds.left - tab.left;
+    else if (tab.right > bounds.right) list.scrollLeft += Math.min(tab.right - bounds.right, tab.left - bounds.left);
+  }, [activeTab, openTabs.length]);
+
   const alignClassName = menuAlignsRight
     ? (classNames?.addMenuAlignRight ?? "foss-earth-window-menu-align-right")
     : (classNames?.addMenuAlignLeft ?? "foss-earth-window-menu-align-left");
@@ -156,7 +170,7 @@ export function TabStrip<TabId extends string>(props: TabStripProps<TabId>) {
         if (tabId) onMoveTab(tabId);
       } : undefined}
     >
-      <div className={cx("foss-earth-tab-strip-list", classNames?.tabList)}>
+      <div ref={listRef} className={cx("foss-earth-tab-strip-list", classNames?.tabList)}>
         {openTabs.map((tabId) => {
           const selected = tabId === activeTab;
           const label = getLabel(tabId);

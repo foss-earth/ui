@@ -85,3 +85,7 @@
   color: inherit;
   border: 1px solid rgba(148, 163, 184, 0.3);
 }
+
+.foss-earth-browser-data {
+  align-items: flex-start;
+}

@@ -45,11 +45,11 @@ describe("current-host compatibility fixtures", () => {
   });
 
   it("keeps the 13 IDs and host-supplied 11/9 context availability without feature imports", () => {
-    const tabs = JSON.parse(fixture("current-tabs.json")) as { registered: string[]; globeHidden: string[]; panoramaHidden: string[] };
+    const tabs = JSON.parse(fixture("current-tabs.json")) as { registered: string[]; globeHidden: string[]; sphereHidden: string[] };
     const registry = createUiContributionRegistry<"globe" | "panorama", object, object>({ settings: createSettingsRegistry(), ports: {}, context: "globe" });
     for (const id of tabs.registered) registry.register({
       id: `host.${id}`, tabId: id, label: id,
-      isAvailable: context => !(context === "globe" ? tabs.globeHidden : tabs.panoramaHidden).includes(id),
+      isAvailable: context => !(context === "globe" ? tabs.globeHidden : tabs.sphereHidden).includes(id),
       create: () => ({ mount: () => {}, unmount: () => {}, dispose: () => {} }),
     });
     expect(registry.list()).toHaveLength(13);

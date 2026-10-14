@@ -7,7 +7,7 @@ import {
   setWorkspaceSlotCollapsed,
   setWorkspaceSlotSize,
 } from "../windowing/core/workspaceState.js";
-import { foldWorkspace, forgetCompactWorkspaceTab, restoreWorkspace } from "./compactWorkspace.js";
+import { foldWorkspace, forgetCompactWorkspaceTab, openTabInCompactWorkspace, restoreWorkspace } from "./compactWorkspace.js";
 
 type TabId = "location" | "settings" | "map" | "debug";
 const definitions = ["location", "settings", "map", "debug"].map((id) => ({ id: id as TabId, label: id }));
@@ -111,5 +111,50 @@ describe("temporary compact workspace", () => {
 
     expect(folded.state).toBe(original);
     expect(restoreWorkspace(folded.state, folded.memory)).toBe(original);
+  });
+
+  it("opens a tab for the folded side in the window that is there, and sends it home selected", () => {
+    const original = createWindowWorkspaceState<TabId>({
+      primary: { tabs: ["location"], activeTab: "location", collapsed: false },
+      secondary: { tabs: ["map"], activeTab: "map", collapsed: false },
+    });
+    const folded = foldWorkspace(original);
+    const opened = openTabInCompactWorkspace(folded.state, folded.memory, "debug", "primary", definitions);
+
+    expect(opened.state.secondary).toMatchObject({ tabs: ["map", "location", "debug"], activeTab: "debug" });
+    expect(restoreWorkspace(opened.state, opened.memory)).toMatchObject({
+      primary: { tabs: ["location", "debug"], activeTab: "debug" },
+      secondary: { tabs: ["map"], activeTab: "map" },
+    });
+  });
+
+  it("opens a tab for the shown side there, and selects a tab already open where it is", () => {
+    for (const into of ["primary", "secondary"] as const) {
+      const folded = foldWorkspace(initial(), into);
+      const shown = openTabInCompactWorkspace(folded.state, folded.memory, "debug", into, definitions);
+      expect(shown.memory).toBe(folded.memory);
+      expect(shown.state[into]).toMatchObject({ activeTab: "debug", collapsed: false });
+      expect(restoreWorkspace(shown.state, shown.memory)[into].tabs).toContain("debug");
+
+      const other = into === "primary" ? "secondary" : "primary";
+      const existing = openTabInCompactWorkspace(folded.state, folded.memory, "settings", other, definitions);
+      expect(existing.memory).toBe(folded.memory);
+      expect(existing.state[into].activeTab).toBe("settings");
+    }
+  });
+
+  it("sends a tab opened for the folded left window home when the fold went into it", () => {
+    const folded = foldWorkspace(initial(), "primary");
+    const opened = openTabInCompactWorkspace(folded.state, folded.memory, "debug", "secondary", definitions);
+
+    expect(opened.state.primary.activeTab).toBe("debug");
+    expect(restoreWorkspace(opened.state, opened.memory).secondary).toMatchObject({ tabs: ["map", "debug"], activeTab: "debug" });
+  });
+
+  it("ignores a tab that is not available", () => {
+    const folded = foldWorkspace(initial());
+    const result = openTabInCompactWorkspace(folded.state, folded.memory, "debug", "primary", definitions.filter(entry => entry.id !== "debug"));
+    expect(result.state).toBe(folded.state);
+    expect(result.memory).toBe(folded.memory);
   });
 });
