@@ -145,12 +145,71 @@ describe("shared window and log layout", () => {
   });
 
   it("lets a choice force overlay on a phone and split on a wide screen", () => {
-    expect(resolveDockLayout({ ...preferences, availableWidth: 390, presentation: "overlay" })).toMatchObject({
+    expect(resolveDockLayout({ ...preferences, primaryWidth: null, secondaryWidth: null, availableWidth: 390, presentation: "overlay" })).toMatchObject({
       mode: "stacked", presentation: "overlay", secondaryWidth: 378,
     });
     expect(resolveDockLayout({ ...preferences, availableWidth: 1200, presentation: "split" })).toMatchObject({
       mode: "dual", presentation: "split", logVisible: true,
     });
+  });
+
+  // A Galaxy Note 20 Ultra in portrait is 412 CSS px wide.
+  it("starts a phone's overlay window full width, lets it be narrowed, and keeps a split window full width", () => {
+    const phone = { availableWidth: 412, logWidth: null, primaryWidth: null, secondaryWidth: null };
+    expect(resolveDockLayout({ ...phone, presentation: "overlay" })).toMatchObject({
+      mode: "stacked", presentation: "overlay", side: "right", windowWidthFixed: false, secondaryWidth: 400, maxWindowWidth: 400,
+    });
+    expect(resolveDockLayout({ ...phone, presentation: "overlay", secondaryWidth: 260 })).toMatchObject({ windowWidthFixed: false, secondaryWidth: 260 });
+    expect(resolveDockLayout({ ...phone, presentation: "overlay", secondaryWidth: 2000 }).secondaryWidth).toBe(400);
+    expect(resolveDockLayout({ ...phone, presentation: "overlay", secondaryWidth: 100 }).secondaryWidth).toBe(160);
+    expect(resolveDockLayout({ ...phone, presentation: "overlay", widened: "left", primaryWidth: 300 })).toMatchObject({ side: "left", primaryWidth: 300 });
+    for (const presentation of [undefined, "auto", "split"] as const) {
+      expect(resolveDockLayout({ ...phone, presentation, secondaryWidth: 260 }), presentation).toMatchObject({
+        presentation: "split", windowWidthFixed: true, secondaryWidth: 412,
+      });
+    }
+  });
+
+  // The grip's arrows come from windowWidthFixed alone, so a width the layout throws away must never be offered.
+  it("uses a shown window's requested width exactly when its width is not fixed", () => {
+    const widths = [280, 360, 412, 515, 516, 640, 847, 848, 1280, 1920];
+    const requests = [null, 160, 240, 320, 420, 900];
+    const opens = [{ left: true, right: true }, { left: true, right: false }, { left: false, right: true }];
+    let resizable = 0, fixed = 0;
+    for (const availableWidth of widths) {
+      for (const presentation of [undefined, "auto", "overlay", "split"] as const) {
+        for (const open of opens) {
+          for (const widened of ["left", "right"] as const) {
+            for (const [primaryWidth, secondaryWidth] of requests.flatMap(a => requests.map(b => [a, b] as const))) {
+              for (const logWidth of [null, 600]) {
+                const input: DockLayoutInput = { availableWidth, primaryWidth, secondaryWidth, logWidth, priority: logWidth === null ? "windows" : "log", presentation, open, widened };
+                const layout = resolveDockLayout(input);
+                const shownSides = layout.mode === "stacked" || layout.windowWidthFixed
+                  ? [layout.side]
+                  : (["left", "right"] as const).filter(side => open[side]);
+                for (const side of shownSides) {
+                  const key = side === "left" ? "primaryWidth" : "secondaryWidth";
+                  const context = `${side} of ${JSON.stringify(input)}`;
+                  const narrower = layout[key] - 24;
+                  if (layout.windowWidthFixed) {
+                    fixed++;
+                    for (const request of [null, 160, narrower, 2000]) {
+                      expect(resolveDockLayout({ ...input, [key]: request })[key], context).toBe(layout[key]);
+                    }
+                  } else if (narrower >= 160) {
+                    // A grip drag asks for the width on screen less the drag; that must narrow the window.
+                    resizable++;
+                    expect(resolveDockLayout({ ...input, [key]: narrower, priority: "windows" })[key], context).toBeLessThan(layout[key]);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    expect(fixed).toBeGreaterThan(0);
+    expect(resizable).toBeGreaterThan(0);
   });
 
   it("never overlaps the windows, and floats the log only between them", () => {

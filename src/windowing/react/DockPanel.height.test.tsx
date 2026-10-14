@@ -98,3 +98,28 @@ it("paints the split grip above the toolbar, on the window's bottom edge", async
   await act(async () => root.unmount());
   expect(document.body.querySelector(".foss-earth-dock-panel-resize-handle")).toBeNull();
 });
+
+it("widens a phone window from its mid-bottom grip toward its free side, and never puts a height-only grip on a corner", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  const widths: number[] = [];
+  for (const side of ["left", "right"] as const) {
+    widths.length = 0;
+    await act(async () => {
+      root.render(<DockPanel side={side} width={300} maxWidth={400} onWidthChange={(width) => widths.push(width)} collapsed={false} onCollapsedChange={() => {}} resizeGripAt="bottom" />);
+    });
+    host.querySelector<HTMLElement>(".foss-earth-dock-panel")!.getBoundingClientRect = () => ({ left: 0, top: 0, width: 300, height: 200, right: 300, bottom: 200, x: 0, y: 0, toJSON() {} });
+    const handle = host.querySelector<HTMLElement>(".foss-earth-dock-panel-resize-handle")!;
+    expect(handle.dataset).toMatchObject({ axes: "both", at: "bottom" });
+    const point = (type: string, clientX: number) => handle.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 1, clientX, clientY: 100, button: 0 }));
+    await act(async () => { point("pointerdown", 150); point("pointermove", side === "left" ? 200 : 100); point("pointerup", side === "left" ? 200 : 100); });
+    expect(widths, side).toEqual([350]);
+  }
+  await act(async () => {
+    root.render(<DockPanel side="right" width={300} maxWidth={300} onWidthChange={() => {}} collapsed={false} onCollapsedChange={() => {}} resizeAxes="height" resizeGripAt="corner" />);
+  });
+  expect(host.querySelector<HTMLElement>(".foss-earth-dock-panel-resize-handle")!.dataset).toMatchObject({ axes: "height", at: "bottom" });
+  await act(async () => root.unmount());
+});

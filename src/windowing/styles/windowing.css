@@ -370,10 +370,13 @@ html[data-world-presentation="split"]:not([data-toolbar-edge="top"]):not([data-t
   cursor: nesw-resize;
 }
 
-/* A panel as wide as the screen changes only its height, from the middle of its bottom edge. */
-.foss-earth-dock-panel .foss-earth-dock-panel-resize-handle[data-axes="height"] {
+/* From the middle of the bottom edge: a panel as wide as the screen changes only its height there,
+   and a phone's one window, whose corner is at the screen's edge, both sizes. */
+.foss-earth-dock-panel .foss-earth-dock-panel-resize-handle[data-at="bottom"] {
   right: auto;
   left: calc(50% - 12px);
+}
+.foss-earth-dock-panel .foss-earth-dock-panel-resize-handle[data-axes="height"] {
   cursor: ns-resize;
 }
 

@@ -30,7 +30,24 @@ const RESIZE_ICON_PATHS = {
   left: "M10.75 2.75v8h-8M8.25 5.25l2.5-2.5 2.5 2.5M5.25 8.25l-2.5 2.5 2.5 2.5",
   right: "M5.25 2.75v8h8M2.75 5.25l2.5-2.5 2.5 2.5M10.75 8.25l2.5 2.5-2.5 2.5",
   height: "M8 2.5v11M5.5 5 8 2.5 10.5 5M5.5 11 8 13.5 10.5 11",
+  both: "M8 2.5v11M2.5 8h11M6 4.5l2-2 2 2M6 11.5l2 2 2-2M4.5 6l-2 2 2 2M11.5 6l2 2-2 2",
 };
+
+export type DockPanelResizeAxes = "both" | "height";
+export type DockPanelResizeGripAt = "corner" | "bottom";
+
+/**
+ * What a grip shows, from what it does and where it sits, so the two cannot
+ * disagree. A height-only grip always sits mid-bottom; a grip that also changes
+ * the width sits on the free corner, or mid-bottom, where its arrows point all four ways.
+ */
+export function dockPanelResizeGrip(side: "left" | "right", axes: DockPanelResizeAxes, at: DockPanelResizeGripAt): {
+  at: DockPanelResizeGripAt;
+  icon: string;
+} {
+  if (axes === "height") return { at: "bottom", icon: RESIZE_ICON_PATHS.height };
+  return at === "bottom" ? { at, icon: RESIZE_ICON_PATHS.both } : { at, icon: RESIZE_ICON_PATHS[side] };
+}
 
 export interface DockPanelClassNames {
   container?: string;
@@ -74,7 +91,12 @@ export interface DockPanelProps {
   resizeAriaLabel?: string;
   resizeTitle?: string;
   /** "height" for a panel as wide as the screen: its grip sits mid-bottom and changes only the height. */
-  resizeAxes?: "both" | "height";
+  resizeAxes?: DockPanelResizeAxes;
+  /**
+   * Where a grip that changes both sizes sits: the free bottom corner, or the
+   * middle of the bottom edge, as for a phone's one window, whose corner is at the screen's edge.
+   */
+  resizeGripAt?: DockPanelResizeGripAt;
   /** Split paints the grip above the toolbar. The toolbar otherwise covers the half that sits on the window. */
   liftResizeHandle?: boolean;
   onDragOver?: DragEventHandler<HTMLDivElement>;
@@ -125,6 +147,7 @@ export function DockPanel(props: DockPanelProps) {
     resizeAriaLabel = "Resize panel, click to minimize",
     resizeTitle = "Drag to resize, click to minimize",
     resizeAxes = "both",
+    resizeGripAt = "corner",
     liftResizeHandle = false,
     onDragOver,
     onDrop,
@@ -135,6 +158,7 @@ export function DockPanel(props: DockPanelProps) {
     flow = false,
   } = props;
   const hold = usePresentationHold(onHoldPresentation);
+  const resizeGrip = dockPanelResizeGrip(side, resizeAxes, resizeGripAt);
 
   const isRightPanel = side === "right";
   // Overlay sits 6px from the screen corner. Split passes its own offsets.
@@ -329,7 +353,7 @@ export function DockPanel(props: DockPanelProps) {
       // Centered on the bottom border, above a toolbar. A stacked row keeps the circle inside
       // this panel so it does not cover the next strip's tabs.
       const top = rect.bottom - (flow ? size : size / 2);
-      const left = resizeAxes === "height"
+      const left = resizeGrip.at === "bottom"
         ? rect.left + rect.width / 2 - size / 2
         : side === "right"
           ? rect.left - hang
@@ -351,7 +375,7 @@ export function DockPanel(props: DockPanelProps) {
       grip.style.left = "";
       grip.style.top = "";
     };
-  }, [liftResizeHandle, resizeAxes, side, collapsed, bodyless, panelHeight, width, flow]);
+  }, [liftResizeHandle, resizeGrip.at, side, collapsed, bodyless, panelHeight, width, flow]);
 
   const positionStyle: CSSProperties = flow
     ? { position: "relative", top: 0, left: 0, right: 0, width: "100%" }
@@ -430,6 +454,7 @@ export function DockPanel(props: DockPanelProps) {
             onPointerCancel={onHandlePointerCancel}
             onContextMenu={onHoldPresentation ? (event) => event.preventDefault() : undefined}
             data-axes={resizeAxes}
+            data-at={resizeGrip.at}
             data-side={side}
             data-lifted={liftResizeHandle ? "true" : undefined}
             className={cx(
@@ -450,7 +475,7 @@ export function DockPanel(props: DockPanelProps) {
               strokeLinejoin="round"
               aria-hidden="true"
             >
-              <path d={RESIZE_ICON_PATHS[resizeAxes === "height" ? "height" : side]} />
+              <path d={resizeGrip.icon} />
             </svg>
           </div>
         );

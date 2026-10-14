@@ -150,8 +150,8 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
 
   const layoutInput = {
     availableWidth,
-    primaryWidth: workspace.state.primary.width ?? 320,
-    secondaryWidth: workspace.state.secondary.width ?? 320,
+    primaryWidth: workspace.state.primary.width,
+    secondaryWidth: workspace.state.secondary.width,
     logWidth,
     priority: resizePriority,
     previousMode: layoutMode,
@@ -516,15 +516,18 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
   });
 
 
-  // A window that fills the width changes only its height. A phone also stays at most half the screen.
-  const stackedPanel = layout.presentation === "split" && layout.windowWidthFixed
+  // The grip changes the width exactly when the layout uses it, so its arrows cannot promise a
+  // width the layout throws away. Only split fixes the width: that window touches the screen's
+  // edges, and on a phone stays at most half the screen. A phone's overlay window keeps both
+  // sizes, with the grip mid-bottom, away from the screen edge its corner would be on.
+  const singlePanel = layout.windowWidthFixed
     ? {
         ...(layout.mode === "stacked" ? { expandedMaxHeightCss: "50dvh", maxHeightRatio: 0.5 } : {}),
         resizeAxes: "height" as const,
         edgeOffsetPx: 0,
         topOffsetPx: "env(safe-area-inset-top, 0px)",
       }
-    : undefined;
+    : layout.mode === "stacked" ? { resizeGripAt: "bottom" as const } : undefined;
   const compactWidth = layout.side === "left" ? layout.primaryWidth : layout.secondaryWidth;
   const panelProps = (slotId: WindowSlotId) => ({
     liftResizeHandle: layout.presentation === "split",
@@ -536,7 +539,7 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
           resizeAxes: "height" as const,
           ...(layout.presentation === "split" ? { expandedMaxHeightCss: "50dvh", maxHeightRatio: 0.5 } : {}),
         }
-      : layout.side === (slotId === "primary" ? "left" : "right") ? stackedPanel : undefined),
+      : layout.side === (slotId === "primary" ? "left" : "right") ? singlePanel : undefined),
     ...(inContext && context.ready && context.measureEntry && display[slotId].activeTab === context.entryTabId
       ? { contentFit: { key: contextVisit.current, measure: context.measureEntry } }
       : {}),

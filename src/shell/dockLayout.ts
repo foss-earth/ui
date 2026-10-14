@@ -2,6 +2,7 @@ const GAP = 12;
 /** An overlay window's distance from the screen corner, and the HUD bar's side inset. */
 const OVERLAY_EDGE = 6;
 const MIN_DOCK_WIDTH = 160;
+const DEFAULT_DOCK_WIDTH = 320;
 const MIN_LOG_WIDTH = 160;
 // A phone needs one readable window, rather than two compressed columns.
 const STACKED_BREAKPOINT = 320 + MIN_LOG_WIDTH + GAP * 3;
@@ -20,8 +21,9 @@ export type ToolbarEdgeChoice = "auto" | ToolbarEdge;
 
 export interface DockLayoutInput {
   availableWidth: number;
-  primaryWidth: number;
-  secondaryWidth: number;
+  /** Null is a window the person never resized: 320 px, or a phone's full width. */
+  primaryWidth: number | null;
+  secondaryWidth: number | null;
   /** A resized log's preferred width; null uses its natural content width. */
   logWidth: number | null;
   /** The most recent manual resize keeps its requested space first. */
@@ -54,6 +56,10 @@ export interface DockLayout {
   /** Split is the phone band: the drawing buffer is only the world under the windows. */
   presentation: WorldPresentation;
   side: DockSide;
+  /**
+   * The requested widths do not apply: the window spans the screen and its
+   * grip changes only its height. Hosts take the grip's axes from this alone.
+   */
   windowWidthFixed: boolean;
   primaryWidth: number;
   secondaryWidth: number;
@@ -107,23 +113,29 @@ function hiddenLog(width: number): Pick<DockLayout, "logVisible" | "logLeft" | "
  * One allocation for the windows and, on a wide screen, the log.
  * The log floats only when both windows and a centered log fit: that is the
  * widest arrangement. Otherwise both windows stay and the log is a tab, until
- * the screen is only wide enough for one window, which then fills the width.
+ * the screen is only wide enough for one window, which then fills the width:
+ * always in split, and in overlay until the person narrows it.
  */
 export function resolveDockLayout(input: DockLayoutInput): DockLayout {
   const width = Math.max(0, input.availableWidth);
   const side = input.widened ?? "right";
+  const requestedPrimary = input.primaryWidth ?? DEFAULT_DOCK_WIDTH;
+  const requestedSecondary = input.secondaryWidth ?? DEFAULT_DOCK_WIDTH;
   if (width < STACKED_BREAKPOINT) {
     const presentation = chosenPresentation(input.presentation, "split");
-    const full = presentation === "split" ? width : Math.max(0, width - OVERLAY_EDGE * 2);
-    const primary = clampWidth(input.primaryWidth, Math.max(full, MIN_DOCK_WIDTH));
-    const secondary = clampWidth(input.secondaryWidth, Math.max(full, MIN_DOCK_WIDTH));
+    // Split draws the world only under the band, so its window spans the width.
+    // Overlay floats the window on the world: it starts full width and can be narrowed.
+    const widthFixed = presentation === "split";
+    const full = widthFixed ? width : Math.max(0, width - OVERLAY_EDGE * 2);
+    const shown = (requested: number | null): number => (widthFixed ? full : clampWidth(requested ?? full, full));
+    const hidden = (requested: number): number => clampWidth(requested, Math.max(full, MIN_DOCK_WIDTH));
     return {
       mode: "stacked",
       presentation,
       side,
-      windowWidthFixed: true,
-      primaryWidth: side === "left" ? full : primary,
-      secondaryWidth: side === "right" ? full : secondary,
+      windowWidthFixed: widthFixed,
+      primaryWidth: side === "left" ? shown(input.primaryWidth) : hidden(requestedPrimary),
+      secondaryWidth: side === "right" ? shown(input.secondaryWidth) : hidden(requestedSecondary),
       maxWindowWidth: full,
       ...hiddenLog(width),
     };
@@ -140,8 +152,8 @@ export function resolveDockLayout(input: DockLayoutInput): DockLayout {
       presentation: "split",
       side: span,
       windowWidthFixed: true,
-      primaryWidth: span === "left" ? width : clampWidth(input.primaryWidth, Math.max(width, MIN_DOCK_WIDTH)),
-      secondaryWidth: span === "right" ? width : clampWidth(input.secondaryWidth, Math.max(width, MIN_DOCK_WIDTH)),
+      primaryWidth: span === "left" ? width : clampWidth(requestedPrimary, Math.max(width, MIN_DOCK_WIDTH)),
+      secondaryWidth: span === "right" ? width : clampWidth(requestedSecondary, Math.max(width, MIN_DOCK_WIDTH)),
       maxWindowWidth: width,
       ...hiddenLog(width),
     };
@@ -150,7 +162,7 @@ export function resolveDockLayout(input: DockLayoutInput): DockLayout {
   const requestedLog = Math.max(MIN_LOG_WIDTH, input.logWidth ?? 560);
   const logPriority = input.priority === "log" && input.logWidth !== null;
   const floatingLog = input.floatingLog !== false;
-  const fitted = fitColumns(input.primaryWidth, input.secondaryWidth, width);
+  const fitted = fitColumns(requestedPrimary, requestedSecondary, width);
   if (logPriority && floatingLog) {
     const sideCapacity = (width - requestedLog) / 2 - GAP * 2;
     if (sideCapacity >= MIN_DOCK_WIDTH) {
