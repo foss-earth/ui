@@ -103,6 +103,8 @@ export interface DockPanelProps {
   onDrop?: DragEventHandler<HTMLDivElement>;
   /** A still press on the resize grip. Moving resizes, as before. */
   onHoldPresentation?: (point: { x: number; y: number }) => void;
+  /** A drag of the grip ended, after its last width and height. */
+  onResizeEnd?: () => void;
   /**
    * The body is a surface the host draws, such as a photograph: no padding or
    * scrolling, and the panel neither paints nor blurs behind it.
@@ -152,6 +154,7 @@ export function DockPanel(props: DockPanelProps) {
     onDragOver,
     onDrop,
     onHoldPresentation,
+    onResizeEnd,
     surface = false,
     bodyless = false,
     onActivate,
@@ -177,6 +180,7 @@ export function DockPanel(props: DockPanelProps) {
     if (!drag?.resizing) return;
     drag.resizing = false;
     containerRef.current?.ownerDocument.defaultView?.dispatchEvent(new Event("foss-earth-panel-resize-end"));
+    onResizeEnd?.();
   };
   const headerRef = useRef<HTMLDivElement | null>(null);
   const bodyRef = useRef<HTMLDivElement | null>(null);

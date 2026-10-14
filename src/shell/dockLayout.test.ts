@@ -212,6 +212,68 @@ describe("shared window and log layout", () => {
     expect(resizable).toBeGreaterThan(0);
   });
 
+  const mirrored = (side: "left" | "right") => (side === "left" ? "right" : "left");
+
+  it("grows the window being dragged wider, on either side, by shrinking the other", () => {
+    let checked = 0;
+    for (const availableWidth of [516, 600, 700, 847, 848, 900, 1047, 1280, 1600]) {
+      for (const primaryWidth of [160, 240, 320, 420, 570, 900]) {
+        for (const secondaryWidth of [160, 240, 320, 420, 570, 900]) {
+          for (const logWidth of [null, 600]) {
+            for (const widened of [undefined, "left", "right"] as const) {
+              for (const presentation of [undefined, "overlay", "split"] as const) {
+                const input: DockLayoutInput = { availableWidth, primaryWidth, secondaryWidth, logWidth, widened, presentation, priority: logWidth === null ? "windows" : "log" };
+                const layout = resolveDockLayout(input);
+                if (layout.windowWidthFixed) continue;
+                for (const side of ["left", "right"] as const) {
+                  const key = side === "left" ? "primaryWidth" : "secondaryWidth";
+                  const otherKey = side === "left" ? "secondaryWidth" : "primaryWidth";
+                  if (layout[key] + 24 > layout.maxWindowWidth) continue;
+                  // What a drag of the grip 24 px outward asks for: the width on screen plus the drag.
+                  // Taking over from a log resize, WindowOverlay first pins the other window where it shows.
+                  const other = input.priority === "log" ? { [otherKey]: layout[otherKey] } : {};
+                  const next = resolveDockLayout({ ...input, ...other, [key]: layout[key] + 24, widened: side, priority: "windows", previousMode: layout.mode });
+                  const context = `${side} of ${JSON.stringify(input)}`;
+                  expect(next[key], context).toBeCloseTo(layout[key] + 24, 6);
+                  expect(next[otherKey], context).toBeLessThanOrEqual(layout[otherKey] + 1e-6);
+                  checked++;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    expect(checked).toBeGreaterThan(1000);
+  });
+
+  it("lays out a mirrored workspace as the mirror image", () => {
+    const widths = [280, 412, 516, 640, 848, 900, 1280];
+    const requests = [null, 160, 320, 570, 900];
+    for (const availableWidth of widths) {
+      for (const primaryWidth of requests) {
+        for (const secondaryWidth of requests) {
+          for (const widened of ["left", "right"] as const) {
+            for (const presentation of [undefined, "overlay", "split"] as const) {
+              for (const open of [{ left: true, right: true }, { left: true, right: false }]) {
+                for (const logWidth of [null, 600]) {
+                  const priority = logWidth === null ? "windows" as const : "log" as const;
+                  const layout = resolveDockLayout({ availableWidth, primaryWidth, secondaryWidth, widened, presentation, open, logWidth, priority });
+                  const mirror = resolveDockLayout({
+                    availableWidth, primaryWidth: secondaryWidth, secondaryWidth: primaryWidth, widened: mirrored(widened), presentation,
+                    open: { left: open.right, right: open.left }, logWidth, priority,
+                  });
+                  const context = JSON.stringify({ availableWidth, primaryWidth, secondaryWidth, widened, presentation, open, logWidth });
+                  expect(mirror, context).toEqual({ ...layout, side: mirrored(layout.side), primaryWidth: layout.secondaryWidth, secondaryWidth: layout.primaryWidth });
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  });
+
   it("never overlaps the windows, and floats the log only between them", () => {
     const widths = [280, 320, 390, 430, 515, 516, 640, 700, 847, 848, 1047, 1048, 1280, 1600, 1601, 1920];
     const dockWidths = [[160, 160], [160, 420], [320, 320], [420, 320], [320, 420], [420, 420], [900, 320], [320, 1300]];

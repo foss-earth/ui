@@ -228,6 +228,23 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
     });
   };
 
+  // The window resized last keeps its width when both no longer fit, and the other gives way. A
+  // reload no longer knows which that was and keeps the wider request, so when the window that
+  // gave way asked for at least as much, the width it shows becomes its own.
+  const shownLayout = useRef(layout);
+  shownLayout.current = layout;
+  const settleResize = (slotId: WindowSlotId): void => {
+    const shown = shownLayout.current;
+    if (shown.mode === "stacked" || shown.windowWidthFixed) return;
+    const other = slotId === "primary" ? "secondary" : "primary";
+    const width = (id: WindowSlotId): number => (id === "primary" ? shown.primaryWidth : shown.secondaryWidth);
+    workspace.setState((current) => {
+      const requested = current[other].width ?? 320;
+      const gaveWay = width(other) < requested - 0.5 && requested >= (current[slotId].width ?? 320);
+      return gaveWay ? setWorkspaceSlotSize(current, other, { width: width(other) }) : current;
+    });
+  };
+
   const toolbarEdge = chosenToolbarEdge(presentation?.toolbarEdge, layout.mode === "stacked");
   const primarySlot = workspace.state.primary;
   const secondarySlot = workspace.state.secondary;
@@ -531,6 +548,7 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
   const compactWidth = layout.side === "left" ? layout.primaryWidth : layout.secondaryWidth;
   const panelProps = (slotId: WindowSlotId) => ({
     liftResizeHandle: layout.presentation === "split",
+    onResizeEnd: () => settleResize(slotId),
     ...(imageCompact
       ? {
           flow: true,

@@ -39,9 +39,10 @@ function layOutPanels(screenWidth: number): void {
   });
 }
 
-async function mount(screenWidth: number, choice: Choice, open: Open) {
+/** Mounts on a device whose saved workspace has the tabs `open`, or, with "saved", whatever the last mount saved. */
+async function mount(screenWidth: number, choice: Choice, open: Open | "saved") {
   const slot = (tabs: Tab[]) => ({ tabs, activeTab: tabs[0] ?? null, collapsed: false });
-  stored.set(SAVED_WORKSPACE_STORAGE_KEY, JSON.stringify({
+  if (open !== "saved") stored.set(SAVED_WORKSPACE_STORAGE_KEY, JSON.stringify({
     primary: slot(open === "both" ? ["a"] : open === "left" ? ["a", "b"] : []),
     secondary: slot(open === "both" ? ["b"] : open === "right" ? ["a", "b"] : []),
   }));
@@ -142,4 +143,42 @@ it("keeps the corner grip wherever two windows fit", async () => {
       }
     } finally { await act(async () => root.unmount()); }
   }
+});
+
+it("widens either window by shrinking the other, whichever was widened first, and a reload shows the same", async () => {
+  const outward = (side: "left" | "right", px: number) => (side === "right" ? -px : px);
+  for (const first of ["right", "left"] as const) {
+    const second = first === "right" ? "left" : "right";
+    const { root, panel, grip } = await mount(900, "overlay", "both");
+    const widths = () => ({ left: Number.parseFloat(panel("left")!.style.width), right: Number.parseFloat(panel("right")!.style.width) });
+    let after: { left: number; right: number };
+    try {
+      const start = widths();
+      await drag(grip(first)!, outward(first, 250), 0);
+      const widened = widths();
+      expect(widened[first], first).toBeGreaterThan(start[first]);
+      expect(widened[second], first).toBeLessThan(start[second]);
+      // Then the other one: it grows with the drag, and the first gives way.
+      await drag(grip(second)!, outward(second, 100), 0);
+      after = widths();
+      expect(after[second], `${second} after ${first}`).toBe(widened[second] + 100);
+      expect(after[first], `${second} after ${first}`).toBe(widened[first] - 100);
+    } finally { await act(async () => root.unmount()); }
+    const reloaded = await mount(900, "overlay", "saved");
+    try {
+      expect({ left: reloaded.panel("left")!.style.width, right: reloaded.panel("right")!.style.width }, `reload after ${first}, ${second}`)
+        .toEqual({ left: `${after.left}px`, right: `${after.right}px` });
+    } finally { await act(async () => reloaded.root.unmount()); }
+  }
+});
+
+it("gives a window that made way for a wider one its width back when that one narrows again", async () => {
+  const { root, panel, grip } = await mount(900, "overlay", "both");
+  try {
+    await drag(grip("right")!, -250, 0);
+    expect(panel("left")!.style.width).toBe("294px");
+    await drag(grip("right")!, 250, 0);
+    expect(panel("left")!.style.width).toBe("320px");
+    expect(panel("right")!.style.width).toBe("320px");
+  } finally { await act(async () => root.unmount()); }
 });

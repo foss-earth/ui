@@ -30,9 +30,9 @@ export interface DockLayoutInput {
   priority?: DockResizePriority;
   previousMode?: DockLayoutMode;
   /**
-   * Which window stays when the screen is only wide enough for one, as after
-   * that window was the one last resized. It does not hide the other window
-   * while both columns fit.
+   * The window resized last. When both no longer fit at their requested
+   * widths it keeps its own and the other gives way; when the screen is only
+   * wide enough for one, it is the one that stays.
    */
   widened?: DockSide;
   /** Auto is split on a phone and overlay once two windows fit. */
@@ -74,17 +74,22 @@ function clampWidth(width: number, max: number): number {
   return Math.min(max, Math.max(MIN_DOCK_WIDTH, width));
 }
 
-/** Both windows share the row. The wider request keeps its size; the other takes what remains, down to the minimum. */
-function fitColumns(primary: number, secondary: number, width: number): { primaryWidth: number; secondaryWidth: number; maxWindowWidth: number } {
+/**
+ * Both windows share the row. The window resized last keeps its size, so
+ * either one can be dragged wider; with no resize yet, the wider request does.
+ * The other takes what remains, down to the minimum.
+ */
+function fitColumns(primary: number, secondary: number, width: number, resized: DockSide | undefined): { primaryWidth: number; secondaryWidth: number; maxWindowWidth: number } {
   const maxWindowWidth = Math.max(MIN_DOCK_WIDTH, width - GAP * 3 - MIN_DOCK_WIDTH);
   const budget = Math.max(MIN_DOCK_WIDTH * 2, width - GAP * 3);
   let primaryWidth = clampWidth(primary, maxWindowWidth);
   let secondaryWidth = clampWidth(secondary, maxWindowWidth);
   if (primaryWidth + secondaryWidth > budget) {
-    if (Math.abs(primaryWidth - secondaryWidth) < 1) {
+    const kept = resized ?? (Math.abs(primaryWidth - secondaryWidth) < 1 ? null : primaryWidth > secondaryWidth ? "left" : "right");
+    if (kept === null) {
       primaryWidth = budget / 2;
       secondaryWidth = budget / 2;
-    } else if (primaryWidth > secondaryWidth) {
+    } else if (kept === "left") {
       primaryWidth = Math.min(primaryWidth, budget - MIN_DOCK_WIDTH);
       secondaryWidth = budget - primaryWidth;
     } else {
@@ -162,7 +167,7 @@ export function resolveDockLayout(input: DockLayoutInput): DockLayout {
   const requestedLog = Math.max(MIN_LOG_WIDTH, input.logWidth ?? 560);
   const logPriority = input.priority === "log" && input.logWidth !== null;
   const floatingLog = input.floatingLog !== false;
-  const fitted = fitColumns(requestedPrimary, requestedSecondary, width);
+  const fitted = fitColumns(requestedPrimary, requestedSecondary, width, input.widened);
   if (logPriority && floatingLog) {
     const sideCapacity = (width - requestedLog) / 2 - GAP * 2;
     if (sideCapacity >= MIN_DOCK_WIDTH) {
