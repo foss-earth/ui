@@ -232,6 +232,16 @@ bottom edge onto it, and a finger swipes the tabs from its lane. A window's body
 takes whatever height its tab strip leaves, so a host does not size it from the
 strip's height.
 
+A tab whose picture takes the world's place carries a mark before its label: a
+tab definition's `icon` is `"image"` for a flat picture or `"sphere"` for a 360
+photograph (`TabIcon` in `src/shell`, passed down as `renderTabIcon`). The mark
+is drawn in the text colour, 1.1em with its base lowered 0.18em, which centres it
+on the label without making the tab taller, and is hidden from screen readers, so
+the tab's name is still its title alone. Hosts put no "360: " before a sphere's
+title; the mark says it. The sphere shows only the near halves of its equator and
+a meridian: a lone equator read as ⊖ at tab size, and a full wireframe read as
+the web's globe icon, which a globe application cannot use for a photograph.
+
 ## Development
 
 UI has no `@foss-earth/*` dependencies, so its own scripts work from a plain
