@@ -238,8 +238,14 @@ npm run build
 ```
 
 `npm run build` compiles with `tsc` into `dist/` and copies the CSS assets. The
-code targets ES2023 and Node ESM tooling. Tests use Vitest with jsdom. No test
-needs a browser, server, GPU or native build.
+code targets ES2023 and Node ESM tooling. `npm test` uses Vitest with jsdom, and
+needs no browser, server, GPU or native build.
+
+`npm run test:browser` checks what jsdom cannot lay out or draw, such as the
+tab strip's scrollbar, in headless Chrome and Firefox. It needs both browsers
+(installed in the usual place, or named by `CHROME_BIN` and `FIREFOX_BIN`) and
+a [browser-testing](https://github.com/foss-earth/browser-testing) checkout
+beside this one. Its screenshots go to `build/`.
 
 Source licensing and notices are in [LICENSE](LICENSE) and [NOTICE](NOTICE).
 

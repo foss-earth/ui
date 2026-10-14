@@ -96,6 +96,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit --tsBuildInfoFile node_modules/.tmp/typecheck.tsbuildinfo",
     "lint": "eslint . --cache --cache-strategy content --cache-location node_modules/.cache/eslint/",
     "test": "vitest run --maxWorkers=50%",
+    "test:browser": "vitest run --config vitest.browser.config.ts",
     "test:consumer": "node tests/package-consumer.mjs",
     "typecheck:consumer": "node tests/package-consumer.mjs",
     "ci": "npm run check:implementation",

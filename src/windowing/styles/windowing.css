@@ -91,12 +91,85 @@ html[data-world-presentation="split"] .foss-earth-workspace-slot-launcher {
   background: rgba(148, 163, 184, 0.18);
 }
 
-.foss-earth-tab-strip-list {
+.foss-earth-tab-strip-scroll {
+  position: relative;
   flex: 0 1 auto;
+  display: flex;
+  min-width: 0;
+}
+
+/* TabStrip draws the scrollbar under the tabs. The browser's own is hidden: on a phone, a tablet or
+   a Mac it is drawn over the bottom of the tabs, and takes presses meant for them while it shows. */
+.foss-earth-tab-strip-list {
+  flex: 1 1 auto;
   display: flex;
   min-width: 0;
   gap: 4px;
   overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.foss-earth-tab-strip-list::-webkit-scrollbar {
+  display: none;
+}
+
+.foss-earth-tab-strip[data-overflowing="true"] .foss-earth-tab-strip-list {
+  padding-bottom: 8px;
+}
+
+/* The selected tab still reaches down to the panel, behind the scrollbar. */
+.foss-earth-tab-strip[data-overflowing="true"] .foss-earth-tab-shell-selected {
+  position: relative;
+}
+
+.foss-earth-tab-strip[data-overflowing="true"] .foss-earth-tab-shell-selected::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  height: 8px;
+  background: inherit;
+  pointer-events: none;
+}
+
+.foss-earth-tab-strip-scrollbar {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 8px;
+  touch-action: none;
+}
+
+/* A finger swipes the tabs, from the scrollbar's lane too. If the scrollbar took touches, a phone
+   would move a tap on the bottom of a tab to it, as the nearest thing that takes taps. */
+@media (pointer: coarse) {
+  .foss-earth-tab-strip-scrollbar {
+    pointer-events: none;
+  }
+}
+
+.foss-earth-tab-strip-scrollbar-thumb {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 0;
+  border-radius: 2px;
+  background: currentColor;
+  opacity: 0.35;
+}
+
+.foss-earth-tab-strip-scrollbar:hover .foss-earth-tab-strip-scrollbar-thumb,
+.foss-earth-tab-strip-scrollbar:active .foss-earth-tab-strip-scrollbar-thumb {
+  top: 1px;
+  bottom: 1px;
+  opacity: 0.6;
+}
+
+/* The + stays level with the tabs, not with the tabs and the scrollbar under them. */
+.foss-earth-tab-strip[data-overflowing="true"] > .foss-earth-tab-add-wrap {
+  margin-bottom: 8px;
 }
 
 .foss-earth-tab-shell {

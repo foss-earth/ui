@@ -211,3 +211,65 @@ it("brings the selected tab into view, and leaves a strip scrolled by hand alone
     expect(scrollLeft).toBe(0);
   } finally { await act(async () => root.unmount()); }
 });
+
+/**
+ * With more tabs than fit, the browser's scrollbar was drawn over the bottom of
+ * the tabs on a phone, a tablet or a Mac, and took presses meant for them while
+ * it showed. The strip now draws its own under the tabs, only while they do not
+ * fit. tests/browser/tabStripScrollbar.browser.test.ts presses and drags it in
+ * real browsers.
+ */
+it("draws a scrollbar under the tabs only while they do not fit, as long and as far along as they scroll", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const panel = document.createElement("div");
+  document.body.append(panel);
+  const root = createRoot(panel);
+  const render = (count: number) => act(async () => root.render(<TabStrip
+    openTabs={Array.from({ length: count }, (_, index) => `tab ${index}`)}
+    activeTab="tab 0"
+    availableTabs={[]}
+    addMenuOpen={false}
+    onSelectTab={() => {}}
+    onCloseTab={() => {}}
+    onOpenTab={() => {}}
+    onAddMenuOpenChange={() => {}}
+    getLabel={(id) => id}
+  />));
+  try {
+    await render(2);
+    const strip = panel.querySelector<HTMLElement>(".foss-earth-tab-strip")!;
+    const list = panel.querySelector<HTMLElement>(".foss-earth-tab-strip-list")!;
+    const thumb = () => panel.querySelector<HTMLElement>(".foss-earth-tab-strip-scrollbar .foss-earth-tab-strip-scrollbar-thumb");
+    // Tabs 125 px wide in a 250 px strip.
+    let scrollLeft = 0;
+    Object.defineProperties(list, {
+      clientWidth: { get: () => 250 },
+      scrollWidth: { get: () => Math.max(250, list.children.length * 125) },
+      scrollLeft: { get: () => scrollLeft, set: (value: number) => { scrollLeft = value; } },
+    });
+
+    await render(2);
+    expect(thumb()).toBeNull();
+    expect(strip.dataset.overflowing).toBeUndefined();
+
+    // Eight tabs, 1000 px: the thumb is a quarter of the strip, at its start.
+    await render(8);
+    expect(strip.dataset.overflowing).toBe("true");
+    expect(thumb()!.style).toMatchObject({ width: "62.5px", transform: "translateX(0px)" });
+
+    // Scrolled halfway, it is halfway along what is left of the strip.
+    await act(async () => {
+      scrollLeft = 375;
+      list.dispatchEvent(new Event("scroll"));
+    });
+    expect(thumb()!.style.transform).toBe("translateX(93.75px)");
+
+    // However many tabs, it stays long enough to take hold of.
+    await render(60);
+    expect(thumb()!.style.width).toBe("24px");
+
+    await render(2);
+    expect(thumb()).toBeNull();
+    expect(strip.dataset.overflowing).toBeUndefined();
+  } finally { await act(async () => root.unmount()); }
+});

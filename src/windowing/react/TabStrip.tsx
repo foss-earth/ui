@@ -1,8 +1,11 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useEscapeToClose } from "./useEscapeToClose.js";
 import { fitMenu, menuBottom as menuBottomOf, MENU_EDGE_PX } from "./menuFit.js";
 import { usePresentationHold } from "./presentationHold.js";
+
+/** The scrollbar's thumb never gets narrower than this, however many tabs are open. */
+const MIN_THUMB_PX = 24;
 
 function cx(...parts: Array<string | null | undefined | false>): string {
   return parts.filter(Boolean).join(" ");
@@ -92,6 +95,10 @@ export function TabStrip<TabId extends string>(props: TabStripProps<TabId>) {
   const addRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
+  const scrollbarRef = useRef<HTMLDivElement | null>(null);
+  const thumbRef = useRef<HTMLDivElement | null>(null);
+  const thumbDrag = useRef<{ pointerId: number; grab: number } | null>(null);
+  const [overflowing, setOverflowing] = useState(false);
   const [menuAlignsRight, setMenuAlignsRight] = useState(false);
   const [menuPlace, setMenuPlace] = useState<CSSProperties | null>(null);
 
@@ -152,6 +159,46 @@ export function TabStrip<TabId extends string>(props: TabStripProps<TabId>) {
     else if (tab.right > bounds.right) list.scrollLeft += Math.min(tab.right - bounds.right, tab.left - bounds.left);
   }, [activeTab, openTabs.length]);
 
+  // The browser's own scrollbar is hidden (see windowing.css): on a phone, a
+  // tablet or a Mac it is drawn over the bottom of the tabs, and while it
+  // shows, it takes presses meant for them. This one is drawn under the tabs,
+  // while they are wider than the strip.
+  const placeThumb = useCallback((): void => {
+    const list = listRef.current;
+    if (!list) return;
+    const range = list.scrollWidth - list.clientWidth;
+    setOverflowing(range > 0);
+    const thumb = thumbRef.current;
+    if (!thumb || range <= 0) return;
+    const width = Math.max(MIN_THUMB_PX, list.clientWidth * list.clientWidth / list.scrollWidth);
+    thumb.style.width = `${width}px`;
+    thumb.style.transform = `translateX(${list.scrollLeft / range * (list.clientWidth - width)}px)`;
+  }, []);
+  // Every render: tabs opened, closed or renamed change how far the strip scrolls.
+  useLayoutEffect(() => placeThumb());
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (!list) return;
+    list.addEventListener("scroll", placeThumb, { passive: true });
+    const Observer = list.ownerDocument.defaultView?.ResizeObserver;
+    const resize = Observer ? new Observer(placeThumb) : null;
+    resize?.observe(list);
+    return () => {
+      list.removeEventListener("scroll", placeThumb);
+      resize?.disconnect();
+    };
+  }, [placeThumb]);
+
+  const dragThumb = (clientX: number): void => {
+    const list = listRef.current, track = scrollbarRef.current?.getBoundingClientRect(), thumb = thumbRef.current;
+    if (!list || !track || !thumb || !thumbDrag.current) return;
+    const free = track.width - thumb.offsetWidth;
+    if (free > 0) list.scrollLeft = (clientX - track.left - thumbDrag.current.grab) / free * (list.scrollWidth - list.clientWidth);
+  };
+  const endThumbDrag = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    if (thumbDrag.current?.pointerId === event.pointerId) thumbDrag.current = null;
+  };
+
   const alignClassName = menuAlignsRight
     ? (classNames?.addMenuAlignRight ?? "foss-earth-window-menu-align-right")
     : (classNames?.addMenuAlignLeft ?? "foss-earth-window-menu-align-left");
@@ -160,6 +207,7 @@ export function TabStrip<TabId extends string>(props: TabStripProps<TabId>) {
     <div
       ref={rootRef}
       className={cx("foss-earth-tab-strip", classNames?.root)}
+      data-overflowing={overflowing ? "true" : undefined}
       onDragOver={onMoveTab ? (event) => event.preventDefault() : undefined}
       onDrop={onMoveTab ? (event) => {
         event.preventDefault();
@@ -170,61 +218,88 @@ export function TabStrip<TabId extends string>(props: TabStripProps<TabId>) {
         if (tabId) onMoveTab(tabId);
       } : undefined}
     >
-      <div ref={listRef} className={cx("foss-earth-tab-strip-list", classNames?.tabList)}>
-        {openTabs.map((tabId) => {
-          const selected = tabId === activeTab;
-          const label = getLabel(tabId);
+      <div className="foss-earth-tab-strip-scroll">
+        <div ref={listRef} className={cx("foss-earth-tab-strip-list", classNames?.tabList)}>
+          {openTabs.map((tabId) => {
+            const selected = tabId === activeTab;
+            const label = getLabel(tabId);
 
-          return (
-            <div
-              key={tabId}
-              draggable={Boolean(onMoveTab)}
-              onDragStart={onMoveTab ? (event) => {
-                event.dataTransfer.effectAllowed = "move";
-                event.dataTransfer.setData("text/plain", tabId);
-                window.dispatchEvent(new CustomEvent("foss-earth-tab-drag-start", {
-                  detail: { side },
-                }));
-              } : undefined}
-              onDragEnd={onMoveTab ? () => {
-                window.dispatchEvent(new Event("foss-earth-tab-drag-end"));
-              } : undefined}
-              onPointerDown={(event) => {
-                if (event.button !== 0) return;
-                const target = event.target as Element;
-                if (target.closest(".foss-earth-tab-close")) return;
-                hold.arm(event.clientX, event.clientY);
-              }}
-              onContextMenu={onHoldPresentation ? (event) => event.preventDefault() : undefined}
-              className={cx(
-                "foss-earth-tab-shell",
-                selected ? "foss-earth-tab-shell-selected" : "foss-earth-tab-shell-unselected",
-                classNames?.tabShell,
-                selected ? classNames?.tabShellSelected : classNames?.tabShellUnselected,
-              )}
-            >
-              <button
-                type="button"
-                onClick={() => { if (hold.take()) return; onSelectTab(tabId); }}
+            return (
+              <div
+                key={tabId}
+                draggable={Boolean(onMoveTab)}
+                onDragStart={onMoveTab ? (event) => {
+                  event.dataTransfer.effectAllowed = "move";
+                  event.dataTransfer.setData("text/plain", tabId);
+                  window.dispatchEvent(new CustomEvent("foss-earth-tab-drag-start", {
+                    detail: { side },
+                  }));
+                } : undefined}
+                onDragEnd={onMoveTab ? () => {
+                  window.dispatchEvent(new Event("foss-earth-tab-drag-end"));
+                } : undefined}
+                onPointerDown={(event) => {
+                  if (event.button !== 0) return;
+                  const target = event.target as Element;
+                  if (target.closest(".foss-earth-tab-close")) return;
+                  hold.arm(event.clientX, event.clientY);
+                }}
+                onContextMenu={onHoldPresentation ? (event) => event.preventDefault() : undefined}
                 className={cx(
-                  "foss-earth-tab-button",
-                  classNames?.tabButton,
-                  compact ? classNames?.tabButtonCompact : undefined,
+                  "foss-earth-tab-shell",
+                  selected ? "foss-earth-tab-shell-selected" : "foss-earth-tab-shell-unselected",
+                  classNames?.tabShell,
+                  selected ? classNames?.tabShellSelected : classNames?.tabShellUnselected,
                 )}
               >
-                {label}
-              </button>
-              <button
-                type="button"
-                onClick={() => onCloseTab(tabId)}
-                className={cx("foss-earth-tab-close", classNames?.closeButton)}
-                aria-label={closeAriaLabel(label)}
-              >
-                {renderCloseButtonContent?.(tabId) ?? "x"}
-              </button>
-            </div>
-          );
-        })}
+                <button
+                  type="button"
+                  onClick={() => { if (hold.take()) return; onSelectTab(tabId); }}
+                  className={cx(
+                    "foss-earth-tab-button",
+                    classNames?.tabButton,
+                    compact ? classNames?.tabButtonCompact : undefined,
+                  )}
+                >
+                  {label}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onCloseTab(tabId)}
+                  className={cx("foss-earth-tab-close", classNames?.closeButton)}
+                  aria-label={closeAriaLabel(label)}
+                >
+                  {renderCloseButtonContent?.(tabId) ?? "x"}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        {overflowing ? (
+          <div
+            ref={scrollbarRef}
+            className="foss-earth-tab-strip-scrollbar"
+            aria-hidden="true"
+            onPointerDown={(event) => {
+              const thumb = thumbRef.current?.getBoundingClientRect();
+              if (event.button !== 0 || !thumb) return;
+              event.preventDefault();
+              event.currentTarget.setPointerCapture(event.pointerId);
+              // A press on the thumb holds it where it was taken. One beside it brings the thumb's middle there.
+              const onThumb = event.clientX >= thumb.left && event.clientX <= thumb.right;
+              thumbDrag.current = { pointerId: event.pointerId, grab: onThumb ? event.clientX - thumb.left : thumb.width / 2 };
+              dragThumb(event.clientX);
+            }}
+            onPointerMove={(event) => {
+              if (thumbDrag.current?.pointerId === event.pointerId) dragThumb(event.clientX);
+            }}
+            onPointerUp={endThumbDrag}
+            onPointerCancel={endThumbDrag}
+          >
+            <div ref={thumbRef} className="foss-earth-tab-strip-scrollbar-thumb" />
+          </div>
+        ) : null}
       </div>
 
       <div className={cx("foss-earth-tab-add-wrap", classNames?.addButtonWrap)}>
