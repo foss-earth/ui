@@ -134,22 +134,20 @@ A page that is older than the published one reloads itself, or says so
 ### Versions
 
 FOSS Earth, 0sfs, gamepad-tools and any other checkout an app is built from name their
-versions alike, from the commit:
-
-```text
-{last two digits of the year}.{month}.{day}.{the commit's count among that day's commits}
-```
-
-`26.10.7.3` is the third commit of 7 October 2026. The day is the commit's own, in the time
-zone it was committed in, and the count starts at 1 each day. It is read from the history when
-an app is built (`commitVersion` in `vite/builtFrom.ts`), so nothing is kept in step by hand, a
-later commit is always a later version, and two builds of one commit are one version. A build
-with changes not committed has its commit's version and says so beside it. A package.json
-cannot hold it, since npm takes three numbers, so those stay as they are and About does not
-show them for a checkout. For a checkout at hand:
+versions alike, from the commit, by the rule in
+[CONTRIBUTING](https://github.com/foss-earth/.github/blob/main/CONTRIBUTING.md#versions):
+`26.10.07.#3` is the third commit of 7 October 2026, UTC. About computes it, and nothing else
+does: it is read from the history when an app is built (`commitVersion` in `about`'s
+`src/vite/builtFrom.ts`), so nothing is kept in step by hand, and two builds of one commit are
+one version. A deploy records the commit of each checkout the app is built from in the app's
+`deployed-from.json`, and commits it when one moved, so new code anywhere in the app is a new
+version. A build with changes not committed has its commit's version and says so beside it. A
+package.json cannot hold it, since npm takes three numbers, so those stay as they are and About
+does not show them for a checkout. About lists every checkout's version. In a checkout that installs
+About, this prints that checkout's:
 
 ```sh
-git log -n 400 --format=%cd --date=short | awk 'NR==1{d=$0} $0==d{n++} END{split(d,p,"-"); printf "%s.%d.%d.%d\n", substr(p[1],3,2), p[2], p[3], n}'
+node --input-type=module -e "import { checkoutVersion } from '@foss-earth/about/vite'; console.log(checkoutVersion('.'))"
 ```
 
 ## Getting a report
