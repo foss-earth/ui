@@ -86,6 +86,8 @@ export interface WorkspaceDockSlotProps<TabId extends string> {
   renderLauncherButtonContent?: ReactNode;
   renderTabAddButtonContent?: ReactNode;
   renderTabCloseButtonContent?: (tabId: TabId) => ReactNode;
+  /** A mark before a tab's label in the strip. */
+  renderTabIcon?: (tabId: TabId) => ReactNode;
   dockPanelProps?: WorkspaceDockPanelOverrides;
   /** Return `false` to keep the tab open. */
   onBeforeCloseTab?: (tabId: TabId) => boolean | void;
@@ -137,6 +139,7 @@ export function WorkspaceDockSlot<TabId extends string>(props: WorkspaceDockSlot
     renderLauncherButtonContent,
     renderTabAddButtonContent,
     renderTabCloseButtonContent,
+    renderTabIcon,
     dockPanelProps,
     onBeforeCloseTab,
     menuContainer,
@@ -290,6 +293,7 @@ export function WorkspaceDockSlot<TabId extends string>(props: WorkspaceDockSlot
             }}
             renderAddButtonContent={renderTabAddButtonContent}
             renderCloseButtonContent={renderTabCloseButtonContent}
+            renderTabIcon={renderTabIcon}
             menuContainer={menuContainer}
             menuBottom={menuBottom}
             onHoldPresentation={onHoldPresentation}

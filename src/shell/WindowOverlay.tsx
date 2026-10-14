@@ -13,6 +13,7 @@ import { surfaceParticipates } from "./imageCompact.js";
 import { hideWorkspaceTabs, restoreWorkspaceTabs, type HiddenTab } from "../windowing/core/contextTabs.js";
 import { createWorkspaceSnapshotStore, workspaceSnapshotFields } from "../windowing/core/workspaceSnapshot.js";
 import { JoinedSurface } from "./JoinedSurface.js";
+import { TabIcon } from "./TabIcon.js";
 import type { OverlayContextPolicy, WindowOverlayHandle, WindowOverlayGeometry, WindowOverlayLogSize, WindowOverlayLayoutPort } from "../windowing/core/overlayPorts.js";
 export type { OverlayContextPolicy, WindowOverlayHandle, WindowOverlayGeometry, WindowOverlayLogSize, WindowOverlayLayoutPort } from "../windowing/core/overlayPorts.js";
 /** What a host draws when two surface tabs share one body. */
@@ -563,6 +564,12 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
       : {}),
   });
 
+  // A tab that shows its picture where the globe is carries a mark that tells it from the panels.
+  const tabIcon = (tabId: TabId): ReactNode => {
+    const icon = tabDefinitions.find(tab => tab.id === tabId)?.icon;
+    return icon ? <TabIcon icon={icon} /> : null;
+  };
+
   return (
     <div ref={setOverlay} className="foss-earth-window-overlay" data-image-compact={imageCompact ? "true" : undefined}>
       <WorkspaceDockSlot<TabId>
@@ -575,6 +582,7 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
         onWidthChange={(width) => resizeWindow("primary", width)}
         tabDefinitions={tabDefinitions}
         getTabLabel={(tabId) => tabDefinitions.find((tab) => tab.id === tabId)?.label ?? tabId}
+        renderTabIcon={tabIcon}
         renderTabContent={renderTabContent}
         restoreOnTabSelect
         width={imageCompact ? compactWidth : layout.primaryWidth}
@@ -599,6 +607,7 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
         onWidthChange={(width) => resizeWindow("secondary", width)}
         tabDefinitions={tabDefinitions}
         getTabLabel={(tabId) => tabDefinitions.find((tab) => tab.id === tabId)?.label ?? tabId}
+        renderTabIcon={tabIcon}
         renderTabContent={renderTabContent}
         restoreOnTabSelect
         width={imageCompact ? compactWidth : layout.secondaryWidth}

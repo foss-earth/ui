@@ -53,6 +53,8 @@ export interface TabStripProps<TabId extends string> {
   strings?: TabStripStrings;
   renderAddButtonContent?: ReactNode;
   renderCloseButtonContent?: (tabId: TabId) => ReactNode;
+  /** A mark before a tab's label, such as a picture on a tab that shows an image. */
+  renderTabIcon?: (tabId: TabId) => ReactNode;
   /**
    * Where the + menu is drawn: outside the panel, which clips what passes its
    * edges, and in front of everything under it. The document's body when absent.
@@ -86,6 +88,7 @@ export function TabStrip<TabId extends string>(props: TabStripProps<TabId>) {
     strings,
     renderAddButtonContent,
     renderCloseButtonContent,
+    renderTabIcon,
     menuContainer,
     menuBottom,
     onHoldPresentation,
@@ -261,6 +264,7 @@ export function TabStrip<TabId extends string>(props: TabStripProps<TabId>) {
                     compact ? classNames?.tabButtonCompact : undefined,
                   )}
                 >
+                  {renderTabIcon?.(tabId)}
                   {label}
                 </button>
                 <button

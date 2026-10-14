@@ -9,12 +9,19 @@ export interface WindowTabSurface {
   joinGroup?: string;
 }
 
+/**
+ * The mark before a tab's label, for a tab whose picture takes the world's
+ * place: a flat image, or a sphere seen from inside.
+ */
+export type WindowTabIcon = "image" | "sphere";
+
 export interface WindowTabDefinition<TabId extends string> {
   id: TabId;
   label: string;
   conflictGroup?: string;
   available?: boolean;
   surface?: WindowTabSurface;
+  icon?: WindowTabIcon;
 }
 
 export interface WindowSlotState<TabId extends string> {

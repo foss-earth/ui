@@ -24,8 +24,8 @@ afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); document.body.rep
 
 const IMAGE_TABS: readonly WindowTabDefinition<Tab>[] = [
   { id: "settings", label: "Settings" },
-  { id: "image-a", label: "Photo A", surface: { joinGroup: "images" } },
-  { id: "image-b", label: "Photo B", surface: { joinGroup: "images" } },
+  { id: "image-a", label: "Photo A", surface: { joinGroup: "images" }, icon: "image" },
+  { id: "image-b", label: "Photo B", surface: { joinGroup: "images" }, icon: "image" },
 ];
 
 /** A host like the app: the Log tab exists only while the layout does not float the log. */
@@ -268,5 +268,23 @@ it("stacks an image beside ordinary content, and keeps one body plus a collapsed
     expect(launcher!.closest(".foss-earth-compact-row")?.querySelector(".foss-earth-compact-row-label")?.textContent).toBe("Right");
     expect(api.current!.workspace.getSnapshot().primary.tabs).toEqual(["image-a"]);
     expect(api.current!.workspace.getSnapshot().secondary.tabs).toEqual([]);
+  } finally { await act(async () => root.unmount()); }
+});
+
+it("marks image tabs with a picture and a 360 tab with a sphere before their labels, which their names leave out", async () => {
+  stored.set(SAVED_WORKSPACE_STORAGE_KEY, JSON.stringify({
+    primary: { tabs: ["settings", "image-a"], activeTab: "settings", collapsed: false, width: 320 },
+    secondary: { tabs: ["image-b"], activeTab: "image-b", collapsed: false, width: 320 },
+  }));
+  const api: { current: WindowOverlayHandle<Tab> | null } = { current: null };
+  const { host, root } = await mount(api, [{ id: "opened", label: "Orb", icon: "sphere" }]);
+  try {
+    await act(async () => api.current!.openTabInSlot("opened", "secondary"));
+    const marks = (side: "left" | "right") => Array.from(panel(host, side).querySelectorAll(".foss-earth-tab-button"),
+      button => [button.textContent, button.querySelector(".foss-earth-tab-icon")?.getAttribute("data-icon") ?? null]);
+    expect(marks("left")).toEqual([["Settings", null], ["Photo A", "image"]]);
+    expect(marks("right")).toEqual([["Photo B", "image"], ["Orb", "sphere"]]);
+    const icons = [...host.querySelectorAll(".foss-earth-tab-icon")];
+    expect(icons.every(icon => icon.getAttribute("aria-hidden") === "true" && icon.parentElement?.firstElementChild === icon)).toBe(true);
   } finally { await act(async () => root.unmount()); }
 });

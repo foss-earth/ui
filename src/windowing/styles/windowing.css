@@ -217,6 +217,15 @@ html[data-world-presentation="split"] .foss-earth-workspace-slot-launcher {
   white-space: nowrap;
 }
 
+/* A mark before a tab's label, such as the picture on an image tab or the sphere on a 360 one. */
+/* Sized and lowered to sit centred on the label without making the tab taller. */
+.foss-earth-tab-icon {
+  width: 1.1em;
+  height: 1.1em;
+  margin-right: 4px;
+  vertical-align: -0.18em;
+}
+
 .foss-earth-tab-add,
 .foss-earth-panel-launcher-button {
   display: grid;

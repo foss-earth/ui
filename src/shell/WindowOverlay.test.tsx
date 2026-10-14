@@ -465,7 +465,7 @@ it("offers an About tab under +, on the globe and in a sphere", async () => {
   try {
     expect(await menu()).toContain("About");
     expect(await menu()).toContain("Bug report");
-    await act(async () => { snapshot = { title: "360: Northrop Mall", onScreen: true }; for (const listener of listeners) listener(); });
+    await act(async () => { snapshot = { title: "Northrop Mall", onScreen: true }; for (const listener of listeners) listener(); });
     expect(await menu()).toContain("About");
     expect(await menu()).toContain("Bug report");
     await act(async () => overlayApiRef.current!.toggleTab("about"));
@@ -554,17 +554,17 @@ it("opens a sphere's tab on entering, hides the map's tabs meanwhile, and leaves
     expect(await menu("left")).toEqual(expect.arrayContaining(["Sky", "Date and time"]));
 
     // Entering: the map's tabs go, and the sky's and its time, which a sphere does not draw; the sphere's opens and shows.
-    await enter("360: Northrop Mall");
-    expect(side("left")).toEqual(["360: Northrop Mall"]);
+    await enter("Northrop Mall");
+    expect(side("left")).toEqual(["Northrop Mall"]);
     expect(host.contains(sphereTab)).toBe(true);
     expect(await menu("left")).toEqual(expect.arrayContaining(["360 image settings", "Scenes"]));
     for (const hidden of ["Map", "Location", "Sky", "Date and time"]) expect(await menu("left")).not.toContain(hidden);
     await act(async () => overlayApiRef.current!.openOrSelectTab("panorama-settings"));
-    expect(side("left")).toEqual(["360: Northrop Mall", "360 image settings"]);
+    expect(side("left")).toEqual(["Northrop Mall", "360 image settings"]);
 
     // Following a link retitles the same tab.
-    await enter("360: Walter Library");
-    expect(side("left")).toEqual(["360: Walter Library", "360 image settings"]);
+    await enter("Walter Library");
+    expect(side("left")).toEqual(["Walter Library", "360 image settings"]);
 
     // Escape: the sphere's tabs go and the map's come back where they were.
     await enter(null);
@@ -573,10 +573,10 @@ it("opens a sphere's tab on entering, hides the map's tabs meanwhile, and leaves
     expect(leave).not.toHaveBeenCalled();
 
     // Entering again brings back 360 image settings too; closing the sphere's tab leaves it.
-    await enter("360: Northrop Mall");
-    expect(side("left")).toEqual(["360: Northrop Mall", "360 image settings"]);
-    expect(selected("left")).toBe("360: Northrop Mall");
-    await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Close 360: Northrop Mall tab"]')!.click());
+    await enter("Northrop Mall");
+    expect(side("left")).toEqual(["Northrop Mall", "360 image settings"]);
+    expect(selected("left")).toBe("Northrop Mall");
+    await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Close Northrop Mall tab"]')!.click());
     expect(leave).toHaveBeenCalledOnce();
     await enter(null);
     expect(side("left")).toEqual(["Map", "Location"]);
@@ -611,8 +611,8 @@ it("opens a sphere's tab minimized while the camera flies in, and shows it once 
   />));
   const left = () => host.querySelector<HTMLElement>('[data-side="left"]')!;
   const selected = () => host.querySelector('[data-side="left"] .foss-earth-tab-shell-selected .foss-earth-tab-button')?.textContent;
-  const flying = { title: "360: Northrop Mall", onScreen: false };
-  const inside = { title: "360: Northrop Mall", onScreen: true };
+  const flying = { title: "Northrop Mall", onScreen: false };
+  const inside = { title: "Northrop Mall", onScreen: true };
   const outside = { title: null, onScreen: false };
   try {
     await act(async () => overlayApiRef.current!.toggleTab("map"));
@@ -620,12 +620,12 @@ it("opens a sphere's tab minimized while the camera flies in, and shows it once 
 
     // Flying in: the tab is there and selected, its panel minimized; on screen, it shows.
     await show(flying);
-    expect(selected()).toBe("360: Northrop Mall");
+    expect(selected()).toBe("Northrop Mall");
     expect(left().dataset.collapsed).toBe("true");
     await show(inside);
     expect(left().dataset.collapsed).toBe("false");
     // Following a link keeps it showing.
-    await show({ title: "360: Walter Library", onScreen: true });
+    await show({ title: "Walter Library", onScreen: true });
     expect(left().dataset.collapsed).toBe("false");
     await show(outside);
     expect(selected()).toBe("Map");
@@ -741,8 +741,8 @@ it("saves the layout a wide window on the globe would show, even while folded or
     expect(first.host.querySelector('[data-side="left"]')).toBeNull();
     expect(saved().primary).toMatchObject({ tabs: ["location", "map"], activeTab: "map" });
     // Inside a sphere the map's tabs are hidden; what is saved still has them.
-    await show({ title: "360: Northrop Mall", onScreen: true });
-    expect(first.host.querySelector('[data-side="right"] .foss-earth-tab-button')?.textContent).toBe("360: Northrop Mall");
+    await show({ title: "Northrop Mall", onScreen: true });
+    expect(first.host.querySelector('[data-side="right"] .foss-earth-tab-button')?.textContent).toBe("Northrop Mall");
     expect(saved().primary).toMatchObject({ tabs: ["location", "map"], activeTab: "map" });
     expect(saved().secondary.tabs).toEqual([]);
   } finally { await act(async () => first.root.unmount()); }
