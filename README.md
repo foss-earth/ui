@@ -223,6 +223,15 @@ it, against the other edge, and widening it further puts the log under it, as
 wide as it. A resized log does not shrink that window to bring the other back.
 Tabs return to their saved windows when there is room for both again.
 
+With more tabs than fit, the tab strip hides the browser's scrollbar: phones,
+tablets, Macs and Firefox draw it over the bottom of the tabs, where it takes
+presses meant for them. The strip draws its own in an 8 px lane under the tabs
+instead, and marks itself `data-overflowing="true"`. A mouse drags it. On a
+touch screen it takes no touches, since a phone would move a tap on a tab's
+bottom edge onto it, and a finger swipes the tabs from its lane. A window's body
+takes whatever height its tab strip leaves, so a host does not size it from the
+strip's height.
+
 ## Development
 
 UI has no `@foss-earth/*` dependencies, so its own scripts work from a plain
@@ -245,7 +254,8 @@ needs no browser, server, GPU or native build.
 tab strip's scrollbar, in headless Chrome and Firefox. It needs both browsers
 (installed in the usual place, or named by `CHROME_BIN` and `FIREFOX_BIN`) and
 a [browser-testing](https://github.com/foss-earth/browser-testing) checkout
-beside this one. Its screenshots go to `build/`.
+beside this one. Its screenshots go to `build/`. [Browser tests](docs/browser-tests.md)
+says what each emulates and what a new one has to watch for.
 
 Source licensing and notices are in [LICENSE](LICENSE) and [NOTICE](NOTICE).
 
