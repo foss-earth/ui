@@ -33,6 +33,7 @@ interface Geometry {
   visible: Array<{ label: string; selected: boolean; button: Box; close: Box }>;
 }
 interface Tabs { open: string[]; active: string | null }
+interface Panel { clip: Box; header: Box; body: Box; scrollsAcross: boolean; scrollsDown: boolean }
 interface Page {
   load(query: string): Promise<void>;
   run<T>(expression: string): Promise<T>;
@@ -77,6 +78,17 @@ const GEOMETRY = `(() => {
         button: box(shell.querySelector(".foss-earth-tab-button")),
         close: box(shell.querySelector(".foss-earth-tab-close")),
       })),
+  };
+})()`;
+const PANEL = `(() => {
+  const box = (element) => { const r = element.getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height }; };
+  const body = document.querySelector(".foss-earth-dock-panel-body");
+  return {
+    clip: box(document.querySelector(".foss-earth-dock-panel-clip")),
+    header: box(document.querySelector(".foss-earth-dock-panel-header")),
+    body: box(body),
+    scrollsAcross: body.scrollWidth > body.clientWidth,
+    scrollsDown: body.scrollHeight > body.clientHeight,
   };
 })()`;
 // The same strip with the browser's own scrollbar hidden, to compare against.
@@ -301,6 +313,22 @@ describe.each(MODES)("$name", ({ slug, touch, open }) => {
     await page.press(middle(closing.close), closing.close.y + closing.close.height - 1);
     await page.run(FRAMES);
     expect((await page.run<Tabs>("window.tabs")).open, `${closing.label} closed`).not.toContain(closing.label);
+  });
+
+  /**
+   * The panel's body was the panel's height less 30 px, the tab strip's
+   * height without the scrollbar's lane. With more tabs than fit, the body's
+   * bottom 8 px, where its own horizontal scrollbar is, went past the panel's
+   * clipped edge, and only the top of that scrollbar showed.
+   */
+  it("keeps the panel's body, and the scrollbars it scrolls with, between the tabs and the panel's bottom edge", async () => {
+    for (const query of ["", "?tabs=2"]) {
+      await load(page, query);
+      const panel = await page.run<Panel>(PANEL);
+      expect(panel.scrollsAcross && panel.scrollsDown, `body scrolls both ways (${query || "all tabs"})`).toBe(true);
+      expect(panel.body.y, `body's top (${query || "all tabs"})`).toBeCloseTo(panel.header.y + panel.header.height, 1);
+      expect(panel.body.y + panel.body.height, `body's bottom (${query || "all tabs"})`).toBeCloseTo(panel.clip.y + panel.clip.height, 1);
+    }
   });
 
   it.runIf(touch)("swipes the tabs from the scrollbar's lane", async () => {

@@ -39,7 +39,8 @@ function Fixture() {
         />
       )}
     >
-      <p>Body</p>
+      {/* Wider and taller than the panel, so the body scrolls both ways. */}
+      <div style={{ width: 900, height: 1200 }}>Body</div>
     </DockPanel>
   );
 }

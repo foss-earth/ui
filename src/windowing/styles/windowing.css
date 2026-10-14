@@ -73,12 +73,15 @@ html[data-world-presentation="split"] .foss-earth-workspace-slot-launcher {
 
 /* The panel's contents clip to its rounded corners; its resize grip sits outside this, across the edge. */
 .foss-earth-dock-panel-clip {
+  display: flex;
+  flex-direction: column;
   height: 100%;
   overflow: hidden;
   border-radius: inherit;
 }
 
 .foss-earth-dock-panel-header {
+  flex: none;
   min-height: 30px;
 }
 
@@ -354,8 +357,11 @@ html[data-world-presentation="split"] .foss-earth-workspace-slot-launcher {
   background: rgba(56, 189, 248, 0.2);
 }
 
+/* The rest of the panel, however tall the tab strip is: taller while its scrollbar shows. Below
+   the panel's edge, the body's own scrollbars would be clipped. */
 .foss-earth-dock-panel-body {
-  height: calc(100% - 30px);
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: auto;
 }
 
