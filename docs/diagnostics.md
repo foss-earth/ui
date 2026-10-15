@@ -163,6 +163,11 @@ text to paste and no additional backend. See [Reporting bugs](bug-reporting.md).
   report and starts nothing else: no renderer, no map, no scene. It is for an app that stops
   before its settings can be reached, as one that stops while starting. It reads the trail and
   leaves it, so the page can be opened again and the app's next visit still says what happened.
+- **Download crash log**, offered with Clear browser data after two failed or stalled starts
+  of a page, and on the review before its clear. It is a `.txt` of the page's failed starts,
+  the last one's message and every visit's trail on the device, and needs only the page's
+  inline recovery script, so it works when the app's bundle does not load. It has no
+  settings or renderer details: `?report` does, where the app still loads.
 
 The report is made on the device and sent nowhere. A key in an address is left out
 (`?key=…`), and a setting that holds a secret says only whether it is set.

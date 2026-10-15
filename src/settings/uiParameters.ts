@@ -6,6 +6,7 @@ export const WINDOWS_PRESENTATION_ID = "interface.windows.presentation";
 export const TABS_BEHIND_TOOLBAR_ID = "interface.windows.tabsBehindToolbar";
 export const TOOLBAR_EDGE_ID = "interface.windows.toolbarEdge";
 export const WORLD_RESIZE_ID = "interface.windows.worldResize";
+export const WORLD_EDGES_ID = "interface.windows.flushEdges";
 /** Register explicitly in the host's registry; no owner feature catalogue is imported. */
 export const UI_PARAMETERS: readonly ParameterSpec[] = [
 {
@@ -116,6 +117,18 @@ export const UI_PARAMETERS: readonly ParameterSpec[] = [
     home: { tab: INTERFACE_TAB, section: "windows", level: "main" },
     appliesLive: true,
     source: "@foss-earth/ui/src/shell/WindowOverlay.tsx",
+  },
+{
+    id: WORLD_EDGES_ID,
+    label: "Windows on the screen's edges",
+    description: "Puts the windows and the toolbar against the screen's edges with no space around them, closes up the toolbar's buttons, holds the map detail rail inside the basemap's chip, and keeps the log a tab. The world is then one rectangle with rectangles cut from its edges, and nothing is drawn under the windows or the toolbar. Only overlay changes: split's windows already meet the edges.",
+    unit: "none",
+    kind: "boolean",
+    default: true,
+    defaultReason: "On 2026-10-14, at 1440×900 at 2× in Chrome with WebGPU and no frame-rate cap, the default view over Minneapolis with a window on each side drew a frame in a median 3.19 ms with the windows on the edges and 3.40 ms without, faster in all 8 alternating blocks. The 3D world's own GPU time fell 2.6%; most of the rest is the blur and shadow behind floating windows that the browser no longer composites.",
+    home: { tab: INTERFACE_TAB, section: "windows", level: "main" },
+    appliesLive: true,
+    source: "@foss-earth/ui/src/shell/dockLayout.ts",
   },
 {
     id: "interface.log.lineDuration",

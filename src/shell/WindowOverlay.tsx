@@ -6,7 +6,7 @@ import type { WindowTabDefinition, WindowWorkspaceState, WindowSlotId } from "..
 import type { SettingsStorage } from "../settings/registry.js";
 import { loadSavedWorkspace, saveWorkspace } from "../browser/workspace.js";
 import { browserOverlayGeometry, lowestSplitBand, publishSplitBand } from "../browser/overlay.js";
-import { chosenToolbarEdge, resolveDockLayout, type DockLayoutMode, type DockResizePriority, type DockSide, type ToolbarEdgeChoice, type WorldPresentationChoice } from "./dockLayout.js";
+import { chosenToolbarEdge, resolveDockLayout, type DockLayoutMode, type DockResizePriority, type DockSide, type ToolbarEdgeChoice, type WorldEdges, type WorldPresentationChoice } from "./dockLayout.js";
 import { PresentationMenu } from "../windowing/react/presentationHold.js";
 import { foldWorkspace, restoreWorkspace, forgetCompactWorkspaceTab, openTabInCompactWorkspace, type CompactWorkspaceMemory } from "./compactWorkspace.js";
 import { surfaceParticipates } from "./imageCompact.js";
@@ -56,6 +56,11 @@ export interface WindowOverlayProps<TabId extends string> {
      * resize, ends. Live resizes it on every movement. Omitted stays live.
      */
     worldResize?: "live" | "release";
+    /**
+     * Flush puts overlay windows, their launchers and the toolbar on the
+     * screen's edges, and keeps the log a tab. Omitted is inset.
+     */
+    edges?: WorldEdges;
   };
   /** Joins two selected surface tabs of one group into one body. Without it each surface keeps its own window. */
   surfaces?: WindowOverlaySurfaces<TabId>;
@@ -158,6 +163,7 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
     previousMode: layoutMode,
     widened: widened ?? undefined,
     presentation: presentation?.choice,
+    edges: presentation?.edges,
     open: { left: workspace.state.primary.tabs.length > 0, right: workspace.state.secondary.tabs.length > 0 },
   };
   // What the sizes alone choose. A join only keeps the log a tab, so ending it returns to this.
@@ -301,7 +307,7 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
     };
   }, [geometry, availableWidth, layout.presentation, toolbarEdge, presentation?.worldResize, primarySlot.collapsed, primarySlot.activeTab, primarySlot.tabs.length, secondarySlot.collapsed, secondarySlot.activeTab, secondarySlot.tabs.length, joined !== null, joinedHeight !== null]);
 
-  useLayoutEffect(() => { layoutPort.publish(layout); }, [layoutPort, layout.mode, layout.presentation, layout.logVisible, layout.side, layout.primaryWidth, layout.secondaryWidth, layout.logLeft, layout.logTop, layout.logCenter, layout.logWidth, layout.maxWindowWidth]);
+  useLayoutEffect(() => { layoutPort.publish(layout); }, [layoutPort, layout.mode, layout.presentation, layout.edges, layout.logVisible, layout.side, layout.primaryWidth, layout.secondaryWidth, layout.logLeft, layout.logTop, layout.logCenter, layout.logWidth, layout.maxWindowWidth]);
   useLayoutEffect(() => {
     const root = document.documentElement;
     if (presentation?.tabsBehindToolbar) root.dataset.tabsBehindToolbar = "true";
@@ -534,6 +540,8 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
   });
 
 
+  // Flush windows meet the top and their side's edge.
+  const flushPanel = layout.edges === "flush" ? { edgeOffsetPx: 0, topOffsetPx: "env(safe-area-inset-top, 0px)" } : undefined;
   // The grip changes the width exactly when the layout uses it, so its arrows cannot promise a
   // width the layout throws away. Only split fixes the width: that window touches the screen's
   // edges, and on a phone stays at most half the screen. A phone's overlay window keeps both
@@ -545,7 +553,7 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
         edgeOffsetPx: 0,
         topOffsetPx: "env(safe-area-inset-top, 0px)",
       }
-    : layout.mode === "stacked" ? { resizeGripAt: "bottom" as const } : undefined;
+    : layout.mode === "stacked" ? { resizeGripAt: "bottom" as const, ...flushPanel } : flushPanel;
   const compactWidth = layout.side === "left" ? layout.primaryWidth : layout.secondaryWidth;
   const panelProps = (slotId: WindowSlotId) => ({
     liftResizeHandle: layout.presentation === "split",
@@ -558,7 +566,7 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
           resizeAxes: "height" as const,
           ...(layout.presentation === "split" ? { expandedMaxHeightCss: "50dvh", maxHeightRatio: 0.5 } : {}),
         }
-      : layout.side === (slotId === "primary" ? "left" : "right") ? singlePanel : undefined),
+      : layout.side === (slotId === "primary" ? "left" : "right") ? singlePanel : flushPanel),
     ...(inContext && context.ready && context.measureEntry && display[slotId].activeTab === context.entryTabId
       ? { contentFit: { key: contextVisit.current, measure: context.measureEntry } }
       : {}),

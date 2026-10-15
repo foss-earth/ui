@@ -3,7 +3,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
 import { WindowOverlay, type WindowOverlayHandle } from "./WindowOverlay.js";
-import { lowestSplitBand } from "../browser/overlay.js";
+import { browserOverlayLayout, lowestSplitBand } from "../browser/overlay.js";
 
 it("releases geometry, log, focus and layout through the supplied host ports", async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
@@ -139,4 +139,39 @@ it("follows the lower window and ignores the drop preview", () => {
   vi.spyOn(launcher, "getBoundingClientRect").mockReturnValue({ bottom: 40 } as DOMRect);
   vi.spyOn(windowBand, "getBoundingClientRect").mockReturnValue({ bottom: 220 } as DOMRect);
   expect(lowestSplitBand([preview, launcher, windowBand])).toBe(windowBand);
+});
+
+it("puts flush windows on the screen's edges and publishes the edges", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const root = document.documentElement;
+  const host = document.createElement("div"); document.body.append(host); const react = createRoot(host);
+  const api: { current: WindowOverlayHandle<"left" | "right"> | null } = { current: null };
+  const layout = browserOverlayLayout(root);
+  const render = (edges: "inset" | "flush") => react.render(<WindowOverlay<"left" | "right">
+    tabDefinitions={[{ id: "left", label: "Left" }, { id: "right", label: "Right" }]} renderTabContent={(id) => <p>{id}</p>}
+    context={{ active: false, ready: true, baseOnlyTabs: new Set(), contextOnlyTabs: new Set(), entryTabId: "left" }}
+    restorableTabs={new Set()} storage={null} overlayApiRef={api}
+    geometry={{ observeWidth(_element, listener) { listener(1440); return () => {}; }, menuBottom: () => null }}
+    logSize={{ getWidth: () => null, subscribe: () => () => {} }} layoutPort={layout}
+    presentation={{ choice: "overlay", onChoice() {}, tabsBehindToolbar: false, edges }}
+  />);
+  try {
+    await act(async () => render("inset"));
+    await act(async () => { api.current!.openTabInSlot("left", "primary"); api.current!.openTabInSlot("right", "secondary"); });
+    const panel = (side: string) => host.querySelector<HTMLElement>(`.foss-earth-dock-panel[data-side="${side}"]`)!;
+    expect(panel("left").style.left).toBe("6px");
+    expect(root.dataset.logVisible).toBe("true");
+    expect(root.dataset.worldEdges).toBeUndefined();
+    await act(async () => render("flush"));
+    expect(panel("left").style.left).toBe("0px");
+    expect(panel("right").style.right).toBe("0px");
+    expect(root.dataset.worldEdges).toBe("flush");
+    expect(root.dataset.logVisible).toBe("false");
+    await act(async () => render("inset"));
+    expect(panel("left").style.left).toBe("6px");
+    expect(root.dataset.worldEdges).toBeUndefined();
+  } finally {
+    await act(async () => react.unmount()); host.remove(); vi.unstubAllGlobals();
+  }
+  expect(root.dataset.worldEdges).toBeUndefined();
 });

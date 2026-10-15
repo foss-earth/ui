@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SETTINGS_STORAGE_KEY } from "../settings/registry.js";
+import { TRAIL_KEY_PREFIX } from "../diagnostics/sessionTrail.js";
 import { browserRecovery } from "../../vite/index.mjs";
 import {
   createBrowserDataPanel,
@@ -53,6 +54,24 @@ function clock() {
       queued.shift()?.work();
     },
   };
+}
+
+function keepTrail(id: string, startedAt: number, steps: { ms: number; text: string; count?: number; lastMs?: number }[], extra: { app?: string; state?: string; closed?: boolean; hidden?: boolean } = {}): void {
+  window.localStorage.setItem(`${TRAIL_KEY_PREFIX}${id}`, JSON.stringify({ version: 1, id, startedAt, app: "", state: "", steps, closed: false, hidden: false, ...extra }));
+}
+
+function crashLogLink(): HTMLAnchorElement {
+  const link = [...document.querySelectorAll("a")].find(each => each.textContent === "Download crash log");
+  expect(link).toBeDefined();
+  return link!;
+}
+
+let savedLogs = new Map<string, Blob>();
+
+async function crashLogOf(link: HTMLAnchorElement): Promise<string> {
+  const blob = savedLogs.get(link.getAttribute("href") ?? "");
+  expect(blob?.type).toBe("text/plain;charset=utf-8");
+  return blob!.text();
 }
 
 function install(extra: Partial<BrowserRecoveryInstallOptions> = {}) {
@@ -108,6 +127,15 @@ async function confirmClear(): Promise<void> {
 }
 
 beforeEach(() => {
+  savedLogs = new Map();
+  vi.spyOn(window.URL, "createObjectURL").mockImplementation(blob => {
+    const url = `blob:crash-log-${savedLogs.size + 1}`;
+    savedLogs.set(url, blob as Blob);
+    return url;
+  });
+  vi.spyOn(window.URL, "revokeObjectURL").mockImplementation(url => {
+    savedLogs.delete(url);
+  });
   replaceStorage("localStorage", memoryStorage());
   replaceStorage("sessionStorage", memoryStorage());
   window.history.replaceState(null, "", "/app/");
@@ -174,7 +202,7 @@ describe("browser data review", () => {
     expect(offer?.textContent).toContain("Clear browser data");
     expect(offer?.textContent).toContain("reported a failure");
     expect(offer?.textContent).not.toContain("private-key");
-    expect(offer?.querySelector("a")?.getAttribute("href")).toContain("resetBrowserData=1");
+    expect([...offer!.querySelectorAll("a")].find(link => link.textContent === "Clear browser data")?.getAttribute("href")).toContain("resetBrowserData=1");
     expect(window.localStorage.getItem("foss-earth.theme")).toBe("dark");
 
     markBrowserAppReady(document);
@@ -183,7 +211,7 @@ describe("browser data review", () => {
     expect(second.timers.queued).toHaveLength(0);
   });
 
-  it("counts a stall only when the start never becomes ready", () => {
+  it("counts a stall only when the start never becomes ready", async () => {
     const timers = install();
     markBrowserAppReady(document);
     expect(timers.timers.queued).toHaveLength(0);
@@ -196,6 +224,61 @@ describe("browser data review", () => {
     install().timers.fire();
     expect(counts()).toEqual({ "foss-earth /app/": 2 });
     expect(document.querySelector(".foss-earth-browser-recovery-offer")?.textContent).not.toContain("reported a failure");
+    expect(await crashLogOf(crashLogLink())).toMatch(/^The last, at \S+Z: The start had not finished after 45 s\.$/m);
+  });
+
+  it("offers the crash log before clearing, and the log says what failed", async () => {
+    keepTrail("older", Date.UTC(2026, 9, 14, 11), [{ ms: 200, text: "Opened https://example.org/app/" }], { closed: true });
+    keepTrail("newer", Date.UTC(2026, 9, 14, 12), [
+      { ms: 200, text: "Opened https://example.org/app/" },
+      { ms: 900, text: "console.error: GPU device lost", count: 3, lastMs: 1400 },
+    ], { app: "App built 2026-10-14 from abc1234.", state: "scene umn-twin-cities, inside the 360 image northrop-mall" });
+    install();
+    reportBrowserAppFailure(document, "The tour could not start.");
+    install();
+    reportBrowserAppFailure(document, "TypeError: boom at https://example.org/app/?key=private-key\n  with apiKey=private-key");
+    const offer = document.querySelector(".foss-earth-browser-recovery-offer")!;
+    expect([...offer.querySelectorAll("a")].map(link => link.textContent)).toEqual(["Download crash log", "Clear browser data"]);
+    expect(offer.textContent).toContain("Download the crash log");
+    expect(offer.textContent).not.toContain("private-key");
+    const download = crashLogLink();
+    expect(download.download).toMatch(/^foss-earth-crash-log-[\dT-]+Z\.txt$/);
+
+    const log = await crashLogOf(download);
+    expect(log).toMatch(/^Crash log of foss-earth, \S+Z\n/);
+    expect(log).toMatch(/^Page: \S+\/app\/$/m);
+    expect(log).toContain("Failed or stalled starts of this page in a row: 2");
+    expect(log).toMatch(/^The last, at \S+Z: TypeError: boom at https:\/\/example\.org\/app\/\?key=… with apiKey=…$/m);
+    expect(log).not.toContain("private-key");
+    expect(log).toContain("Visit opened 2026-10-14T12:00:00.000Z, neither closed nor hidden: it stopped while shown, or is still open.");
+    expect(log).toContain("  App: App built 2026-10-14 from abc1234.");
+    expect(log).toContain("  It was at: scene umn-twin-cities, inside the 360 image northrop-mall");
+    expect(log).toContain("    0.9 s  console.error: GPU device lost (3 times, the last at 1.4 s)");
+    expect(log.indexOf("T12:00:00")).toBeLessThan(log.indexOf("Visit opened 2026-10-14T11:00:00.000Z, closed, reloaded or left."));
+    expect(window.localStorage.getItem(`${TRAIL_KEY_PREFIX}newer`)).not.toBeNull();
+
+    // Made again when chosen, with what the device kept since.
+    keepTrail("newer", Date.UTC(2026, 9, 14, 12), [{ ms: 3000, text: "A later step" }]);
+    download.addEventListener("click", event => event.preventDefault());
+    download.click();
+    expect(await crashLogOf(download)).toContain("A later step");
+    expect(window.URL.revokeObjectURL).toHaveBeenCalledWith("blob:crash-log-1");
+    expect(counts()).toEqual({ "foss-earth /app/": 2 });
+  });
+
+  it("forgets the last failure's message with its count", async () => {
+    install();
+    reportBrowserAppFailure(document, "TypeError: boom");
+    expect(JSON.parse(window.localStorage.getItem(RECOVERY_KEY)!).last["foss-earth /app/"].message).toBe("TypeError: boom");
+    markBrowserAppReady(document);
+    expect(window.localStorage.getItem(RECOVERY_KEY)).toBeNull();
+    install();
+    reportBrowserAppFailure(document);
+    install();
+    reportBrowserAppFailure(document);
+    const log = await crashLogOf(crashLogLink());
+    expect(log).toContain(": The start failed and gave no reason.");
+    expect(log).not.toContain("boom");
   });
 
   it("keeps a failure on one page from counting as another page", () => {
@@ -235,6 +318,32 @@ describe("browser data review", () => {
     expect(document.cookie).not.toContain(`${RECOVERY_KEY}=`);
   });
 
+  it("keeps the counts in a cookie when the messages would not fit", () => {
+    const denied = {
+      get length() { return 0; },
+      key() { throw new Error("denied"); },
+      getItem() { throw new Error("denied"); },
+      setItem() { throw new Error("denied"); },
+      removeItem() { throw new Error("denied"); },
+      clear() { throw new Error("denied"); },
+    } as Storage;
+    replaceStorage("localStorage", denied);
+    replaceStorage("sessionStorage", denied);
+    for (const page of ["one", "two", "three", "four", "five", "six"]) {
+      window.history.replaceState(null, "", `/${page}/`);
+      install();
+      reportBrowserAppFailure(document, `${page} ${"é".repeat(300)}`);
+    }
+    const cookie = document.cookie.split("; ").find(item => item.startsWith(`${RECOVERY_KEY}=`))!;
+    expect(cookie.length).toBeLessThan(4000);
+    expect(Object.keys((JSON.parse(decodeURIComponent(cookie.slice(RECOVERY_KEY.length + 1))) as { failures: object }).failures)).toHaveLength(6);
+    for (const page of ["one", "two", "three", "four", "five", "six"]) {
+      window.history.replaceState(null, "", `/${page}/`);
+      markBrowserAppReady(document);
+    }
+    expect(document.cookie).not.toContain(`${RECOVERY_KEY}=`);
+  });
+
   it("shows the review without deleting until confirmed, and keeps API keys", async () => {
     window.history.replaceState(null, "", "/app/?resetBrowserData=1&scene=campus");
     window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify({
@@ -269,6 +378,41 @@ describe("browser data review", () => {
     expect(replace).toHaveBeenCalledOnce();
     expect(replace.mock.calls[0][0]).not.toContain("resetBrowserData");
     expect(replace.mock.calls[0][0]).not.toContain("scene=campus");
+  });
+
+  it("offers the crash log on the review, before the clear that deletes it", async () => {
+    window.localStorage.setItem(RECOVERY_KEY, JSON.stringify({
+      version: 1,
+      failures: { "foss-earth /app/": 3 },
+      last: { "foss-earth /app/": { at: Date.UTC(2026, 9, 14, 12), message: "The tour could not start." } },
+    }));
+    keepTrail("stopped", Date.UTC(2026, 9, 14, 12), [{ ms: 500, text: "Renderer webgpu (asked for auto)" }]);
+    window.history.replaceState(null, "", "/app/?resetBrowserData=1");
+    storageDoubles();
+    install();
+    const download = crashLogLink();
+    const confirm = document.querySelector("button")!;
+    expect(download.compareDocumentPosition(confirm) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(document.body.textContent).toContain("Clearing also deletes the crash log");
+    const log = await crashLogOf(download);
+    expect(log).toContain("Failed or stalled starts of this page in a row: 3");
+    expect(log).toContain("The last, at 2026-10-14T12:00:00.000Z: The tour could not start.");
+    expect(log).toContain("    0.5 s  Renderer webgpu (asked for auto)");
+
+    await confirmClear();
+    expect(window.localStorage.getItem(`${TRAIL_KEY_PREFIX}stopped`)).toBeNull();
+    download.addEventListener("click", event => event.preventDefault());
+    download.click();
+    expect(await crashLogOf(download)).toContain("No visit's trail is kept on this device");
+  });
+
+  it("saves the crash log as a data address where the browser has no object URLs", () => {
+    vi.mocked(window.URL.createObjectURL).mockImplementation(() => { throw new TypeError("unsupported"); });
+    window.history.replaceState(null, "", "/app/?resetBrowserData=1");
+    install();
+    const href = crashLogLink().getAttribute("href") ?? "";
+    expect(href.startsWith("data:text/plain;charset=utf-8,")).toBe(true);
+    expect(decodeURIComponent(href)).toContain("Crash log of foss-earth");
   });
 
   it("removes saved API keys only when the review unchecks them", async () => {

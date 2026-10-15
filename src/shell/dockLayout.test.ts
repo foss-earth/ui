@@ -12,6 +12,7 @@ describe("shared window and log layout", () => {
     expect(wide).toEqual({
       mode: "dual",
       presentation: "overlay",
+      edges: "inset",
       logVisible: true,
       side: "right",
       windowWidthFixed: false,
@@ -333,5 +334,27 @@ describe("shared window and log layout", () => {
     }
     const prioritized = { ...preferences, logWidth: 900, availableWidth: 1280, priority: "log" as const };
     expect(resolveDockLayout({ ...prioritized, floatingLog: false }).logVisible).toBe(false);
+  });
+
+  it("puts flush windows on the edges and keeps the log a tab, in overlay only", () => {
+    for (const availableWidth of [848, 1280, 2400]) {
+      const flush = resolveDockLayout({ ...preferences, availableWidth, edges: "flush" });
+      expect(flush).toMatchObject({ mode: "columns", presentation: "overlay", edges: "flush", logVisible: false, primaryWidth: 320, secondaryWidth: 320 });
+      // Only the gap between the windows is kept free.
+      expect(flush.maxWindowWidth).toBe(availableWidth - 12 - 160);
+    }
+    // Two wide windows share all but the gap between them.
+    const shared = resolveDockLayout({ primaryWidth: 900, secondaryWidth: 900, logWidth: null, availableWidth: 1000, edges: "flush" });
+    expect(shared.primaryWidth + shared.secondaryWidth).toBe(1000 - 12);
+    const prioritized = { ...preferences, logWidth: 400, availableWidth: 1280, priority: "log" as const, edges: "flush" as const };
+    expect(resolveDockLayout(prioritized).logVisible).toBe(false);
+    // A phone's overlay window starts as wide as the screen.
+    expect(resolveDockLayout({ primaryWidth: null, secondaryWidth: null, logWidth: null, availableWidth: 390, presentation: "overlay", edges: "flush" }))
+      .toMatchObject({ mode: "stacked", edges: "flush", secondaryWidth: 390, maxWindowWidth: 390 });
+    expect(resolveDockLayout({ primaryWidth: null, secondaryWidth: null, logWidth: null, availableWidth: 390, presentation: "overlay" }))
+      .toMatchObject({ mode: "stacked", edges: "inset", secondaryWidth: 378 });
+    // Split's band already meets the edges.
+    expect(resolveDockLayout({ ...preferences, availableWidth: 390, edges: "flush" })).toMatchObject({ presentation: "split", edges: "inset" });
+    expect(resolveDockLayout({ ...preferences, availableWidth: 1280, presentation: "split", edges: "flush" })).toMatchObject({ presentation: "split", edges: "inset" });
   });
 });

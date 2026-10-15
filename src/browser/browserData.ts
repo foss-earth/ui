@@ -3,10 +3,12 @@
  *
  * This file stays free of imports. The Vite plugin inlines it into each HTML
  * page, so the review can run when the application bundle never loads.
- * `foss-earth.settings.v1` is `SETTINGS_STORAGE_KEY` in the settings registry.
+ * `foss-earth.settings.v1` is `SETTINGS_STORAGE_KEY` in the settings registry,
+ * and `foss-earth.visit ` is `TRAIL_KEY_PREFIX` in diagnostics/sessionTrail.ts.
  */
 
 const SETTINGS_STORAGE_KEY = "foss-earth.settings.v1";
+const TRAIL_KEY_PREFIX = "foss-earth.visit ";
 const RECOVERY_STORAGE_KEY = "foss-earth.browser-recovery.v1";
 const RECOVERY_QUERY = "resetBrowserData";
 const KEEP_QUERY = "keepApiKeys";
@@ -14,6 +16,10 @@ const HOOK = "__fossEarthBrowserRecovery";
 const FAILURE_LIMIT = 2;
 const STALL_MS = 45_000;
 const STYLE_ID = "foss-earth-browser-recovery-style";
+/** A failure's message is one line, as a trail step is. */
+const MESSAGE_CHARS = 300;
+/** Visits a crash log lists. A visit removes the trails of those before it, so there are seldom more than two. */
+const LOG_VISITS = 20;
 const API_KEYS = [
   { id: "map.source.googleKey", label: "Google Maps" },
   { id: "map.source.cartoKey", label: "CARTO" },
@@ -44,6 +50,27 @@ interface RecoveryHook {
 
 interface FailureMap {
   [key: string]: number;
+}
+
+interface LastFailure {
+  /** Milliseconds since the epoch. */
+  at: number;
+  message: string;
+}
+
+interface RecoveryRecord {
+  failures: FailureMap;
+  /** The latest failure of each page that has a count, for the crash log. */
+  last: { [key: string]: LastFailure };
+}
+
+interface LoggedVisit {
+  startedAt: number;
+  app: string;
+  state: string;
+  steps: { ms: number; text: string; count?: number; lastMs?: number }[];
+  closed: boolean;
+  hidden: boolean;
 }
 
 interface KeptKeys {
@@ -156,6 +183,17 @@ function readCookie(document: Document, name: string): string | null {
   return null;
 }
 
+/** A cookie over about 4 KB is dropped whole, so the failures' messages go before their counts do. */
+function fitCookie(raw: string): string {
+  if (encodeURIComponent(raw).length <= 3800) return raw;
+  try {
+    const { failures } = JSON.parse(raw) as { failures?: unknown };
+    return JSON.stringify({ version: 1, failures });
+  } catch {
+    return raw;
+  }
+}
+
 function writeCookie(document: Document, name: string, value: string): void {
   document.cookie = `${name}=${encodeURIComponent(value)}; Path=/; Max-Age=604800; SameSite=Lax`;
 }
@@ -164,22 +202,46 @@ function expireCookie(document: Document, name: string): void {
   document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Lax`;
 }
 
-function parseRecord(raw: string | null): FailureMap {
-  const map: FailureMap = Object.create(null) as FailureMap;
-  if (!raw) return map;
+/** Without a secret, as the trail's `tidyStep`: a key, token, secret or password's value is left out. */
+function redact(text: string): string {
+  return text.replace(/\b([\w.-]*(?:key|token|secret|password)\s*[:=]\s*)[^\s&,;"')]+/gi, "$1…");
+}
+
+function tidyMessage(text: string): string {
+  const line = redact(text.replace(/\s+/g, " ").trim());
+  return line.length > MESSAGE_CHARS ? `${line.slice(0, MESSAGE_CHARS - 1)}…` : line;
+}
+
+function emptyRecord(): RecoveryRecord {
+  return { failures: Object.create(null) as FailureMap, last: Object.create(null) as RecoveryRecord["last"] };
+}
+
+function usableKey(key: string): boolean {
+  return key.length <= 600 && key !== "__proto__" && key !== "constructor" && key !== "prototype";
+}
+
+function parseRecord(raw: string | null): RecoveryRecord {
+  const record = emptyRecord();
+  if (!raw) return record;
   try {
     const parsed: unknown = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object") return map;
-    const failures = (parsed as { version?: unknown; failures?: unknown }).failures;
-    if ((parsed as { version?: unknown }).version !== 1 || !failures || typeof failures !== "object") return map;
+    if (!parsed || typeof parsed !== "object") return record;
+    const { version, failures, last } = parsed as { version?: unknown; failures?: unknown; last?: unknown };
+    if (version !== 1 || !failures || typeof failures !== "object") return record;
     for (const [key, value] of Object.entries(failures)) {
-      if (key.length > 600 || key === "__proto__" || key === "constructor" || key === "prototype") continue;
-      if (typeof value === "number" && Number.isInteger(value) && value > 0 && value < 100) map[key] = value;
+      if (!usableKey(key)) continue;
+      if (typeof value === "number" && Number.isInteger(value) && value > 0 && value < 100) record.failures[key] = value;
+    }
+    if (!last || typeof last !== "object") return record;
+    for (const [key, value] of Object.entries(last)) {
+      if (!usableKey(key) || !(key in record.failures) || !value || typeof value !== "object") continue;
+      const { at, message } = value as { at?: unknown; message?: unknown };
+      if (typeof at === "number" && Number.isFinite(at) && typeof message === "string") record.last[key] = { at, message: tidyMessage(message) };
     }
   } catch {
-    return Object.create(null) as FailureMap;
+    return emptyRecord();
   }
-  return map;
+  return record;
 }
 
 function readRaw(view: Window, document: Document): string | null {
@@ -232,7 +294,7 @@ function persist(view: Window, document: Document, raw: string | null): void {
     }
   }
   if (raw === null) expireCookie(document, RECOVERY_STORAGE_KEY);
-  else writeCookie(document, RECOVERY_STORAGE_KEY, raw);
+  else writeCookie(document, RECOVERY_STORAGE_KEY, fitCookie(raw));
 }
 
 function failureKey(appId: string, pathname: string): string {
@@ -241,19 +303,25 @@ function failureKey(appId: string, pathname: string): string {
 
 function readCount(view: Window, document: Document, appId: string): number {
   try {
-    return parseRecord(readRaw(view, document))[failureKey(appId, pathnameOf(view))] ?? 0;
+    return parseRecord(readRaw(view, document)).failures[failureKey(appId, pathnameOf(view))] ?? 0;
   } catch {
     return 0;
   }
 }
 
-function writeCount(view: Window, document: Document, appId: string, count: number): void {
+/** `message` says why the start failed, for the crash log. A count of 0 forgets the page's failures. */
+function writeCount(view: Window, document: Document, appId: string, count: number, message?: string): void {
   try {
-    const map = parseRecord(readRaw(view, document));
+    const record = parseRecord(readRaw(view, document));
     const key = failureKey(appId, pathnameOf(view));
-    if (count <= 0) delete map[key];
-    else map[key] = Math.min(99, count);
-    persist(view, document, Object.keys(map).length === 0 ? null : JSON.stringify({ version: 1, failures: map }));
+    if (count <= 0) {
+      delete record.failures[key];
+      delete record.last[key];
+    } else {
+      record.failures[key] = Math.min(99, count);
+      if (message !== undefined) record.last[key] = { at: Date.now(), message: tidyMessage(message) };
+    }
+    persist(view, document, Object.keys(record.failures).length === 0 ? null : JSON.stringify({ version: 1, failures: record.failures, last: record.last }));
   } catch {
     // Counting is best-effort. A start is never blocked on it.
   }
@@ -491,6 +559,146 @@ function paragraph(document: Document, text: string): HTMLParagraphElement {
   return element;
 }
 
+function isoTime(ms: number): string {
+  try {
+    return new Date(ms).toISOString();
+  } catch {
+    return String(ms);
+  }
+}
+
+function failureMessage(message: string | undefined): string {
+  return message?.trim() ? message : "The start failed and gave no reason.";
+}
+
+function parseVisit(raw: string | null): LoggedVisit | null {
+  if (!raw) return null;
+  try {
+    const value: unknown = JSON.parse(raw);
+    if (!value || typeof value !== "object") return null;
+    const record = value as Record<string, unknown>;
+    if (record.version !== 1 || typeof record.startedAt !== "number" || !Array.isArray(record.steps)) return null;
+    const steps = (record.steps as unknown[]).filter((step): step is LoggedVisit["steps"][number] =>
+      !!step && typeof (step as { ms?: unknown }).ms === "number" && typeof (step as { text?: unknown }).text === "string");
+    return {
+      startedAt: record.startedAt,
+      app: typeof record.app === "string" ? record.app : "",
+      state: typeof record.state === "string" ? record.state : "",
+      steps,
+      closed: record.closed === true,
+      hidden: record.hidden === true,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** The trails the app's diagnostics kept of this site's visits, newest first. */
+function readVisits(view: Window): LoggedVisit[] {
+  const local = storageOf(view, "localStorage");
+  if (!local) return [];
+  const visits: LoggedVisit[] = [];
+  try {
+    for (let index = 0; index < local.length; index++) {
+      const name = local.key(index);
+      if (!name?.startsWith(TRAIL_KEY_PREFIX)) continue;
+      const visit = parseVisit(local.getItem(name));
+      if (visit) visits.push(visit);
+    }
+  } catch {
+    // The trails read before the store refused are still logged.
+  }
+  return visits.sort((a, b) => b.startedAt - a.startedAt).slice(0, LOG_VISITS);
+}
+
+/** As the diagnostics report writes a step. */
+function stepLine(step: LoggedVisit["steps"][number]): string {
+  const times = typeof step.count === "number"
+    ? ` (${step.count} times${typeof step.lastMs === "number" ? `, the last at ${(step.lastMs / 1000).toFixed(1)} s` : ""})`
+    : "";
+  return `${(step.ms / 1000).toFixed(1).padStart(7)} s  ${step.text}${times}`;
+}
+
+function visitEnding(visit: LoggedVisit): string {
+  if (visit.closed) return "closed, reloaded or left";
+  if (visit.hidden) return "hidden when last written, so the browser may have let it go";
+  return "neither closed nor hidden: it stopped while shown, or is still open";
+}
+
+/**
+ * What this device kept of the failed starts and of the visits before: the
+ * failure counts and the last failure's message, then each visit's trail.
+ * Clearing the site's data deletes all of it.
+ */
+function crashLog(document: Document, view: Window, appId: string, at: Date): string {
+  const record = parseRecord(readRaw(view, document));
+  const key = failureKey(appId, pathnameOf(view));
+  const last = record.last[key];
+  let page = pathnameOf(view);
+  try {
+    page = `${view.location.origin}${page}`;
+  } catch {
+    // The path alone still names the page.
+  }
+  let browser = "not known";
+  try {
+    browser = view.navigator.userAgent || browser;
+  } catch {
+    // Some privacy settings hide it.
+  }
+  const lines = [
+    `Crash log of ${appId}, ${at.toISOString()}`,
+    `Page: ${page}`,
+    `Browser: ${browser}`,
+    `Failed or stalled starts of this page in a row: ${record.failures[key] ?? 0}`,
+    last ? `The last, at ${isoTime(last.at)}: ${last.message}` : "The last: not recorded.",
+  ];
+  const others = Object.entries(record.failures).filter(([other]) => other !== key);
+  if (others.length > 0) lines.push(`Other pages of this site that did not finish starting: ${others.map(([other, count]) => `${other} (${count})`).join(", ")}`);
+  const visits = readVisits(view);
+  lines.push("");
+  if (visits.length === 0) lines.push("No visit's trail is kept on this device: Settings → Diagnostics → Remember how a visit ended may be off, or the app stopped before it began one.");
+  for (const visit of visits) {
+    lines.push(`Visit opened ${isoTime(visit.startedAt)}, ${visitEnding(visit)}.`);
+    if (visit.app) lines.push(`  App: ${visit.app}`);
+    if (visit.state) lines.push(`  It was at: ${visit.state}`);
+    lines.push(...visit.steps.map(stepLine), "");
+  }
+  return `${redact(lines.join("\n").trimEnd())}\n`;
+}
+
+/** One click saves the crash log as a text file. It reads the site's data and deletes nothing. */
+function crashLogLink(document: Document, view: Window, appId: string): HTMLAnchorElement {
+  const page = view as Window & typeof globalThis;
+  const link = document.createElement("a");
+  link.textContent = "Download crash log";
+  let objectUrl: string | null = null;
+  const refresh = (): void => {
+    const at = new Date();
+    const text = crashLog(document, view, appId, at);
+    link.download = `${appId}-crash-log-${at.toISOString().replace(/[:.]/g, "-")}.txt`;
+    if (objectUrl !== null) {
+      try {
+        page.URL.revokeObjectURL(objectUrl);
+      } catch {
+        // It goes with the page.
+      }
+      objectUrl = null;
+    }
+    try {
+      objectUrl = page.URL.createObjectURL(new page.Blob([text], { type: "text/plain;charset=utf-8" }));
+      link.href = objectUrl;
+    } catch {
+      // A browser without object URLs still saves a data address.
+      link.href = `data:text/plain;charset=utf-8,${encodeURIComponent(text)}`;
+    }
+  };
+  refresh();
+  // Made again as it is chosen, so it holds what happened since it was shown.
+  link.addEventListener("click", refresh);
+  return link;
+}
+
 /** The Browser data tab. It links to the review and does not delete anything. */
 export function createBrowserDataPanel(document: Document): BrowserDataPanel {
   const view = document.defaultView;
@@ -598,14 +806,12 @@ export function installBrowserRecovery(document: Document, options: BrowserRecov
       offer.className = "foss-earth-browser-recovery-offer";
       offer.setAttribute("role", "region");
       offer.setAttribute("aria-label", "Browser data recovery");
-      const text = paragraph(document, reported
-        ? "This page has not finished starting repeatedly. The last start reported a failure. You can review clearing this site's browser data. Nothing is deleted until you confirm."
-        : "This page has not finished starting repeatedly. You can review clearing this site's browser data. Nothing is deleted until you confirm.");
+      const text = paragraph(document, `This page has not finished starting repeatedly.${reported ? " The last start reported a failure." : ""} Download the crash log to keep what happened, then review clearing this site's browser data, which deletes it. Nothing is deleted until you confirm.`);
       const action = document.createElement("a");
       const href = recoveryHref(view.location.href, true);
       if (href) action.href = href;
       action.textContent = "Clear browser data";
-      offer.append(text, action);
+      offer.append(text, crashLogLink(document, view, appId), action);
       document.body?.prepend(offer);
     });
   };
@@ -616,32 +822,32 @@ export function installBrowserRecovery(document: Document, options: BrowserRecov
     writeCount(view, document, appId, 0);
     removeOffer();
   };
-  const fail = (reported: boolean): void => {
+  const fail = (message: string, reported: boolean): void => {
     if (!current() || recoveryPage || settled) return;
     settled = true;
     stopTimer();
-    writeCount(view, document, appId, readCount(view, document, appId) + 1);
+    writeCount(view, document, appId, readCount(view, document, appId) + 1, message);
     if (readCount(view, document, appId) >= limit) showOffer(reported);
   };
   (view as unknown as Record<string, unknown>)[HOOK] = {
     ready: succeed,
     failed(message: string) {
-      fail(message.trim().length > 0);
+      fail(failureMessage(message), message.trim().length > 0);
     },
   };
   if (recoveryPage) {
     whenReady(document, () => {
       if (!current()) return;
-      renderReview(document, view, replace, schedule);
+      renderReview(document, view, appId, replace, schedule);
     });
     return;
   }
   if (readCount(view, document, appId) >= limit) showOffer(false);
   timerOn = true;
-  timerId = schedule(() => fail(false), stallMs);
+  timerId = schedule(() => fail(`The start had not finished after ${Math.round(stallMs / 1000)} s.`, false), stallMs);
 }
 
-function renderReview(document: Document, view: Window, replace: (url: string) => void, schedule: (work: () => void, delayMs: number) => number): void {
+function renderReview(document: Document, view: Window, appId: string, replace: (url: string) => void, schedule: (work: () => void, delayMs: number) => number): void {
   if (!document.body || document.querySelector(".foss-earth-browser-recovery")) return;
   ensureStyle(document);
   const root = document.createElement("div");
@@ -668,6 +874,9 @@ function renderReview(document: Document, view: Window, replace: (url: string) =
   const confirm = document.createElement("button");
   confirm.type = "button";
   confirm.textContent = "Clear this site's browser data";
+  // A row of its own: it is not part of the clear's options.
+  const download = document.createElement("p");
+  download.append(crashLogLink(document, view, appId));
   const back = document.createElement("a");
   back.textContent = "Return without clearing";
   const home = appHref(view.location.href);
@@ -718,6 +927,8 @@ function renderReview(document: Document, view: Window, replace: (url: string) =
   panel.append(
     title,
     paragraph(document, "This clears saved settings, window layout, session storage, IndexedDB databases, cached app files and service worker registrations for this website, including other apps on this site. Nothing is deleted until you choose Clear this site's browser data."),
+    paragraph(document, "Clearing also deletes the crash log: what this device kept of the failed starts and of the visits before. Download it first to keep it."),
+    download,
     keep,
     paragraph(document, "Keeps the saved Google Maps and CARTO keys. Uncheck to remove them too."),
     paragraph(document, UNREACHABLE),
@@ -756,5 +967,5 @@ export function reportBrowserAppFailure(document: Document, message?: string): v
   const appId = appIdFrom(document);
   const view = document.defaultView;
   if (!appId || !view || isBrowserRecoveryPage(document)) return;
-  writeCount(view, document, appId, readCount(view, document, appId) + 1);
+  writeCount(view, document, appId, readCount(view, document, appId) + 1, failureMessage(message));
 }

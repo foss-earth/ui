@@ -42,6 +42,41 @@ html[data-world-presentation="split"] .foss-earth-workspace-slot-launcher {
   z-index: 12;
 }
 
+/*
+ * Flush overlay: each window meets the top and its side's edge, so the world
+ * is one rectangle with rectangles cut from its edges. The world is not drawn
+ * under a window, so there is nothing for a blur to show.
+ */
+html[data-world-edges="flush"] .foss-earth-dock-panel {
+  border-top: 0;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+html[data-world-edges="flush"] .foss-earth-dock-panel[data-side="left"] {
+  border-left: 0;
+}
+html[data-world-edges="flush"] .foss-earth-dock-panel[data-side="right"] {
+  border-right: 0;
+}
+html[data-world-edges="flush"] .foss-earth-dock-panel[data-side="left"] .foss-earth-dock-panel-clip {
+  padding-left: env(safe-area-inset-left, 0px);
+}
+html[data-world-edges="flush"] .foss-earth-dock-panel[data-side="right"] .foss-earth-dock-panel-clip {
+  padding-right: env(safe-area-inset-right, 0px);
+}
+html[data-world-edges="flush"] .foss-earth-joined-surface {
+  border-radius: 0;
+}
+html[data-world-edges="flush"] .foss-earth-workspace-slot-launcher-left {
+  top: env(safe-area-inset-top, 0px);
+  left: env(safe-area-inset-left, 0px);
+}
+html[data-world-edges="flush"] .foss-earth-workspace-slot-launcher-right {
+  top: env(safe-area-inset-top, 0px);
+  right: env(safe-area-inset-right, 0px);
+}
+
 .foss-earth-window-overlay > * {
   pointer-events: auto;
 }

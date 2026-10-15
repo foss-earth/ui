@@ -29,6 +29,9 @@ export function browserOverlayLayout(root: HTMLElement): WindowOverlayLayoutPort
     publish(layout) {
       root.dataset.dockLayout = layout.mode;
       root.dataset.worldPresentation = layout.presentation;
+      // Flush puts the windows and the toolbar on the screen's edges.
+      if (layout.edges === "flush") root.dataset.worldEdges = "flush";
+      else delete root.dataset.worldEdges;
       root.dataset.logVisible = layout.logVisible ? "true" : "false";
       // The side of the window when only one shows.
       root.dataset.dockSide = layout.side;
@@ -41,6 +44,7 @@ export function browserOverlayLayout(root: HTMLElement): WindowOverlayLayoutPort
       delete root.dataset.dockLayout;
       delete root.dataset.dockSide;
       delete root.dataset.worldPresentation;
+      delete root.dataset.worldEdges;
       delete root.dataset.logVisible;
       delete root.dataset.hudInBand;
       for (const name of ["--foss-log-left", "--foss-log-top", "--foss-log-center", "--foss-log-width", "--foss-world-top", "--foss-split-hud-top"]) root.style.removeProperty(name);
