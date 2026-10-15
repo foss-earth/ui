@@ -217,6 +217,36 @@ describe("settings registry", () => {
     expect(settings.get("test.budget")).toBe(128);
   });
 
+  it("drops a saved branch that is no longer a parameter, and leaves the other branches", () => {
+    const storage = memoryStorage({
+      [SETTINGS_STORAGE_KEY]: JSON.stringify({
+        version: 1,
+        values: {
+          "test.budget": 256,
+          "test.key": "secret",
+          "test.removed": true,
+          "test.removed.child": 5,
+          "camera.eyeContact": false,
+          "camera.eyeContactAcceleration": 30,
+        },
+        presets: { "test.budget": "sharp", "test.removed": "old", "test.key": "mine" },
+        userPresets: [{
+          id: "user:mine",
+          name: "Mine",
+          description: "A mix.",
+          values: { "test.budget": 256, "test.key": "secret", "test.removed": true, "test.removed.child": 5 },
+        }],
+      }),
+    });
+    const settings = registry(storage);
+    settings.dropStale();
+    expect(settings.get("test.budget")).toBe(256);
+    expect(settings.get("test.key")).toBe("secret");
+    expect(record(storage).values).toEqual({ "test.budget": 256, "test.key": "secret" });
+    expect(record(storage).presets).toEqual({ "test.budget": "sharp", "test.key": "mine" });
+    expect(record(storage).userPresets[0].values).toEqual({ "test.budget": 256, "test.key": "secret" });
+  });
+
   it("drops an invalid saved value with a note, and keeps the valid ones", () => {
     const storage = memoryStorage({
       [SETTINGS_STORAGE_KEY]: JSON.stringify({ version: 1, values: { "test.mode": "zzz", "test.range": { min: 2, max: 8 } } }),

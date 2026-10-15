@@ -54,6 +54,12 @@ defaults and forced values, presets, dynamic choices, source links, readings,
 session values and secret exclusion on export. The storage key is
 `foss-earth.settings.v1`; the persisted record and the import/export format
 (`foss-earth.settings`) are version 1. Migrations are host-supplied callbacks.
+`dropStale()`, which the Earth app calls after its catalogue is registered,
+deletes a saved id that is not a current parameter, and anything saved under
+that id that is also not a parameter. A saved value whose id is still a
+parameter stays, including API keys and every other branch. Renaming a setting
+is a new id. The old id is dropped. There is no map from the old id to the new
+one.
 
 `UI_PARAMETERS` holds the five UI-owned parameters: `interface.theme`,
 `interface.log.lineDuration`, `interface.log.maxLines`, `diagnostics.trail` and

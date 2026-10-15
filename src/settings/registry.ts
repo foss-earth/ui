@@ -155,6 +155,12 @@ export interface SettingsRegistry {
   setSourceBase(prefix: string, baseUrl: string): void;
   /** A link to the file that reads a parameter, or null when no base is known. */
   sourceUrl(id: string): string | null;
+  /**
+   * Drops saved values whose ids are not registered parameters, and anything
+   * saved under those ids. A value whose id is still a parameter stays, including
+   * one stored under a dropped id. Other branches, such as API keys, stay.
+   */
+  dropStale(): void;
   /** Re-reads the record, as after another tab saved it. */
   reload(): void;
   /** Null after a storage failure: settings still apply but will not survive a reload. */
@@ -487,6 +493,45 @@ export function createSettingsRegistry(options: SettingsRegistryOptions = {}): S
       writeRecord();
     });
     return { ok: true };
+  }
+
+  /** A saved id under `root`: the id itself, or a dotted child of it. `camera.eye` is not under `camera.e`. */
+  function under(id: string, root: string): boolean {
+    return id === root || id.startsWith(`${root}.`);
+  }
+
+  /**
+   * Saved ids that are not parameters, and saved ids under them that are not
+   * parameters either. A parameter that is still registered is not stale, so a
+   * key or a sibling branch is left where it is.
+   */
+  function staleIds(ids: readonly string[]): string[] {
+    const stale = ids.filter(id => !specs.has(id));
+    const roots = stale.filter(id => !stale.some(other => other !== id && id.startsWith(`${other}.`)));
+    return ids.filter(id => !specs.has(id) && roots.some(root => under(id, root)));
+  }
+
+  /** Removes stale saved values and the same ids inside saved presets. Reports whether the record changed. */
+  function dropStaleValues(): boolean {
+    const ids = new Set<string>([
+      ...Object.keys(record.values),
+      ...Object.keys(record.presets ?? {}),
+      ...(record.userPresets ?? []).flatMap(preset => Object.keys(preset.values)),
+    ]);
+    const stale = new Set(staleIds([...ids]));
+    if (stale.size === 0) return false;
+    for (const id of stale) {
+      delete record.values[id];
+      if (record.presets) delete record.presets[id];
+    }
+    if (record.presets && Object.keys(record.presets).length === 0) record.presets = undefined;
+    if (record.userPresets) {
+      record.userPresets = record.userPresets.map(preset => {
+        if (!Object.keys(preset.values).some(id => stale.has(id))) return preset;
+        return { ...preset, values: Object.fromEntries(Object.entries(preset.values).filter(([id]) => !stale.has(id))) };
+      });
+    }
+    return true;
   }
 
   /** Migrates and checks values read from storage. Reports whether the record changed. */
@@ -915,14 +960,18 @@ export function createSettingsRegistry(options: SettingsRegistryOptions = {}): S
       }
       return best === null ? null : `${best}${spec.source}`;
     },
+    dropStale() {
+      if (dropStaleValues()) writeRecord();
+    },
     reload() {
       mutate(specs.keys(), () => {
         record = readRecord();
-        let migrated = false;
+        let changed = false;
         for (const spec of specs.values()) {
-          if (adoptStored(spec)) migrated = true;
+          if (adoptStored(spec)) changed = true;
         }
-        if (migrated) writeRecord();
+        if (dropStaleValues()) changed = true;
+        if (changed) writeRecord();
       });
     },
     getStorageError: () => storageError,
