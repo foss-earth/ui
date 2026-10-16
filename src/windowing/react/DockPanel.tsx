@@ -82,6 +82,8 @@ export interface DockPanelProps {
   minWidth?: number;
   minHeight?: number;
   initialHeight?: number;
+  /** A manual change to the ordinary height, for workspace persistence. Temporary content fits stay local. */
+  onHeightChange?: (height: number) => void;
   /** A temporary height for one content visit; its measurer returns the desired body height. */
   contentFit?: { key: string | number; measure(body: HTMLElement): number | null };
   maxHeightPaddingPx?: number;
@@ -142,6 +144,7 @@ export function DockPanel(props: DockPanelProps) {
     minWidth = 160,
     minHeight = 128,
     initialHeight = 512,
+    onHeightChange,
     contentFit,
     maxHeightPaddingPx = 80,
     maxHeightRatio,
@@ -323,7 +326,10 @@ export function DockPanel(props: DockPanelProps) {
         measuredHeight: current?.key === resizeFitKey ? current.measuredHeight : null,
         manualHeight: resizedHeight,
       }));
-    } else setPanelHeight(resizedHeight);
+    } else {
+      setPanelHeight(resizedHeight);
+      if (drag.moved) onHeightChange?.(resizedHeight);
+    }
   };
 
   const onHandlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {

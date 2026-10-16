@@ -71,8 +71,6 @@ interface OverlayContextMemory<TabId extends string> {
   context: HiddenTab<TabId>[];
   /** The slot the sphere's tab opened in, and whether it was collapsed before. */
   opened: { slotId: WindowSlotId; collapsed: boolean } | null;
-  /** The sphere's tab opened minimized, and shows when the sphere is on screen. */
-  arriving: boolean;
 }
 
 /**
@@ -426,49 +424,47 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
     previouslyVisible.current = new Set();
   }, [layoutPort]);
 
-  // Entering a sphere hides the tabs about the map and opens the sphere's
-  // tab; leaving hides the sphere's tabs. Each hidden tab comes back where
-  // it was when its context returns.
-  const contextMemory = useRef<OverlayContextMemory<TabId>>({ base: [], context: [], opened: null, arriving: false });
+  // Leave the workspace alone during entry. Once inside, keep its existing
+  // tabs and open the photograph only when no tabs remain in this context.
+  const contextMemory = useRef<OverlayContextMemory<TabId>>({ base: [], context: [], opened: null });
   const contextShown = useRef(false);
   const contextVisit = useRef(0);
   useLayoutEffect(() => {
+    // Choose the entry window after geometry has resolved the saved widths.
+    if (availableWidth <= 0) return;
+    if (inContext && !context.ready) return;
     if (contextShown.current === inContext) return;
     contextShown.current = inContext;
     const memory = contextMemory.current;
     if (inContext) {
       contextVisit.current += 1;
-      const hidden = hideWorkspaceTabs(workspace.state, context.baseOnlyTabs);
+      const hidden = context.preserveOpenTabs
+        ? { state: workspace.state, hidden: [] as HiddenTab<TabId>[] }
+        : hideWorkspaceTabs(workspace.state, context.baseOnlyTabs);
       memory.base = hidden.hidden;
-      const restored = restoreWorkspaceTabs(hidden.state, memory.context, presented);
+      let restored = restoreWorkspaceTabs(hidden.state, memory.context, presented);
+      // Remembered photograph tabs return in the background when a tab is already selected.
+      for (const slotId of ["primary", "secondary"] as const) {
+        const activeTab = hidden.state[slotId].activeTab;
+        if (activeTab !== null && restored[slotId].activeTab !== activeTab) {
+          restored = { ...restored, [slotId]: { ...restored[slotId], activeTab } };
+        }
+      }
       memory.context = [];
-      const slotId = slotIdForOpenTab(restored, context.entryTabId) ?? preferredSlot;
-      memory.opened = { slotId, collapsed: restored[slotId].collapsed };
-      const opened = openOrSelectTabInWorkspace(restored, context.entryTabId, preferredSlot, tabDefinitions);
-      // While the camera flies in, the panel stays out of the way of the map it flies over.
-      memory.arriving = !context.ready;
-      scheduleWorkspace(memory.arriving ? setWorkspaceSlotCollapsed(opened, slotId, true) : opened);
+      const hasTabs = restored.primary.tabs.length > 0 || restored.secondary.tabs.length > 0;
+      if (hasTabs) scheduleWorkspace(restored);
+      else {
+        memory.opened = { slotId: preferredSlot, collapsed: restored[preferredSlot].collapsed };
+        scheduleWorkspace(openOrSelectTabInWorkspace(restored, context.entryTabId, preferredSlot, tabDefinitions));
+      }
       return;
     }
-    memory.arriving = false;
     const left = baseWorkspace(workspace.state, memory, presented, context);
     memory.context = left.hidden;
     memory.base = [];
     memory.opened = null;
     scheduleWorkspace(left.state);
-  }, [inContext, context.ready, presented, workspace]);
-
-  // The sphere on screen: its tab shows, unless the person chose otherwise
-  // meanwhile, by showing it themselves or picking another tab in its panel.
-  useLayoutEffect(() => {
-    const memory = contextMemory.current;
-    if (!inContext || !context.ready || !memory.arriving) return;
-    memory.arriving = false;
-    const slotId = slotIdForOpenTab(workspace.state, context.entryTabId);
-    if (slotId && workspace.state[slotId].activeTab === context.entryTabId && workspace.state[slotId].collapsed) {
-      scheduleWorkspace(setWorkspaceSlotCollapsed(workspace.state, slotId, false));
-    }
-  }, [inContext, context.ready, workspace]);
+  }, [availableWidth, inContext, context.ready, presented, workspace]);
 
 
   // Save the workspace as a wide window on the globe would show it: a
@@ -556,6 +552,8 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
     : layout.mode === "stacked" ? { resizeGripAt: "bottom" as const, ...flushPanel } : flushPanel;
   const compactWidth = layout.side === "left" ? layout.primaryWidth : layout.secondaryWidth;
   const panelProps = (slotId: WindowSlotId) => ({
+    initialHeight: display[slotId].height ?? 512,
+    onHeightChange: (height: number) => workspace.setSize(slotId, { height }),
     liftResizeHandle: layout.presentation === "split",
     onResizeEnd: () => settleResize(slotId),
     ...(imageCompact

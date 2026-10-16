@@ -182,3 +182,25 @@ it("gives a window that made way for a wider one its width back when that one na
     expect(panel("right")!.style.width).toBe("320px");
   } finally { await act(async () => root.unmount()); }
 });
+
+it.each([390, 1280])("remembers manually resized heights with widths after a reload at %i px", async screenWidth => {
+  const first = await mount(screenWidth, "overlay", "both");
+  const sizes: Record<string, { width: string; height: string }> = {};
+  try {
+    for (const side of ["left", "right"] as const) {
+      if (!first.panel(side)) continue;
+      await drag(first.grip(side)!, side === "right" ? 20 : -20, -60);
+      const panel = first.panel(side)!;
+      sizes[side] = { width: panel.style.width, height: panel.style.height };
+      const saved = JSON.parse(stored.get(SAVED_WORKSPACE_STORAGE_KEY)!)[side === "left" ? "primary" : "secondary"];
+      expect(saved.height).toBe(Number.parseFloat(panel.style.height));
+    }
+  } finally { await act(async () => first.root.unmount()); }
+  const reloaded = await mount(screenWidth, "overlay", "saved");
+  try {
+    for (const [side, size] of Object.entries(sizes)) {
+      const panel = reloaded.panel(side as "left" | "right")!;
+      expect({ width: panel.style.width, height: panel.style.height }).toEqual(size);
+    }
+  } finally { await act(async () => reloaded.root.unmount()); }
+});

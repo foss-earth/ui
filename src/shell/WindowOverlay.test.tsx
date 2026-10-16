@@ -572,10 +572,10 @@ it("opens a sphere's tab on entering, hides the map's tabs meanwhile, and leaves
     expect(selected("left")).toBe("Map");
     expect(leave).not.toHaveBeenCalled();
 
-    // Entering again brings back 360 image settings too; closing the sphere's tab leaves it.
+    // Entering again preserves the previously selected image settings; closing the photograph leaves it.
     await enter("Northrop Mall");
     expect(side("left")).toEqual(["Northrop Mall", "360 image settings"]);
-    expect(selected("left")).toBe("Northrop Mall");
+    expect(selected("left")).toBe("360 image settings");
     await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Close Northrop Mall tab"]')!.click());
     expect(leave).toHaveBeenCalledOnce();
     await enter(null);
@@ -583,7 +583,7 @@ it("opens a sphere's tab on entering, hides the map's tabs meanwhile, and leaves
   } finally { await act(async () => root.unmount()); }
 });
 
-it("opens a sphere's tab minimized while the camera flies in, and shows it once the sphere is on screen", async () => {
+it("keeps tabs stable during flight and opens the photograph on arrival only when no other tabs remain", async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(1200);
   vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
@@ -618,11 +618,12 @@ it("opens a sphere's tab minimized while the camera flies in, and shows it once 
     await act(async () => overlayApiRef.current!.toggleTab("map"));
     expect(left().dataset.collapsed).toBe("false");
 
-    // Flying in: the tab is there and selected, its panel minimized; on screen, it shows.
+    // The map stays selected during flight; the photograph replaces it on arrival.
     await show(flying);
-    expect(selected()).toBe("Northrop Mall");
-    expect(left().dataset.collapsed).toBe("true");
+    expect(selected()).toBe("Map");
+    expect(left().dataset.collapsed).toBe("false");
     await show(inside);
+    expect(selected()).toBe("Northrop Mall");
     expect(left().dataset.collapsed).toBe("false");
     // Following a link keeps it showing.
     await show({ title: "Walter Library", onScreen: true });
@@ -633,7 +634,7 @@ it("opens a sphere's tab minimized while the camera flies in, and shows it once 
 
     // A flight cut short: the panel comes back as it was, not minimized.
     await show(flying);
-    expect(left().dataset.collapsed).toBe("true");
+    expect(left().dataset.collapsed).toBe("false");
     await show(outside);
     expect(selected()).toBe("Map");
     expect(left().dataset.collapsed).toBe("false");

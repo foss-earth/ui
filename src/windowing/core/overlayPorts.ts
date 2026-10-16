@@ -9,6 +9,8 @@ export interface OverlayContextPolicy<TabId extends string> {
   baseOnlyTabs: ReadonlySet<TabId>;
   contextOnlyTabs: ReadonlySet<TabId>;
   entryTabId: TabId;
+  /** Keep tabs the person already opened, including base-only tabs, selected through this context. */
+  preserveOpenTabs?: boolean;
   /** Fit the entry tab to this body height while retaining the window's ordinary height. */
   measureEntry?(body: HTMLElement): number | null;
 }

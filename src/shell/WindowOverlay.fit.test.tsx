@@ -54,7 +54,8 @@ it("fits an entry tab on a phone, honors its resize, and restores the ordinary w
     expect(panel().style.height).toBe("340px");
 
     await render(true, false);
-    expect(panel().dataset.collapsed).toBe("true");
+    expect(panel().dataset.collapsed).toBe("false");
+    expect(panel().style.height).toBe("340px");
     expect(measureEntry).not.toHaveBeenCalled();
     await render(true);
     expect(panel().style.height).toBe("92px"); // 60 px of photograph plus actual header and borders; fitting may be below the drag minimum.
