@@ -4,7 +4,9 @@
  * This file stays free of imports. The Vite plugin inlines it into each HTML
  * page, so the review can run when the application bundle never loads.
  * `foss-earth.settings.v1` is `SETTINGS_STORAGE_KEY` in the settings registry,
- * and `foss-earth.visit ` is `TRAIL_KEY_PREFIX` in diagnostics/sessionTrail.ts.
+ * `foss-earth.visit ` is `TRAIL_KEY_PREFIX` in diagnostics/sessionTrail.ts, and
+ * `foss-earth-boot` and `__fossEarthBoot` are the boot terminal's
+ * (bootTerminal.ts), which shows a start's failure and this review's offer.
  */
 
 const SETTINGS_STORAGE_KEY = "foss-earth.settings.v1";
@@ -13,6 +15,8 @@ const RECOVERY_STORAGE_KEY = "foss-earth.browser-recovery.v1";
 const RECOVERY_QUERY = "resetBrowserData";
 const KEEP_QUERY = "keepApiKeys";
 const HOOK = "__fossEarthBrowserRecovery";
+const BOOT_TERMINAL_ID = "foss-earth-boot";
+const BOOT_TERMINAL_GLOBAL = "__fossEarthBoot";
 const FAILURE_LIMIT = 2;
 const STALL_MS = 45_000;
 const STYLE_ID = "foss-earth-browser-recovery-style";
@@ -155,6 +159,14 @@ function hookOf(document: Document): RecoveryHook | null {
   const candidate = hook as Partial<RecoveryHook>;
   if (typeof candidate.ready !== "function" || typeof candidate.failed !== "function") return null;
   return candidate as RecoveryHook;
+}
+
+/** The boot terminal's ready and fail, where the page has one. */
+function bootTerminalOf(document: Document): { ready(): void; fail(text: string): void } | null {
+  const boot = (document.defaultView as unknown as Record<string, unknown> | null)?.[BOOT_TERMINAL_GLOBAL];
+  if (!boot || typeof boot !== "object") return null;
+  const candidate = boot as { ready?: unknown; fail?: unknown };
+  return typeof candidate.ready === "function" && typeof candidate.fail === "function" ? candidate as { ready(): void; fail(text: string): void } : null;
 }
 
 function appIdFrom(document: Document): string | null {
@@ -812,7 +824,10 @@ export function installBrowserRecovery(document: Document, options: BrowserRecov
       if (href) action.href = href;
       action.textContent = "Clear browser data";
       offer.append(text, crashLogLink(document, view, appId), action);
-      document.body?.prepend(offer);
+      // While the boot terminal shows, the offer is its last lines; the terminal hands it to the page when it goes.
+      const terminal = document.getElementById(BOOT_TERMINAL_ID);
+      if (terminal && !terminal.hasAttribute("data-done")) terminal.append(offer);
+      else document.body?.prepend(offer);
     });
   };
   const succeed = (): void => {
@@ -849,6 +864,8 @@ export function installBrowserRecovery(document: Document, options: BrowserRecov
 
 function renderReview(document: Document, view: Window, appId: string, replace: (url: string) => void, schedule: (work: () => void, delayMs: number) => number): void {
   if (!document.body || document.querySelector(".foss-earth-browser-recovery")) return;
+  // The app does not start on this page, so nothing would end its boot terminal.
+  document.getElementById(BOOT_TERMINAL_ID)?.remove();
   ensureStyle(document);
   const root = document.createElement("div");
   root.className = "foss-earth-browser-recovery";
@@ -947,6 +964,7 @@ function renderReview(document: Document, view: Window, appId: string, replace: 
 }
 
 export function markBrowserAppReady(document: Document): void {
+  bootTerminalOf(document)?.ready();
   const hook = hookOf(document);
   if (hook) {
     hook.ready();
@@ -959,6 +977,7 @@ export function markBrowserAppReady(document: Document): void {
 }
 
 export function reportBrowserAppFailure(document: Document, message?: string): void {
+  bootTerminalOf(document)?.fail(message?.trim() || "The app could not start.");
   const hook = hookOf(document);
   if (hook) {
     hook.failed(message ?? "");

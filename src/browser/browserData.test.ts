@@ -491,10 +491,11 @@ const UNREACHABLE_SNIPPET = "cookies hidden from JavaScript";
 describe("inline recovery script", () => {
   it("runs from the HTML plugin without clearing data", () => {
     const tags = browserRecovery({ appId: "umn-vr-tour" }).transformIndexHtml();
-    expect(tags[0]?.injectTo).toBe("head-prepend");
+    // After the boot terminal, which the page paints first.
+    expect(tags[0]?.injectTo).toBe("body-prepend");
     expect(tags[0]?.attrs["data-foss-earth-browser-recovery"]).toBe("umn-vr-tour");
     expect(tags[0]?.children).not.toContain("<");
-    expect(tags[0]?.children.startsWith('self.performance?.mark?.("boot:html")\n')).toBe(true);
+    expect(tags[0]?.children.startsWith('self.performance?.getEntriesByName?.("boot:html").length || self.performance?.mark?.("boot:html")\n')).toBe(true);
     const encoded = tags[0]?.children.match(/\neval\(JSON\.parse\(([\s\S]*)\)\)\n$/)?.[1];
     const source = JSON.parse(JSON.parse(encoded ?? "null") as string) as string;
     expect(source).toContain('installBrowserRecovery(document, {"appId":"umn-vr-tour"})');
@@ -502,6 +503,9 @@ describe("inline recovery script", () => {
     window.localStorage.setItem("foss-earth.theme", "dark");
     performance.clearMarks("boot:html");
     new Function("document", tags[0]!.children)(document);
+    expect(performance.getEntriesByName("boot:html", "mark")).toHaveLength(1);
+    // A boot terminal's head script marks it first on its pages.
+    new Function(tags[0]!.children.split("\n")[0]!)();
     expect(performance.getEntriesByName("boot:html", "mark")).toHaveLength(1);
     expect(document.querySelector(".foss-earth-browser-recovery")?.textContent).toContain("Clear this site's browser data");
     expect(window.localStorage.getItem("foss-earth.theme")).toBe("dark");

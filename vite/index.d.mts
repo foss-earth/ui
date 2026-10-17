@@ -29,6 +29,41 @@ export function appFiles(options?: KeptFilesPlugin): AppFilesPlugin;
 export interface BrowserRecoveryPluginOptions { appId: string }
 export interface BrowserRecoveryPlugin {
   name: string;
-  transformIndexHtml(): { tag: string; attrs: { "data-foss-earth-browser-recovery": string }; children: string; injectTo: "head-prepend" }[];
+  transformIndexHtml(): { tag: string; attrs: { "data-foss-earth-browser-recovery": string }; children: string; injectTo: "body-prepend" }[];
 }
 export function browserRecovery(options: BrowserRecoveryPluginOptions): BrowserRecoveryPlugin;
+export interface BootTerminalPluginOptions {
+  /** The terminal's first line. Default: the page's <title>. */
+  title?: string;
+  /** "dark" keeps the terminal dark whatever the device's or the visitor's theme. Default "auto". */
+  theme?: "auto" | "dark";
+  /** Which pages get the terminal, by their path in the build, such as "/minneapolis/index.html". Default: every page. */
+  pages?: (path: string) => boolean;
+  /** Modules, relative to the root, that a page imports lazily and needs before its first frame: their files count as its download. */
+  waitFor?: readonly string[];
+}
+export interface BootTerminalPlugin {
+  name: string;
+  configResolved(config: { base?: string; root?: string }): void;
+  transformIndexHtml: {
+    order: "post";
+    handler(html: string, ctx: { path: string; bundle?: Record<string, unknown>; chunk?: { fileName: string } }): string;
+  };
+}
+export function bootTerminal(options?: BootTerminalPluginOptions): BootTerminalPlugin;
+export interface WarmPagesPluginOptions {
+  /** The page that warms the others, as its build path: "/index.html". */
+  from: string;
+  /** The pages it warms, as build paths: "/minneapolis/index.html". */
+  pages: readonly string[];
+}
+export interface WarmPagesPlugin {
+  name: string;
+  apply: "build";
+  configResolved(config: { base?: string; root?: string }): void;
+  transformIndexHtml: {
+    order: "post";
+    handler(html: string, ctx: { path: string; bundle?: Record<string, unknown> }): string;
+  };
+}
+export function warmPages(options: WarmPagesPluginOptions): WarmPagesPlugin;

@@ -1,0 +1,60 @@
+/*
+ * The boot terminal (bootTerminal.ts). `bootTerminal()` in vite/index.mjs
+ * writes this into each page's <head>, so it paints with the first bytes.
+ * Its lines sit where the game log's will, which takes them over.
+ */
+#foss-earth-boot {
+  --boot-page: #040914;
+  --boot-text: #ecf1f4;
+  --boot-muted: #94a3b8;
+  --boot-accent: #e8b647;
+  --boot-success: #86efac;
+  --boot-warning: #fcd34d;
+  --boot-error: #fca5a5;
+  --boot-track: rgba(148, 163, 184, 0.25);
+  color-scheme: dark;
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  box-sizing: border-box;
+  overflow: auto;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) calc(16px + env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) calc(16px + env(safe-area-inset-left, 0px));
+  background: var(--boot-page);
+  color: var(--boot-text);
+  font: 13px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  opacity: 1;
+  transition: opacity 150ms ease-out;
+}
+#foss-earth-boot[data-done] { opacity: 0; pointer-events: none; }
+#foss-earth-boot > * { max-width: 40rem; }
+#foss-earth-boot p { margin: 0; }
+#foss-earth-boot .fe-boot__title { color: var(--boot-muted); }
+#foss-earth-boot ol { margin: 8px 0 0; padding: 0; list-style: none; }
+#foss-earth-boot li { padding-left: 2ch; text-indent: -2ch; overflow-wrap: anywhere; }
+#foss-earth-boot li::before { content: "› "; color: var(--boot-accent); }
+#foss-earth-boot li[data-tone="success"] { color: var(--boot-muted); }
+#foss-earth-boot li[data-tone="success"]::before { content: "✓ "; color: var(--boot-success); }
+#foss-earth-boot li[data-tone="warning"]::before { content: "! "; color: var(--boot-warning); }
+#foss-earth-boot li[data-tone="error"] { color: var(--boot-error); }
+#foss-earth-boot li[data-tone="error"]::before { content: "✗ "; color: var(--boot-error); }
+#foss-earth-boot .fe-boot__bar { width: 24rem; max-width: 100%; height: 3px; margin-top: 10px; background: var(--boot-track); border-radius: 2px; overflow: hidden; }
+#foss-earth-boot .fe-boot__bar > span { display: block; height: 100%; background: var(--boot-accent); transform-origin: left; transform: scaleX(var(--boot-progress, 0)); transition: transform 300ms linear; }
+#foss-earth-boot[data-failed] .fe-boot__bar { display: none; }
+/* The recovery's offer joins the terminal while it shows (browserData.ts). */
+#foss-earth-boot .foss-earth-browser-recovery-offer { position: static; margin-top: 12px; padding: 0; background: none; color: var(--boot-text); font: inherit; }
+#foss-earth-boot .foss-earth-browser-recovery-offer a { color: var(--boot-accent); }
+#foss-earth-boot a { color: var(--boot-accent); }
+@media (prefers-reduced-motion: reduce) {
+  #foss-earth-boot, #foss-earth-boot .fe-boot__bar > span { transition: none; }
+}
+/* The UMN palette (ui/assets/theme.css). */
+html[data-ui-theme="umn"] #foss-earth-boot { --boot-page: #19090d; --boot-text: #f6f0f1; --boot-muted: #ba9ba0; --boot-accent: #ffcc33; --boot-success: #abd7b9; --boot-warning: #ffe08b; --boot-error: #ffb8aa; --boot-track: rgba(186, 155, 160, 0.25); }
+/* LIGHT: the plugin leaves out what follows for a page that is always dark. */
+@media (prefers-color-scheme: light) {
+  html:not([data-boot-theme]) #foss-earth-boot { color-scheme: light; --boot-page: #e2e8f0; --boot-text: #0f172a; --boot-muted: #475569; --boot-accent: #0284c7; --boot-success: #15803d; --boot-warning: #a16207; --boot-error: #b91c1c; --boot-track: rgba(71, 85, 105, 0.25); }
+}
+html[data-boot-theme="light"] #foss-earth-boot { color-scheme: light; --boot-page: #e2e8f0; --boot-text: #0f172a; --boot-muted: #475569; --boot-accent: #0284c7; --boot-success: #15803d; --boot-warning: #a16207; --boot-error: #b91c1c; --boot-track: rgba(71, 85, 105, 0.25); }
+@media (prefers-color-scheme: light) {
+  html[data-ui-theme="umn"]:not([data-boot-theme]) #foss-earth-boot { --boot-page: #eedfe2; --boot-text: #2a1015; --boot-muted: #5e4f52; --boot-accent: #7a0019; --boot-success: #236043; --boot-warning: #775000; --boot-error: #9a231f; --boot-track: rgba(94, 79, 82, 0.25); }
+}
+html[data-ui-theme="umn"][data-boot-theme="light"] #foss-earth-boot { --boot-page: #eedfe2; --boot-text: #2a1015; --boot-muted: #5e4f52; --boot-accent: #7a0019; --boot-success: #236043; --boot-warning: #775000; --boot-error: #9a231f; --boot-track: rgba(94, 79, 82, 0.25); }
