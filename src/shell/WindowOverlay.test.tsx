@@ -21,7 +21,7 @@ beforeEach(() => {
 });
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); document.body.replaceChildren(); });
 
-it("stacks phone tabs above the log, follows the panel height, and restores both wider window homes", async () => {
+it("follows a manually selected phone split's height and restores both wider window homes", async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   stored.set(SAVED_WORKSPACE_STORAGE_KEY, JSON.stringify({
     primary: { tabs: ["left-tab"], activeTab: "left-tab", collapsed: false, width: 340 },
@@ -45,16 +45,19 @@ it("stacks phone tabs above the log, follows the panel height, and restores both
   const logTop = () => document.documentElement.style.getPropertyValue("--foss-log-top");
   const resize = async (width: number) => act(async () => changeWidth!(width));
   const selectedTab = () => slot("right")!.querySelector<HTMLButtonElement>(".foss-earth-tab-shell-selected .foss-earth-tab-button")!;
-  await act(async () => root.render(<SharedWindowOverlay<"left-tab" | "right-tab">
+  const render = (choice: "overlay" | "split") => root.render(<SharedWindowOverlay<"left-tab" | "right-tab">
     tabDefinitions={[{ id: "left-tab", label: "Left tab" }, { id: "right-tab", label: "Right tab" }]}
     renderTabContent={tabId => <p>{tabId}</p>} geometry={geometry}
+    presentation={{ choice, onChoice() {}, tabsBehindToolbar: false, edges: "inset" }}
     context={{ active: false, ready: true, baseOnlyTabs: new Set(), contextOnlyTabs: new Set(), entryTabId: "left-tab" }}
     restorableTabs={new Set(["left-tab", "right-tab"])} storage={localStorage}
     logSize={{ getWidth: () => null, subscribe: () => () => {} }} layoutPort={browserOverlayLayout(document.documentElement)}
-  />));
+  />);
+  await act(async () => render("overlay"));
   try {
     expect(labels("left")).toEqual(["Left tab"]);
     expect(labels("right")).toEqual(["Right tab"]);
+    await act(async () => render("split"));
     await resize(390);
     expect(document.documentElement.dataset.dockLayout).toBe("stacked");
     expect(document.documentElement.dataset.logVisible).toBe("false");
@@ -83,6 +86,7 @@ it("stacks phone tabs above the log, follows the panel height, and restores both
     expect(slot("right")!.dataset.collapsed).toBe("true");
     await act(async () => selectedTab().click());
     expect(slot("right")!.dataset.collapsed).toBe("false");
+    await act(async () => render("overlay"));
     await resize(700);
     expect(document.documentElement.dataset.dockLayout).toBe("columns");
     expect(document.documentElement.dataset.logVisible).toBe("false");
@@ -99,6 +103,7 @@ it("stacks phone tabs above the log, follows the panel height, and restores both
     expect(slot("right")!.querySelector<HTMLElement>(".foss-earth-dock-panel-resize-handle")!.dataset.axes).toBe("both");
     await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Close Left tab tab"]')!.click());
     await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Close Right tab tab"]')!.click());
+    await act(async () => render("split"));
     await resize(390);
     expect(heightElement?.classList.contains("foss-earth-workspace-slot-launcher")).toBe(true);
     expect(document.documentElement.dataset.logVisible).toBe("false");
@@ -127,6 +132,7 @@ it.each(["left", "right"] as const)("keeps the %s window widened out of two on i
   await act(async () => root.render(<SharedWindowOverlay<"left-tab" | "right-tab">
     tabDefinitions={[{ id: "left-tab", label: "Left tab" }, { id: "right-tab", label: "Right tab" }]}
     renderTabContent={tabId => <p>{tabId}</p>} geometry={geometry}
+    presentation={{ choice: "auto", onChoice() {}, tabsBehindToolbar: false, edges: "inset" }}
     context={{ active: false, ready: true, baseOnlyTabs: new Set(), contextOnlyTabs: new Set(), entryTabId: "left-tab" }}
     restorableTabs={new Set(["left-tab", "right-tab"])} storage={localStorage}
     logSize={{ getWidth: () => null, subscribe: () => () => {} }} layoutPort={browserOverlayLayout(html)}
@@ -785,6 +791,5 @@ it("gives the only split window the full width on a screen that could hold two",
     expect(host.querySelector(".foss-earth-dock-panel[data-side='right']")).toBeNull();
     expect(host.querySelector(".foss-earth-workspace-slot-launcher-right")).not.toBeNull();
     expect(document.documentElement.dataset.worldPresentation).toBe("split");
-    expect(document.documentElement.dataset.toolbarEdge).toBe("bottom");
   } finally { await act(async () => root.unmount()); }
 });

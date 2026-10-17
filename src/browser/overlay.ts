@@ -46,8 +46,7 @@ export function browserOverlayLayout(root: HTMLElement): WindowOverlayLayoutPort
       delete root.dataset.worldPresentation;
       delete root.dataset.worldEdges;
       delete root.dataset.logVisible;
-      delete root.dataset.hudInBand;
-      for (const name of ["--foss-log-left", "--foss-log-top", "--foss-log-center", "--foss-log-width", "--foss-world-top", "--foss-split-hud-top"]) root.style.removeProperty(name);
+      for (const name of ["--foss-log-left", "--foss-log-top", "--foss-log-center", "--foss-log-width", "--foss-world-top"]) root.style.removeProperty(name);
     },
   };
 }
@@ -67,30 +66,12 @@ export function lowestSplitBand(elements: Iterable<HTMLElement>): HTMLElement | 
   return best;
 }
 
-function toolbarBarHeight(root: HTMLElement): number {
-  const raw = root.ownerDocument.defaultView?.getComputedStyle(root).getPropertyValue("--foss-hud-bar-height") ?? "";
-  const value = Number.parseFloat(raw);
-  return Number.isFinite(value) && value > 0 ? value : 28;
-}
-
-/**
- * The world starts where the UI ends. `edge` is where the toolbar sits in that
- * UI: on top, the window's bottom is the world; at the bottom, a short launcher
- * leaves one bar of space under it and a tall window keeps the bar inside its edge.
- */
-export function publishSplitBand(root: HTMLElement, band: HTMLElement | null, edge: "top" | "bottom" = "bottom"): void {
-  for (const host of root.querySelectorAll<HTMLElement>("[data-toolbar-host]")) delete host.dataset.toolbarHost;
+/** The world starts below the lowest window or launcher; the HUD stays at the screen's bottom. */
+export function publishSplitBand(root: HTMLElement, band: HTMLElement | null): void {
   if (!band) {
     root.style.removeProperty("--foss-world-top");
-    root.style.removeProperty("--foss-split-hud-top");
-    delete root.dataset.hudInBand;
     return;
   }
-  const collapsed = band.dataset.collapsed === "true" || band.classList.contains("foss-earth-workspace-slot-launcher");
   const bottom = band.getBoundingClientRect().bottom;
-  const worldTop = edge === "bottom" && collapsed ? bottom + toolbarBarHeight(root) : bottom;
-  if (edge === "bottom" && !collapsed) band.dataset.toolbarHost = "true";
-  root.style.setProperty("--foss-split-hud-top", "env(safe-area-inset-top, 0px)");
-  root.style.setProperty("--foss-world-top", `${worldTop}px`);
-  root.dataset.hudInBand = edge;
+  root.style.setProperty("--foss-world-top", `${bottom}px`);
 }

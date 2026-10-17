@@ -35,6 +35,7 @@ it("fits an entry tab on a phone, honors its resize, and restores the ordinary w
     renderTabContent={id => id === "entry" ? <div><p data-photograph>Photograph information</p><details><summary>Links</summary><p>Linked images</p></details></div> : <p>{id}</p>}
     context={{ active, ready, entryTabId: "entry", baseOnlyTabs: new Set(["map"]), contextOnlyTabs: new Set(["entry", "settings"]), measureEntry }}
     restorableTabs={new Set(["map"])} storage={null} overlayApiRef={api} geometry={geometry} logSize={logSize} layoutPort={layoutPort}
+    presentation={{ choice: "split", onChoice() {}, tabsBehindToolbar: false }}
   />));
   const panel = () => host.querySelector<HTMLElement>('.foss-earth-dock-panel[data-side="right"]')!;
   const resize = async (height: number) => {

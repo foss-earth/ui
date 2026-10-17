@@ -49,6 +49,7 @@ function Host({ api, extra = [] }: { api: { current: WindowOverlayHandle<Tab> | 
     context={{ active: false, ready: true, baseOnlyTabs: new Set(), contextOnlyTabs: new Set(), entryTabId: "settings" }}
     restorableTabs={new Set(["settings", "image-a", "image-b"])} storage={localStorage} overlayApiRef={api}
     geometry={geometry}
+    presentation={{ choice: "auto", onChoice() {}, tabsBehindToolbar: false, edges: "inset" }}
     logSize={{ getWidth: () => null, subscribe: () => () => {} }} layoutPort={browserOverlayLayout(document.documentElement)}
   />;
 }

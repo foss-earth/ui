@@ -1,12 +1,35 @@
 import { describe, expect, it } from "vitest";
 import { resolveDockLayout, type DockLayoutInput } from "./dockLayout.js";
 
-const preferences = { primaryWidth: 320, secondaryWidth: 320, logWidth: null };
+const insetPreferences = { primaryWidth: 320, secondaryWidth: 320, logWidth: null, edges: "inset" as const };
 
 describe("shared window and log layout", () => {
+  it("defaults to flush overlay and changes presentation and edges only when explicitly requested", () => {
+    const requests = { primaryWidth: null, secondaryWidth: null, logWidth: null };
+    for (const edges of [undefined, "inset", "flush"] as const) {
+      for (const availableWidth of [280, 390, 515, 516, 700, 848, 1280, 2400, 390, 1280]) {
+        for (const presentation of [undefined, "auto", "overlay", "split"] as const) {
+          for (const open of [{ left: true, right: true }, { left: true, right: false }, { left: false, right: true }]) {
+            const input = { ...requests, edges, availableWidth, presentation, open };
+            const layout = resolveDockLayout(input);
+            expect(layout.edges, JSON.stringify(input)).toBe(edges ?? "flush");
+            expect(layout.presentation, JSON.stringify(input)).toBe(presentation === "split" ? "split" : "overlay");
+            if (edges !== "inset") expect(layout.logVisible, JSON.stringify(input)).toBe(false);
+          }
+        }
+      }
+    }
+    expect(resolveDockLayout({ ...requests, availableWidth: 390, presentation: "overlay" })).toMatchObject({
+      edges: "flush", secondaryWidth: 390, maxWindowWidth: 390,
+    });
+    expect(resolveDockLayout({ ...requests, availableWidth: 1280 })).toMatchObject({
+      edges: "flush", mode: "columns", primaryWidth: 320, secondaryWidth: 320, maxWindowWidth: 1108,
+    });
+  });
+
   it("shows the centered log only once both windows and a minimum log fit", () => {
-    const narrow = resolveDockLayout({ ...preferences, availableWidth: 847 });
-    const wide = resolveDockLayout({ ...preferences, availableWidth: 848 });
+    const narrow = resolveDockLayout({ ...insetPreferences, availableWidth: 847 });
+    const wide = resolveDockLayout({ ...insetPreferences, availableWidth: 848 });
 
     expect(narrow).toMatchObject({ mode: "columns", presentation: "overlay", logVisible: false, primaryWidth: 320, secondaryWidth: 320 });
     expect(wide).toEqual({
@@ -27,7 +50,7 @@ describe("shared window and log layout", () => {
   });
 
   it.each([[420, 320], [320, 420]])("keeps the log at viewport center with unequal windows (%s, %s)", (primaryWidth, secondaryWidth) => {
-    const input = { ...preferences, primaryWidth, secondaryWidth };
+    const input = { ...insetPreferences, primaryWidth, secondaryWidth };
     expect(resolveDockLayout({ ...input, availableWidth: 1047 }).logVisible).toBe(false);
     const layout = resolveDockLayout({ ...input, availableWidth: 1048 });
 
@@ -39,7 +62,7 @@ describe("shared window and log layout", () => {
   });
 
   it("gives a manual log resize priority by shrinking windows, then hides the log instead of dropping a window", () => {
-    const input = { ...preferences, availableWidth: 1280 };
+    const input = { ...insetPreferences, availableWidth: 1280 };
     const original = resolveDockLayout(input);
     const enlarged = resolveDockLayout({ ...input, logWidth: 640, priority: "log" });
 
@@ -60,7 +83,7 @@ describe("shared window and log layout", () => {
   });
 
   it("gives a later window resize priority by squeezing the log, then keeps both windows when the log no longer fits", () => {
-    const input = { ...preferences, availableWidth: 1280, logWidth: 640, priority: "windows" as const, previousMode: "dual" as const };
+    const input = { ...insetPreferences, availableWidth: 1280, logWidth: 640, priority: "windows" as const, previousMode: "dual" as const };
     const widened = resolveDockLayout({ ...input, primaryWidth: 420 });
     const retreated = resolveDockLayout({ ...input, primaryWidth: 296, secondaryWidth: 296 });
 
@@ -72,12 +95,12 @@ describe("shared window and log layout", () => {
   });
 
   it("keeps a widened log a tab until its requested width fits between the windows again", () => {
-    const hidden = resolveDockLayout({ ...preferences, availableWidth: 1280, logWidth: 913, priority: "log", previousMode: "dual" });
+    const hidden = resolveDockLayout({ ...insetPreferences, availableWidth: 1280, logWidth: 913, priority: "log", previousMode: "dual" });
     const stillHidden = resolveDockLayout({
-      ...preferences, availableWidth: 1600, logWidth: 913, priority: "windows", previousMode: hidden.mode,
+      ...insetPreferences, availableWidth: 1600, logWidth: 913, priority: "windows", previousMode: hidden.mode,
     });
     const restored = resolveDockLayout({
-      ...preferences, availableWidth: 1601, logWidth: 913, priority: "windows", previousMode: stillHidden.mode,
+      ...insetPreferences, availableWidth: 1601, logWidth: 913, priority: "windows", previousMode: stillHidden.mode,
     });
 
     expect(hidden.mode).toBe("columns");
@@ -88,7 +111,7 @@ describe("shared window and log layout", () => {
   it.each([280, 320, 360, 390, 430, 515])("gives a phone one full-width window and no floating log at %s", (availableWidth) => {
     for (const priority of ["log", "windows"] as const) {
       for (const logWidth of [null, 160, 2000]) {
-        const input: DockLayoutInput = { ...preferences, availableWidth, logWidth, priority };
+        const input: DockLayoutInput = { ...insetPreferences, availableWidth, logWidth, priority, presentation: "split" };
         const layout = resolveDockLayout(input);
         expect(layout).toMatchObject({
           mode: "stacked",
@@ -99,25 +122,25 @@ describe("shared window and log layout", () => {
           maxWindowWidth: availableWidth,
           logWidth: 0,
         });
-        expect(input).toEqual({ ...preferences, availableWidth, logWidth, priority });
+        expect(input).toEqual({ ...insetPreferences, availableWidth, logWidth, priority, presentation: "split" });
       }
     }
   });
 
   it("returns to both windows, still without a log, at the first width that used to keep the log beside one window", () => {
-    expect(resolveDockLayout({ ...preferences, availableWidth: 515 }).mode).toBe("stacked");
-    expect(resolveDockLayout({ ...preferences, availableWidth: 516, previousMode: "stacked" })).toMatchObject({
+    expect(resolveDockLayout({ ...insetPreferences, availableWidth: 515 }).mode).toBe("stacked");
+    expect(resolveDockLayout({ ...insetPreferences, availableWidth: 516, previousMode: "stacked" })).toMatchObject({
       mode: "columns", presentation: "overlay", logVisible: false, primaryWidth: 240, secondaryWidth: 240,
     });
-    expect(resolveDockLayout({ ...preferences, availableWidth: 768, previousMode: "stacked" })).toMatchObject({
+    expect(resolveDockLayout({ ...insetPreferences, availableWidth: 768, previousMode: "stacked" })).toMatchObject({
       mode: "columns", logVisible: false, primaryWidth: 320, secondaryWidth: 320,
     });
-    expect(resolveDockLayout({ ...preferences, availableWidth: 848, previousMode: "columns" }).mode).toBe("dual");
+    expect(resolveDockLayout({ ...insetPreferences, availableWidth: 848, previousMode: "columns" }).mode).toBe("dual");
   });
 
   it("keeps both windows when one is widened, and stops that window where the other still has its minimum", () => {
     const at = (primaryWidth: number, previousMode?: "dual" | "columns" | "stacked") => resolveDockLayout({
-      ...preferences, availableWidth: 1280, primaryWidth, priority: "windows", previousMode, widened: "left",
+      ...insetPreferences, availableWidth: 1280, primaryWidth, priority: "windows", previousMode, widened: "left",
     });
 
     expect(at(536)).toMatchObject({ mode: "dual", primaryWidth: 536, secondaryWidth: 320, logWidth: 160, logCenter: 640 });
@@ -128,35 +151,35 @@ describe("shared window and log layout", () => {
   });
 
   it("keeps a phone's full-width window on the side that stayed", () => {
-    expect(resolveDockLayout({ ...preferences, availableWidth: 390, widened: "left" })).toMatchObject({
+    expect(resolveDockLayout({ ...insetPreferences, availableWidth: 390, widened: "left", presentation: "split" })).toMatchObject({
       mode: "stacked", side: "left", presentation: "split", windowWidthFixed: true, primaryWidth: 390, secondaryWidth: 320, logVisible: false,
     });
   });
 
   it("gives the one open split window the full width on a screen that could hold two", () => {
-    expect(resolveDockLayout({ ...preferences, availableWidth: 1200, presentation: "split", open: { left: false, right: true } })).toMatchObject({
+    expect(resolveDockLayout({ ...insetPreferences, availableWidth: 1200, presentation: "split", open: { left: false, right: true } })).toMatchObject({
       mode: "columns", presentation: "split", side: "right", windowWidthFixed: true, secondaryWidth: 1200, logVisible: false,
     });
-    expect(resolveDockLayout({ ...preferences, availableWidth: 1200, presentation: "split", open: { left: true, right: false } })).toMatchObject({
+    expect(resolveDockLayout({ ...insetPreferences, availableWidth: 1200, presentation: "split", open: { left: true, right: false } })).toMatchObject({
       mode: "columns", presentation: "split", side: "left", windowWidthFixed: true, primaryWidth: 1200, logVisible: false,
     });
-    expect(resolveDockLayout({ ...preferences, availableWidth: 1200, presentation: "split", open: { left: true, right: true } })).toMatchObject({
+    expect(resolveDockLayout({ ...insetPreferences, availableWidth: 1200, presentation: "split", open: { left: true, right: true } })).toMatchObject({
       mode: "dual", presentation: "split", windowWidthFixed: false, logVisible: true,
     });
   });
 
-  it("lets a choice force overlay on a phone and split on a wide screen", () => {
-    expect(resolveDockLayout({ ...preferences, primaryWidth: null, secondaryWidth: null, availableWidth: 390, presentation: "overlay" })).toMatchObject({
+  it("lets a choice select overlay on a phone and split on a wide screen", () => {
+    expect(resolveDockLayout({ ...insetPreferences, primaryWidth: null, secondaryWidth: null, availableWidth: 390, presentation: "overlay" })).toMatchObject({
       mode: "stacked", presentation: "overlay", secondaryWidth: 378,
     });
-    expect(resolveDockLayout({ ...preferences, availableWidth: 1200, presentation: "split" })).toMatchObject({
+    expect(resolveDockLayout({ ...insetPreferences, availableWidth: 1200, presentation: "split" })).toMatchObject({
       mode: "dual", presentation: "split", logVisible: true,
     });
   });
 
   // A Galaxy Note 20 Ultra in portrait is 412 CSS px wide.
   it("starts a phone's overlay window full width, lets it be narrowed, and keeps a split window full width", () => {
-    const phone = { availableWidth: 412, logWidth: null, primaryWidth: null, secondaryWidth: null };
+    const phone = { availableWidth: 412, logWidth: null, primaryWidth: null, secondaryWidth: null, edges: "inset" as const };
     expect(resolveDockLayout({ ...phone, presentation: "overlay" })).toMatchObject({
       mode: "stacked", presentation: "overlay", side: "right", windowWidthFixed: false, secondaryWidth: 400, maxWindowWidth: 400,
     });
@@ -164,11 +187,14 @@ describe("shared window and log layout", () => {
     expect(resolveDockLayout({ ...phone, presentation: "overlay", secondaryWidth: 2000 }).secondaryWidth).toBe(400);
     expect(resolveDockLayout({ ...phone, presentation: "overlay", secondaryWidth: 100 }).secondaryWidth).toBe(160);
     expect(resolveDockLayout({ ...phone, presentation: "overlay", widened: "left", primaryWidth: 300 })).toMatchObject({ side: "left", primaryWidth: 300 });
-    for (const presentation of [undefined, "auto", "split"] as const) {
+    for (const presentation of [undefined, "auto", "overlay"] as const) {
       expect(resolveDockLayout({ ...phone, presentation, secondaryWidth: 260 }), presentation).toMatchObject({
-        presentation: "split", windowWidthFixed: true, secondaryWidth: 412,
+        presentation: "overlay", windowWidthFixed: false, secondaryWidth: 260,
       });
     }
+    expect(resolveDockLayout({ ...phone, presentation: "split", secondaryWidth: 260 })).toMatchObject({
+      presentation: "split", windowWidthFixed: true, secondaryWidth: 412,
+    });
   });
 
   // The grip's arrows come from windowWidthFixed alone, so a width the layout throws away must never be offered.
@@ -286,7 +312,10 @@ describe("shared window and log layout", () => {
           for (const priority of ["log", "windows"] as const) {
             for (const previousMode of [undefined, "stacked", "columns", "dual"] as const) {
               for (const side of ["left", "right"] as const) {
-                const input: DockLayoutInput = { availableWidth, primaryWidth, secondaryWidth, logWidth, priority, previousMode, widened: side };
+                const input: DockLayoutInput = {
+                  availableWidth, primaryWidth, secondaryWidth, logWidth, priority, previousMode, widened: side,
+                  edges: "inset", presentation: availableWidth < 516 ? "split" : "overlay",
+                };
                 const layout = resolveDockLayout(input);
                 const context = JSON.stringify(input);
                 const shown = layout.mode === "stacked"
@@ -328,17 +357,17 @@ describe("shared window and log layout", () => {
 
   it("keeps the log out of the screen while it is held as a tab, at any width", () => {
     for (const availableWidth of [848, 1280, 2400]) {
-      const held = resolveDockLayout({ ...preferences, availableWidth, floatingLog: false });
+      const held = resolveDockLayout({ ...insetPreferences, availableWidth, floatingLog: false });
       expect(held).toMatchObject({ mode: "columns", presentation: "overlay", logVisible: false, primaryWidth: 320, secondaryWidth: 320 });
-      expect(resolveDockLayout({ ...preferences, availableWidth }).mode).toBe("dual");
+      expect(resolveDockLayout({ ...insetPreferences, availableWidth }).mode).toBe("dual");
     }
-    const prioritized = { ...preferences, logWidth: 900, availableWidth: 1280, priority: "log" as const };
+    const prioritized = { ...insetPreferences, logWidth: 900, availableWidth: 1280, priority: "log" as const };
     expect(resolveDockLayout({ ...prioritized, floatingLog: false }).logVisible).toBe(false);
   });
 
-  it("puts flush windows on the edges and keeps the log a tab, in overlay only", () => {
+  it("puts flush windows on the edges and keeps the log a tab", () => {
     for (const availableWidth of [848, 1280, 2400]) {
-      const flush = resolveDockLayout({ ...preferences, availableWidth, edges: "flush" });
+      const flush = resolveDockLayout({ ...insetPreferences, availableWidth, edges: "flush" });
       expect(flush).toMatchObject({ mode: "columns", presentation: "overlay", edges: "flush", logVisible: false, primaryWidth: 320, secondaryWidth: 320 });
       // Only the gap between the windows is kept free.
       expect(flush.maxWindowWidth).toBe(availableWidth - 12 - 160);
@@ -346,15 +375,15 @@ describe("shared window and log layout", () => {
     // Two wide windows share all but the gap between them.
     const shared = resolveDockLayout({ primaryWidth: 900, secondaryWidth: 900, logWidth: null, availableWidth: 1000, edges: "flush" });
     expect(shared.primaryWidth + shared.secondaryWidth).toBe(1000 - 12);
-    const prioritized = { ...preferences, logWidth: 400, availableWidth: 1280, priority: "log" as const, edges: "flush" as const };
+    const prioritized = { ...insetPreferences, logWidth: 400, availableWidth: 1280, priority: "log" as const, edges: "flush" as const };
     expect(resolveDockLayout(prioritized).logVisible).toBe(false);
     // A phone's overlay window starts as wide as the screen.
     expect(resolveDockLayout({ primaryWidth: null, secondaryWidth: null, logWidth: null, availableWidth: 390, presentation: "overlay", edges: "flush" }))
       .toMatchObject({ mode: "stacked", edges: "flush", secondaryWidth: 390, maxWindowWidth: 390 });
-    expect(resolveDockLayout({ primaryWidth: null, secondaryWidth: null, logWidth: null, availableWidth: 390, presentation: "overlay" }))
+    expect(resolveDockLayout({ primaryWidth: null, secondaryWidth: null, logWidth: null, availableWidth: 390, presentation: "overlay", edges: "inset" }))
       .toMatchObject({ mode: "stacked", edges: "inset", secondaryWidth: 378 });
-    // Split's band already meets the edges.
-    expect(resolveDockLayout({ ...preferences, availableWidth: 390, edges: "flush" })).toMatchObject({ presentation: "split", edges: "inset" });
-    expect(resolveDockLayout({ ...preferences, availableWidth: 1280, presentation: "split", edges: "flush" })).toMatchObject({ presentation: "split", edges: "inset" });
+    // Split preserves the edge preference too.
+    expect(resolveDockLayout({ ...insetPreferences, availableWidth: 390, presentation: "split", edges: "flush" })).toMatchObject({ presentation: "split", edges: "flush" });
+    expect(resolveDockLayout({ ...insetPreferences, availableWidth: 1280, presentation: "split", edges: "flush" })).toMatchObject({ presentation: "split", edges: "flush" });
   });
 });

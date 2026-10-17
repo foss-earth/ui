@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createSettingsRegistry, SETTINGS_STORAGE_KEY, type SettingsStorage } from "./registry.js";
 import type { ParameterSpec } from "./types.js";
+import { UI_PARAMETERS, WINDOWS_PRESENTATION_ID, WORLD_EDGES_ID } from "./uiParameters.js";
 
 function memoryStorage(initial: Record<string, string> = {}): SettingsStorage & { data: Map<string, string> } {
   const data = new Map(Object.entries(initial));
@@ -359,6 +360,23 @@ describe("settings registry", () => {
     expect(result.rejected.map(entry => entry.id)).toEqual(["test.mode", "nope", "test.key"]);
     expect(other.get("test.budget")).toBe(512);
     expect(other.import("not json").rejected[0].reason).toMatch(/not JSON/);
+  });
+
+  it.each(["auto", "overlay", "split"])("migrates saved window presentation %s without losing the user's edge preference", saved => {
+    const storage = memoryStorage({
+      [SETTINGS_STORAGE_KEY]: JSON.stringify({ version: 1, values: { [WINDOWS_PRESENTATION_ID]: saved, [WORLD_EDGES_ID]: false } }),
+    });
+    const settings = createSettingsRegistry({ storage });
+    settings.register(UI_PARAMETERS);
+    const expected = saved === "auto" ? "overlay" : saved;
+    expect(settings.inspect(WINDOWS_PRESENTATION_ID)).toMatchObject({ value: expected, provenance: "user", layers: { saved: { value: expected } } });
+    expect(settings.get(WORLD_EDGES_ID)).toBe(false);
+    expect(record(storage).values).toEqual({ [WINDOWS_PRESENTATION_ID]: expected, [WORLD_EDGES_ID]: false });
+    expect(settings.spec(WINDOWS_PRESENTATION_ID)?.choices?.map(choice => choice.id)).toEqual(["overlay", "split"]);
+    const reloaded = createSettingsRegistry({ storage });
+    reloaded.register(UI_PARAMETERS);
+    expect(reloaded.get(WINDOWS_PRESENTATION_ID)).toBe(expected);
+    expect(reloaded.get(WORLD_EDGES_ID)).toBe(false);
   });
 
   it("migrates legacy keys once, filling only what has no saved value", () => {

@@ -3,7 +3,9 @@ import { TRAIL_STEPS_DEFAULT } from "../diagnostics/sessionTrail.js";
 import { GAME_LOG_LINE_MS, GAME_LOG_MAX_LINES } from "../log/gameLogDefaults.js";
 const SETTINGS_TAB = "settings"; const INTERFACE_TAB = "interface";
 export const WINDOWS_PRESENTATION_ID = "interface.windows.presentation";
+/** @deprecated The toolbar always stays at the bottom of the screen. */
 export const TABS_BEHIND_TOOLBAR_ID = "interface.windows.tabsBehindToolbar";
+/** @deprecated The toolbar always stays at the bottom of the screen. */
 export const TOOLBAR_EDGE_ID = "interface.windows.toolbarEdge";
 export const WORLD_RESIZE_ID = "interface.windows.worldResize";
 export const WORLD_EDGES_ID = "interface.windows.flushEdges";
@@ -57,49 +59,20 @@ export const UI_PARAMETERS: readonly ParameterSpec[] = [
 {
     id: WINDOWS_PRESENTATION_ID,
     label: "Windows and the world",
-    description: "Overlay draws the world full screen and floats the windows on it. Split gives the windows the top of the screen and draws the world only underneath, which is lighter on a phone. Until this is moved, a phone uses split and a wider screen uses overlay. Holding a tab, or the window's resize handle, without moving opens the same switch.",
+    description: "Overlay draws the world full screen and floats the windows on it at every screen width. Choose Split to give the windows the top of the screen and draw the world only underneath. Resizing the screen keeps the chosen presentation. Holding a tab, or the window's resize handle, without moving opens the same switch.",
     unit: "none",
     kind: "choice",
     choiceControl: "two-position",
     choices: [
       { id: "overlay", label: "Overlay" },
-      { id: "auto", label: "Auto" },
       { id: "split", label: "Split" },
     ],
-    default: "auto",
-    defaultReason: "A phone has one window covering most of the screen, so drawing the world only under it spends less. A wider screen keeps the windows floating so they can be resized over the world.",
+    legacyValues: [{ value: "auto", replacement: "overlay" }],
+    default: "overlay",
+    defaultReason: "The world stays full screen at every width. Split is an explicit choice, so narrowing the screen never clips the world under a tab window or launcher.",
     home: { tab: INTERFACE_TAB, section: "windows", level: "main" },
     appliesLive: true,
     source: "@foss-earth/ui/src/shell/dockLayout.ts",
-  },
-{
-    id: TOOLBAR_EDGE_ID,
-    label: "Toolbar",
-    description: "Where the toolbar sits on the window. Top is above the tabs. Bottom is the edge where the window meets the world. Auto uses the top on a phone and the bottom when two windows fit.",
-    unit: "none",
-    kind: "choice",
-    choices: [
-      { id: "top", label: "Top", icon: "bar-top", description: "Above the tabs." },
-      { id: "auto", label: "Auto", shortLabel: "A", description: "Above the tabs on a phone, and at the bottom of the window when two windows fit." },
-      { id: "bottom", label: "Bottom", icon: "bar-bottom", description: "At the bottom of the window, on the edge with the world." },
-    ],
-    default: "bottom",
-    defaultReason: "The toolbar stays on the edge between the window and the world. Above the tabs is a choice.",
-    home: { tab: INTERFACE_TAB, section: "windows", level: "main" },
-    appliesLive: true,
-    source: "@foss-earth/ui/src/shell/WindowOverlay.tsx",
-  },
-{
-    id: TABS_BEHIND_TOOLBAR_ID,
-    label: "Tabs behind the toolbar",
-    description: "Lets the window show through the toolbar. Off keeps a solid space behind the toolbar.",
-    unit: "none",
-    kind: "boolean",
-    default: false,
-    defaultReason: "The toolbar's gaps showing the tabs underneath reads as the window shining through a control, which is distracting. The solid strip is the same surface as the window.",
-    home: { tab: INTERFACE_TAB, section: "windows", level: "main" },
-    appliesLive: true,
-    source: "@foss-earth/ui/src/shell/WindowOverlay.tsx",
   },
 {
     id: WORLD_RESIZE_ID,
@@ -121,7 +94,7 @@ export const UI_PARAMETERS: readonly ParameterSpec[] = [
 {
     id: WORLD_EDGES_ID,
     label: "Windows on the screen's edges",
-    description: "Puts the windows and the toolbar against the screen's edges with no space around them, closes up the toolbar's buttons, holds the map detail rail inside the basemap's chip, and keeps the log a tab. The world is then one rectangle with rectangles cut from its edges, and nothing is drawn under the windows or the toolbar. Only overlay changes: split's windows already meet the edges.",
+    description: "Puts the windows and the toolbar against the screen's edges with no space around them, closes up the toolbar's buttons, holds the map detail rail inside the basemap's chip, and keeps the log a tab. The world is then one rectangle with rectangles cut from its edges, and nothing is drawn under the windows or the toolbar. This style applies at every screen width. Turn this off to choose corner insets; resizing the screen keeps the chosen style.",
     unit: "none",
     kind: "boolean",
     default: true,

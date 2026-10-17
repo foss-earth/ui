@@ -58,7 +58,7 @@ async function mount(screenWidth: number, choice: Choice, open: Open | "saved") 
     geometry={{ observeWidth(_element, listener) { listener(screenWidth); return () => {}; }, observeHeight(_element, listener) { listener(240); return () => {}; }, menuBottom: () => null }}
     logSize={{ getWidth: () => null, subscribe: () => () => {} }}
     layoutPort={browserOverlayLayout(document.documentElement)}
-    presentation={choice === undefined ? undefined : { choice, onChoice: () => {}, tabsBehindToolbar: false, toolbarEdge: "bottom" }}
+    presentation={choice === undefined ? undefined : { choice, onChoice: () => {}, tabsBehindToolbar: false, toolbarEdge: "bottom", edges: "inset" }}
   />));
   const panel = (side: "left" | "right") => host.querySelector<HTMLElement>(`.foss-earth-dock-panel[data-side="${side}"]`);
   // A split grip is painted on the body, above the toolbar.

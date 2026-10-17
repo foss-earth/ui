@@ -37,6 +37,7 @@ export function FixtureOverlay<T extends string = never>(props: Props<T>) {
   }), []);
   const visible = useCallback((id: BuiltIn | T, shown: boolean) => { if (id === "bug-report" && shown) props.onBugReportShow?.(); }, [props.onBugReportShow]);
   return <WindowOverlay<BuiltIn | T> {...ports} storage={localStorage} restorableTabs={new Set(definitions.filter(tab => tab.id !== "panorama" && tab.id !== "panorama-settings").map(tab => tab.id))}
+    presentation={{ choice: "auto", onChoice() {}, tabsBehindToolbar: false, edges: "inset" }}
     tabDefinitions={definitions} context={{ active: snapshot.title !== null, ready: snapshot.onScreen, baseOnlyTabs: new Set(["location", "map", "sky", "time"]), contextOnlyTabs: new Set(["panorama", "panorama-settings"]), entryTabId: "panorama" }} overlayApiRef={props.overlayApiRef}
     onTabVisibility={visible} onBeforeCloseTab={id => { if (props.onBeforeCloseTab?.(id) === false) return false; if (id === "panorama") props.sphereTabs?.leave(); }}
     renderTabContent={id => sections[id as BuiltIn] ? <SectionsPanel sections={sections[id as BuiltIn]!} storage={null} /> : elements[id as BuiltIn] ? <AdoptedElement element={elements[id as BuiltIn]!} className="foss-earth-element-tab" /> : id === "location" ? <p>Host location content</p> : props.renderAdditionalTab?.(id as T)} />;

@@ -12,11 +12,11 @@ export type DockResizePriority = "log" | "windows";
 export type DockSide = "left" | "right";
 /** Overlay keeps the world full-screen under the windows. Split gives the windows the top band and the world only the remainder. */
 export type WorldPresentation = "overlay" | "split";
-/** Auto follows the screen: split on a phone, overlay when two windows fit. */
+/** Legacy Auto uses overlay; only an explicit Split choice reserves a top band. */
 export type WorldPresentationChoice = "auto" | WorldPresentation;
-/** Top puts the toolbar above the tabs. Bottom puts it on the edge with the world. */
+/** @deprecated The toolbar stays at the screen's bottom. */
 export type ToolbarEdge = "top" | "bottom";
-/** Auto is the top on a phone and the bottom when two windows fit. */
+/** @deprecated Retained for hosts with saved placement choices; placement is ignored. */
 export type ToolbarEdgeChoice = "auto" | ToolbarEdge;
 /**
  * Inset floats overlay windows a few pixels in from the screen's corners. Flush
@@ -41,7 +41,7 @@ export interface DockLayoutInput {
    * wide enough for one, it is the one that stays.
    */
   widened?: DockSide;
-  /** Auto is split on a phone and overlay once two windows fit. */
+  /** Overlay at every width unless Split is explicitly chosen. */
   presentation?: WorldPresentationChoice;
   /**
    * Which sides have a tab open. When split leaves one side empty, that window
@@ -53,7 +53,7 @@ export interface DockLayoutInput {
    * body. Absent lets it float whenever the widest arrangement fits.
    */
   floatingLog?: boolean;
-  /** Flush puts overlay windows on the screen's edges and keeps the log a tab. Absent is inset. */
+  /** Flush puts controls on the screen's edges and keeps the log a tab. Inset is an explicit choice. */
   edges?: WorldEdges;
 }
 
@@ -61,9 +61,9 @@ export interface DockLayout {
   mode: DockLayoutMode;
   /** The floating log is only the widest arrangement: both windows, log centered. */
   logVisible: boolean;
-  /** Split is the phone band: the drawing buffer is only the world under the windows. */
+  /** Split reserves a top band: the drawing buffer is only the world under the windows. */
   presentation: WorldPresentation;
-  /** Flush only in overlay; split's band already meets the edges. */
+  /** The chosen edge style, preserved at every width and in either presentation. */
   edges: WorldEdges;
   side: DockSide;
   /**
@@ -112,14 +112,8 @@ function fitColumns(primary: number, secondary: number, width: number, resized: 
   return { primaryWidth, secondaryWidth, maxWindowWidth };
 }
 
-function chosenPresentation(choice: WorldPresentationChoice | undefined, automatic: WorldPresentation): WorldPresentation {
-  return choice === "overlay" || choice === "split" ? choice : automatic;
-}
-
-/** Bottom unless Auto is asked to follow a phone, or Top is chosen. */
-export function chosenToolbarEdge(choice: ToolbarEdgeChoice | undefined, stacked: boolean): ToolbarEdge {
-  if (choice === "top" || choice === "bottom") return choice;
-  return choice === "auto" && stacked ? "top" : "bottom";
+function chosenPresentation(choice: WorldPresentationChoice | undefined): WorldPresentation {
+  return choice === "split" ? "split" : "overlay";
 }
 
 function hiddenLog(width: number): Pick<DockLayout, "logVisible" | "logLeft" | "logTop" | "logWidth" | "logCenter"> {
@@ -138,10 +132,10 @@ export function resolveDockLayout(input: DockLayoutInput): DockLayout {
   const side = input.widened ?? "right";
   const requestedPrimary = input.primaryWidth ?? DEFAULT_DOCK_WIDTH;
   const requestedSecondary = input.secondaryWidth ?? DEFAULT_DOCK_WIDTH;
-  const flush = input.edges === "flush";
-  const edgesIn = (presentation: WorldPresentation): WorldEdges => (flush && presentation === "overlay" ? "flush" : "inset");
+  const flush = input.edges !== "inset";
+  const edges: WorldEdges = flush ? "flush" : "inset";
   if (width < STACKED_BREAKPOINT) {
-    const presentation = chosenPresentation(input.presentation, "split");
+    const presentation = chosenPresentation(input.presentation);
     // Split draws the world only under the band, so its window spans the width.
     // Overlay floats the window on the world: it starts full width and can be narrowed.
     const widthFixed = presentation === "split";
@@ -151,7 +145,7 @@ export function resolveDockLayout(input: DockLayoutInput): DockLayout {
     return {
       mode: "stacked",
       presentation,
-      edges: edgesIn(presentation),
+      edges,
       side,
       windowWidthFixed: widthFixed,
       primaryWidth: side === "left" ? shown(input.primaryWidth) : hidden(requestedPrimary),
@@ -161,7 +155,7 @@ export function resolveDockLayout(input: DockLayoutInput): DockLayout {
     };
   }
 
-  const widePresentation = chosenPresentation(input.presentation, "overlay");
+  const widePresentation = chosenPresentation(input.presentation);
   const openLeft = input.open?.left !== false;
   const openRight = input.open?.right !== false;
   // One window in split uses the whole width. The empty side stays a launcher, not a blank half.
@@ -170,7 +164,7 @@ export function resolveDockLayout(input: DockLayoutInput): DockLayout {
     return {
       mode: "columns",
       presentation: "split",
-      edges: "inset",
+      edges,
       side: span,
       windowWidthFixed: true,
       primaryWidth: span === "left" ? width : clampWidth(requestedPrimary, Math.max(width, MIN_DOCK_WIDTH)),
@@ -183,7 +177,6 @@ export function resolveDockLayout(input: DockLayoutInput): DockLayout {
   const requestedLog = Math.max(MIN_LOG_WIDTH, input.logWidth ?? 560);
   const logPriority = input.priority === "log" && input.logWidth !== null;
   const floatingLog = input.floatingLog !== false && !flush;
-  const edges = edgesIn(widePresentation);
   const fitted = fitColumns(requestedPrimary, requestedSecondary, width, input.widened, edges === "flush" ? GAP : GAP * 3);
   if (logPriority && floatingLog) {
     const sideCapacity = (width - requestedLog) / 2 - GAP * 2;

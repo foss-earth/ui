@@ -6,7 +6,7 @@ import type { WindowTabDefinition, WindowWorkspaceState, WindowSlotId } from "..
 import type { SettingsStorage } from "../settings/registry.js";
 import { loadSavedWorkspace, saveWorkspace } from "../browser/workspace.js";
 import { browserOverlayGeometry, lowestSplitBand, publishSplitBand } from "../browser/overlay.js";
-import { chosenToolbarEdge, resolveDockLayout, type DockLayoutMode, type DockResizePriority, type DockSide, type ToolbarEdgeChoice, type WorldEdges, type WorldPresentationChoice } from "./dockLayout.js";
+import { resolveDockLayout, type DockLayoutMode, type DockResizePriority, type DockSide, type ToolbarEdgeChoice, type WorldEdges, type WorldPresentationChoice } from "./dockLayout.js";
 import { PresentationMenu } from "../windowing/react/presentationHold.js";
 import { foldWorkspace, restoreWorkspace, forgetCompactWorkspaceTab, openTabInCompactWorkspace, type CompactWorkspaceMemory } from "./compactWorkspace.js";
 import { surfaceParticipates } from "./imageCompact.js";
@@ -42,14 +42,15 @@ export interface WindowOverlayProps<TabId extends string> {
   focus?: { onOpen?(tabId: TabId): void; onClose?(tabId: TabId): void };
   /**
    * Overlay floats the windows on a full-screen world. Split gives them the top
-   * of the screen and draws the world only underneath. Auto follows the width.
+   * of the screen and draws the world only underneath. Overlay is the default
+   * at every width; the legacy Auto choice also uses overlay.
    */
   presentation?: {
     choice: WorldPresentationChoice;
     onChoice(choice: "overlay" | "split"): void;
-    /** Off keeps a solid strip behind the toolbar. On lets the window show through it. */
-    tabsBehindToolbar: boolean;
-    /** Top is above the tabs. Bottom is the window's edge with the world. Auto follows a phone. */
+    /** @deprecated Ignored. The toolbar stays at the screen's bottom, outside the windows. */
+    tabsBehindToolbar?: boolean;
+    /** @deprecated Ignored. The toolbar stays at the screen's bottom at every width. */
     toolbarEdge?: ToolbarEdgeChoice;
     /**
      * Release keeps the drawing buffer until a split drag, or a browser-window
@@ -57,8 +58,8 @@ export interface WindowOverlayProps<TabId extends string> {
      */
     worldResize?: "live" | "release";
     /**
-     * Flush puts overlay windows, their launchers and the toolbar on the
-     * screen's edges, and keeps the log a tab. Omitted is inset.
+     * Flush puts the windows, their launchers and the toolbar on the screen's
+     * edges, and keeps the log a tab. Inset is an explicit choice.
      */
     edges?: WorldEdges;
   };
@@ -250,7 +251,6 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
     });
   };
 
-  const toolbarEdge = chosenToolbarEdge(presentation?.toolbarEdge, layout.mode === "stacked");
   const primarySlot = workspace.state.primary;
   const secondarySlot = workspace.state.secondary;
   useLayoutEffect(() => {
@@ -267,12 +267,12 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
     const bands = (): HTMLElement[] => [...overlay.querySelectorAll<HTMLElement>(".foss-earth-dock-panel, .foss-earth-workspace-slot-launcher, .foss-earth-joined-surface")];
     let panelHeld = false;
     const publish = (): void => {
-      publishSplitBand(root, lowestSplitBand(bands()), toolbarEdge);
+      publishSplitBand(root, lowestSplitBand(bands()));
       if (!deferDraw) {
         root.style.removeProperty("--foss-canvas-top");
         return;
       }
-      // The toolbar follows the window. The drawing buffer waits out the drag.
+      // The world boundary follows the window. The drawing buffer waits out the drag.
       if (panelHeld || root.dataset.worldDrawHeld === "true") return;
       const top = root.style.getPropertyValue("--foss-world-top");
       if (top) root.style.setProperty("--foss-canvas-top", top);
@@ -303,23 +303,17 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
       view?.removeEventListener("foss-earth-panel-resize-end", onResizeEnd);
       view?.removeEventListener("foss-earth-world-draw-commit", onResizeEnd);
     };
-  }, [geometry, availableWidth, layout.presentation, toolbarEdge, presentation?.worldResize, primarySlot.collapsed, primarySlot.activeTab, primarySlot.tabs.length, secondarySlot.collapsed, secondarySlot.activeTab, secondarySlot.tabs.length, joined !== null, joinedHeight !== null]);
+  }, [geometry, availableWidth, layout.presentation, layout.edges, presentation?.worldResize, primarySlot.collapsed, primarySlot.activeTab, primarySlot.tabs.length, secondarySlot.collapsed, secondarySlot.activeTab, secondarySlot.tabs.length, joined !== null, joinedHeight !== null]);
 
   useLayoutEffect(() => { layoutPort.publish(layout); }, [layoutPort, layout.mode, layout.presentation, layout.edges, layout.logVisible, layout.side, layout.primaryWidth, layout.secondaryWidth, layout.logLeft, layout.logTop, layout.logCenter, layout.logWidth, layout.maxWindowWidth]);
   useLayoutEffect(() => {
     const root = document.documentElement;
-    if (presentation?.tabsBehindToolbar) root.dataset.tabsBehindToolbar = "true";
-    else delete root.dataset.tabsBehindToolbar;
-    if (layout.presentation === "split") root.dataset.toolbarEdge = toolbarEdge;
-    else delete root.dataset.toolbarEdge;
     if (presentation?.worldResize === "live" || presentation?.worldResize === "release") root.dataset.worldResize = presentation.worldResize;
     else delete root.dataset.worldResize;
     return () => {
-      delete root.dataset.tabsBehindToolbar;
-      delete root.dataset.toolbarEdge;
       delete root.dataset.worldResize;
     };
-  }, [presentation?.tabsBehindToolbar, presentation?.worldResize, layout.presentation, toolbarEdge]);
+  }, [presentation?.worldResize]);
 
   const definedIds = tabDefinitions.map((tab) => tab.id).join("\0");
   useLayoutEffect(() => {
