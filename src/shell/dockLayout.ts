@@ -41,6 +41,8 @@ export interface DockLayoutInput {
    * wide enough for one, it is the one that stays.
    */
   widened?: DockSide;
+  /** The window most recently used, preferred when both sides must share one compact window. */
+  compactSide?: DockSide;
   /** Overlay at every width unless Split is explicitly chosen. */
   presentation?: WorldPresentationChoice;
   /**
@@ -129,7 +131,11 @@ function hiddenLog(width: number): Pick<DockLayout, "logVisible" | "logLeft" | "
  */
 export function resolveDockLayout(input: DockLayoutInput): DockLayout {
   const width = Math.max(0, input.availableWidth);
-  const side = input.widened ?? "right";
+  const openLeft = input.open?.left !== false;
+  const openRight = input.open?.right !== false;
+  // Fitting may combine two occupied windows, but never moves a lone window
+  // away from the side the person chose.
+  const side = openLeft !== openRight ? (openLeft ? "left" : "right") : input.compactSide ?? input.widened ?? "right";
   const requestedPrimary = input.primaryWidth ?? DEFAULT_DOCK_WIDTH;
   const requestedSecondary = input.secondaryWidth ?? DEFAULT_DOCK_WIDTH;
   const flush = input.edges !== "inset";
@@ -156,8 +162,6 @@ export function resolveDockLayout(input: DockLayoutInput): DockLayout {
   }
 
   const widePresentation = chosenPresentation(input.presentation);
-  const openLeft = input.open?.left !== false;
-  const openRight = input.open?.right !== false;
   // One window in split uses the whole width. The empty side stays a launcher, not a blank half.
   if (widePresentation === "split" && openLeft !== openRight) {
     const span = openLeft ? "left" : "right";

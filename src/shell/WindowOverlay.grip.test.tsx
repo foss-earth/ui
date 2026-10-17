@@ -11,6 +11,10 @@ import { WindowOverlay } from "./WindowOverlay.js";
 type Tab = "a" | "b";
 type Open = "both" | "left" | "right";
 type Choice = "auto" | "overlay" | "split" | undefined;
+type Side = "left" | "right";
+const opposite = (side: Side): Side => side === "left" ? "right" : "left";
+const outward = (side: Side, px: number): number => side === "left" ? px : -px;
+const slotKey = (side: Side) => side === "left" ? "primary" : "secondary";
 
 let stored: Map<string, string>;
 beforeEach(() => {
@@ -29,24 +33,26 @@ beforeEach(() => {
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); document.head.replaceChildren(); document.body.replaceChildren(); });
 
 /** jsdom has no layout: a panel's box is its inline size, against the screen edge on its side. */
-function layOutPanels(screenWidth: number): void {
+function layOutPanels(screenWidth: () => number): void {
   vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
     const panel = this.classList.contains("foss-earth-dock-panel");
-    const width = panel ? (this.style.width.endsWith("px") ? Number.parseFloat(this.style.width) : screenWidth) : 0;
+    const width = panel ? (this.style.width.endsWith("px") ? Number.parseFloat(this.style.width) : screenWidth()) : 0;
     const height = panel ? Number.parseFloat(this.style.height) || 30 : 0;
-    const left = panel && this.dataset.side === "right" ? screenWidth - width : 0;
+    const left = panel && this.dataset.side === "right" ? screenWidth() - width : 0;
     return { left, top: 0, width, height, right: left + width, bottom: height, x: left, y: 0, toJSON() {} } as DOMRect;
   });
 }
 
 /** Mounts on a device whose saved workspace has the tabs `open`, or, with "saved", whatever the last mount saved. */
-async function mount(screenWidth: number, choice: Choice, open: Open | "saved") {
+async function mount(screenWidth: number, choice: Choice, open: Open | "saved", edges: "inset" | "flush" = "inset") {
   const slot = (tabs: Tab[]) => ({ tabs, activeTab: tabs[0] ?? null, collapsed: false });
   if (open !== "saved") stored.set(SAVED_WORKSPACE_STORAGE_KEY, JSON.stringify({
     primary: slot(open === "both" ? ["a"] : open === "left" ? ["a", "b"] : []),
     secondary: slot(open === "both" ? ["b"] : open === "right" ? ["a", "b"] : []),
   }));
-  layOutPanels(screenWidth);
+  let currentWidth = screenWidth;
+  let observeWidth: ((width: number) => void) | undefined;
+  layOutPanels(() => currentWidth);
   const host = document.createElement("div");
   document.body.append(host);
   const root = createRoot(host);
@@ -55,26 +61,31 @@ async function mount(screenWidth: number, choice: Choice, open: Open | "saved") 
     renderTabContent={tabId => <p>{tabId}</p>}
     context={{ active: false, ready: true, baseOnlyTabs: new Set(), contextOnlyTabs: new Set(), entryTabId: "a" }}
     restorableTabs={new Set<Tab>(["a", "b"])} storage={localStorage}
-    geometry={{ observeWidth(_element, listener) { listener(screenWidth); return () => {}; }, observeHeight(_element, listener) { listener(240); return () => {}; }, menuBottom: () => null }}
+    geometry={{ observeWidth(_element, listener) { observeWidth = listener; listener(currentWidth); return () => {}; }, observeHeight(_element, listener) { listener(240); return () => {}; }, menuBottom: () => null }}
     logSize={{ getWidth: () => null, subscribe: () => () => {} }}
     layoutPort={browserOverlayLayout(document.documentElement)}
-    presentation={choice === undefined ? undefined : { choice, onChoice: () => {}, tabsBehindToolbar: false, toolbarEdge: "bottom", edges: "inset" }}
+    presentation={choice === undefined ? undefined : { choice, onChoice: () => {}, tabsBehindToolbar: false, toolbarEdge: "bottom", edges }}
   />));
   const panel = (side: "left" | "right") => host.querySelector<HTMLElement>(`.foss-earth-dock-panel[data-side="${side}"]`);
   // A split grip is painted on the body, above the toolbar.
   const grip = (side: "left" | "right") => document.querySelector<HTMLElement>(`.foss-earth-dock-panel-resize-handle[data-side="${side}"]`);
-  return { root, panel, grip };
+  const resizeScreen = (width: number) => act(async () => { currentWidth = width; observeWidth!(width); });
+  const launcher = (side: Side) => host.querySelector<HTMLElement>(`.foss-earth-workspace-slot-launcher-${side}`);
+  return { root, panel, grip, resizeScreen, launcher };
+}
+
+function pointer(grip: HTMLElement, type: string, dx = 0, dy = 0, pointerId = 1): Promise<void> {
+  return act(async () => {
+    grip.dispatchEvent(new PointerEvent(type, { button: 0, clientX: 200 + dx, clientY: 200 + dy, pointerId, bubbles: true }));
+  });
 }
 
 /** A press, a drag and a release on a grip, by its center. */
 async function drag(grip: HTMLElement, dx: number, dy: number): Promise<void> {
   grip.setPointerCapture = () => {}; grip.releasePointerCapture = () => {};
-  const send = (type: string, x: number, y: number) => act(async () => {
-    grip.dispatchEvent(new PointerEvent(type, { button: 0, clientX: x, clientY: y, pointerId: 1, bubbles: true }));
-  });
-  await send("pointerdown", 200, 200);
-  await send("pointermove", 200 + dx, 200 + dy);
-  await send("pointerup", 200 + dx, 200 + dy);
+  await pointer(grip, "pointerdown");
+  await pointer(grip, "pointermove", dx, dy);
+  await pointer(grip, "pointerup", dx, dy);
 }
 
 /** Whether the grip's icon draws a sideways stroke: an arrow promising the width. */
@@ -110,7 +121,7 @@ it("draws sideways arrows on a grip exactly when dragging it changes the window'
   expect([...seen].sort()).toEqual(["both/bottom", "both/corner", "height/bottom"]);
 });
 
-it("lets a Galaxy Note 20 Ultra narrow its overlay window from a grip mid-bottom, and keeps that width", async () => {
+it("lets a Galaxy Note 20 Ultra narrow its overlay window from a grip mid-bottom, and locks back to full width", async () => {
   // 412 CSS px wide in portrait: one window, floating on the world.
   const { root, panel, grip } = await mount(412, "overlay", "right");
   try {
@@ -126,10 +137,187 @@ it("lets a Galaxy Note 20 Ultra narrow its overlay window from a grip mid-bottom
     await drag(handle, 120, 0);
     expect(panel("right")!.style.width).toBe("280px");
     expect(JSON.parse(stored.get(SAVED_WORKSPACE_STORAGE_KEY)!).secondary.width).toBe(280);
-    // Back past the full width, it stops at the screen's edges.
-    await drag(grip("right")!, -400, 0);
+    // Slightly past full width, it stays snapped there and follows the next screen width.
+    await drag(grip("right")!, -130, 0);
     expect(panel("right")!.style.width).toBe("400px");
+    expect(JSON.parse(stored.get(SAVED_WORKSPACE_STORAGE_KEY)!).secondary.width).toBeNull();
   } finally { await act(async () => root.unmount()); }
+});
+
+it.each(["left", "right"] as const)("keeps a lone %s window on its side through phone and desktop widths", async side => {
+  for (const choice of ["overlay", "split"] as const) {
+    const mounted = await mount(900, choice, side, "flush");
+    try {
+      expect(mounted.launcher(opposite(side))).not.toBeNull();
+      for (const width of [412, 280, 515, 900, 390]) {
+        await mounted.resizeScreen(width);
+        expect(mounted.panel(side), `${choice} at ${width}`).not.toBeNull();
+        expect(mounted.panel(opposite(side)), `${choice} at ${width}`).toBeNull();
+        expect(mounted.launcher(opposite(side)) === null, `${choice} at ${width}`).toBe(width < 516);
+        if (width < 516) {
+          expect(mounted.grip(side)!.dataset).toMatchObject({ at: "bottom", axes: choice === "split" ? "height" : "both" });
+        }
+      }
+      const saved = JSON.parse(stored.get(SAVED_WORKSPACE_STORAGE_KEY)!);
+      expect(saved[slotKey(side)].tabs).toEqual(["a", "b"]);
+      expect(saved[slotKey(opposite(side))].tabs).toEqual([]);
+    } finally { await act(async () => mounted.root.unmount()); }
+  }
+});
+
+it.each(["left", "right"] as const)("folds two windows toward the focused %s side without changing their saved homes", async side => {
+  const mounted = await mount(900, "overlay", "both", "flush");
+  try {
+    await pointer(mounted.panel(side)!, "pointerdown");
+    await mounted.resizeScreen(390);
+    expect(mounted.panel(side)).not.toBeNull();
+    expect(mounted.panel(opposite(side))).toBeNull();
+    expect(mounted.launcher(opposite(side))).toBeNull();
+    expect(mounted.panel(side)!.querySelectorAll(".foss-earth-tab-button")).toHaveLength(2);
+    const saved = JSON.parse(stored.get(SAVED_WORKSPACE_STORAGE_KEY)!);
+    expect(saved.primary.tabs).toEqual(["a"]);
+    expect(saved.secondary.tabs).toEqual(["b"]);
+    await mounted.resizeScreen(900);
+    expect(mounted.panel("left")!.querySelector(".foss-earth-tab-button")!.textContent).toBe("A");
+    expect(mounted.panel("right")!.querySelector(".foss-earth-tab-button")!.textContent).toBe("B");
+  } finally { await act(async () => mounted.root.unmount()); }
+});
+
+it.each(["left", "right"] as const)("snaps the %s overlay window to full width and follows the compact screen after a reload", async side => {
+  for (const edges of ["flush", "inset"] as const) {
+    const mounted = await mount(412, "overlay", side, edges);
+    const full = 412 - (edges === "inset" ? 12 : 0);
+    try {
+      await drag(mounted.grip(side)!, -outward(side, 120), 0);
+      expect(mounted.panel(side)!.style.width).toBe(`${full - 120}px`);
+      await drag(mounted.grip(side)!, outward(side, 110), 0);
+      expect(mounted.panel(side)!.style.width).toBe(`${full}px`);
+      expect(JSON.parse(stored.get(SAVED_WORKSPACE_STORAGE_KEY)!)[slotKey(side)].width).toBeNull();
+      await mounted.resizeScreen(430);
+      expect(mounted.panel(side)!.style.width).toBe(`${430 - (edges === "inset" ? 12 : 0)}px`);
+    } finally { await act(async () => mounted.root.unmount()); }
+    const reloaded = await mount(390, "overlay", "saved", edges);
+    try {
+      expect(reloaded.panel(side)!.style.width).toBe(`${390 - (edges === "inset" ? 12 : 0)}px`);
+      expect(reloaded.panel(opposite(side))).toBeNull();
+    } finally { await act(async () => reloaded.root.unmount()); }
+  }
+});
+
+it.each(["left", "right"] as const)("continues one compact %s grip gesture through full width onto the other side, and remembers the move", async side => {
+  const mounted = await mount(412, "overlay", side);
+  const other = opposite(side);
+  try {
+    await drag(mounted.grip(side)!, -outward(side, 120), 0);
+    const handle = mounted.grip(side)!;
+    const height = Number.parseFloat(mounted.panel(side)!.style.height);
+    await pointer(handle, "pointerdown");
+    await pointer(handle, "pointermove", outward(side, 100), 0);
+    expect(mounted.panel(side)!.style.width).toBe("400px");
+    await pointer(handle, "pointermove", outward(side, 130), 0);
+    expect(mounted.panel(side)!.style.width).toBe("400px");
+    expect(mounted.panel(other)).toBeNull();
+    await pointer(handle, "pointermove", outward(side, 180), 30);
+    expect(mounted.panel(side)).toBeNull();
+    expect(mounted.panel(other)!.style.width).toBe("340px");
+    expect(mounted.panel(other)!.style.height).toBe(`${height + 30}px`);
+    expect(mounted.grip(other)).toBe(handle);
+    await pointer(handle, "pointermove", outward(side, 200), 40);
+    expect(mounted.panel(other)!.style.width).toBe("320px");
+    await pointer(handle, "pointerup", outward(side, 200), 40);
+    const saved = JSON.parse(stored.get(SAVED_WORKSPACE_STORAGE_KEY)!);
+    expect(saved[slotKey(side)].tabs).toEqual([]);
+    expect(saved[slotKey(other)]).toMatchObject({ tabs: ["a", "b"], width: 320, height: height + 40 });
+  } finally { await act(async () => mounted.root.unmount()); }
+  const reloaded = await mount(900, "overlay", "saved");
+  try {
+    expect(reloaded.panel(side)).toBeNull();
+    expect(reloaded.panel(other)!.style.width).toBe("320px");
+    expect(reloaded.panel(other)!.querySelectorAll(".foss-earth-tab-button")).toHaveLength(2);
+  } finally { await act(async () => reloaded.root.unmount()); }
+});
+
+it.each(["left", "right"] as const)("reverses a compact %s side switch in the same pointer gesture and cancels without minimizing", async side => {
+  for (const cancellation of ["pointercancel", "lostpointercapture"]) {
+    const mounted = await mount(412, "overlay", side);
+    const resizeStart = vi.fn(), resizeEnd = vi.fn();
+    window.addEventListener("foss-earth-panel-resize-start", resizeStart);
+    window.addEventListener("foss-earth-panel-resize-end", resizeEnd);
+    try {
+      await drag(mounted.grip(side)!, -outward(side, 120), 0);
+      resizeStart.mockClear(); resizeEnd.mockClear();
+      const handle = mounted.grip(side)!;
+      await pointer(handle, "pointerdown");
+      await pointer(handle, "pointermove", outward(side, 180), 0);
+      expect(mounted.panel(opposite(side))!.style.width).toBe("340px");
+      await pointer(handle, "pointermove", outward(side, 70), 0);
+      expect(mounted.panel(side)!.style.width).toBe("350px");
+      expect(mounted.grip(side)).toBe(handle);
+      await pointer(handle, cancellation, outward(side, 70), 0);
+      await pointer(handle, "pointerup", outward(side, 70), 0);
+      expect(mounted.panel(side)!.dataset.collapsed).toBe("false");
+      expect(mounted.panel(side)!.style.width).toBe("350px");
+      expect(resizeStart).toHaveBeenCalledTimes(1);
+      expect(resizeEnd).toHaveBeenCalledTimes(1);
+    } finally {
+      await act(async () => mounted.root.unmount());
+      window.removeEventListener("foss-earth-panel-resize-start", resizeStart);
+      window.removeEventListener("foss-earth-panel-resize-end", resizeEnd);
+    }
+  }
+});
+
+it.each(["left", "right"] as const)("reveals the opposite drop target only while dragging from the compact %s window, then remembers the tab's new side", async side => {
+  const mounted = await mount(390, "overlay", side, "flush");
+  const other = opposite(side);
+  const data = new Map<string, string>();
+  const dataTransfer = {
+    effectAllowed: "",
+    getData: (type: string) => data.get(type) ?? "",
+    setData: (type: string, value: string) => { data.set(type, value); },
+  };
+  const send = (target: HTMLElement, type: string) => act(async () => {
+    const event = new Event(type, { bubbles: true, cancelable: true });
+    Object.defineProperty(event, "dataTransfer", { value: dataTransfer });
+    target.dispatchEvent(event);
+  });
+  try {
+    expect(mounted.launcher(other)).toBeNull();
+    const tab = mounted.panel(side)!.querySelector<HTMLElement>('.foss-earth-tab-shell')!;
+    await send(tab, "dragstart");
+    expect(mounted.launcher(other)!.classList.contains("foss-earth-panel-launcher-drop-active")).toBe(true);
+    await send(tab, "dragend");
+    expect(mounted.launcher(other)).toBeNull();
+    // Start again and drop A, leaving B's canonical home on the original side.
+    await send(tab, "dragstart");
+    await send(mounted.launcher(other)!, "drop");
+    expect(mounted.panel(other)).not.toBeNull();
+    expect(mounted.launcher(side)).toBeNull();
+    expect(JSON.parse(stored.get(SAVED_WORKSPACE_STORAGE_KEY)!)[slotKey(other)].tabs).toEqual(["a"]);
+    expect(JSON.parse(stored.get(SAVED_WORKSPACE_STORAGE_KEY)!)[slotKey(side)].tabs).toEqual(["b"]);
+    await mounted.resizeScreen(900);
+    expect(mounted.panel(other)!.querySelector(".foss-earth-tab-button")!.textContent).toBe("A");
+    expect(mounted.panel(side)!.querySelector(".foss-earth-tab-button")!.textContent).toBe("B");
+  } finally { await act(async () => mounted.root.unmount()); }
+});
+
+it.each(["left", "right"] as const)("treats a compact %s grip side switch as an explicit move of all folded tabs", async side => {
+  const mounted = await mount(900, "overlay", "both");
+  const other = opposite(side);
+  try {
+    await pointer(mounted.panel(side)!, "pointerdown");
+    await mounted.resizeScreen(412);
+    await drag(mounted.grip(side)!, -outward(side, 120), 0);
+    await drag(mounted.grip(side)!, outward(side, 180), 0);
+    expect(mounted.panel(side)).toBeNull();
+    expect(mounted.panel(other)!.querySelectorAll(".foss-earth-tab-button")).toHaveLength(2);
+    const saved = JSON.parse(stored.get(SAVED_WORKSPACE_STORAGE_KEY)!);
+    expect(saved[slotKey(side)].tabs).toEqual([]);
+    expect(saved[slotKey(other)].tabs.slice().sort()).toEqual(["a", "b"]);
+    await mounted.resizeScreen(900);
+    expect(mounted.panel(side)).toBeNull();
+    expect(mounted.panel(other)!.querySelectorAll(".foss-earth-tab-button")).toHaveLength(2);
+  } finally { await act(async () => mounted.root.unmount()); }
 });
 
 it("keeps the corner grip wherever two windows fit", async () => {

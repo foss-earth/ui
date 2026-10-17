@@ -78,6 +78,8 @@ export interface WorkspaceDockSlotProps<TabId extends string> {
   onAddMenuOpenChange: (open: boolean) => void;
   visible?: boolean;
   showLauncherWhenEmpty?: boolean;
+  /** Reveals an empty side as a drop target when a tab drag began before it mounted. */
+  emptyDropActive?: boolean;
   compactWhenCollapsed?: boolean;
   restoreOnTabSelect?: boolean;
   restoreOnTabOpen?: boolean;
@@ -131,6 +133,7 @@ export function WorkspaceDockSlot<TabId extends string>(props: WorkspaceDockSlot
     onAddMenuOpenChange,
     visible = true,
     showLauncherWhenEmpty = true,
+    emptyDropActive = false,
     compactWhenCollapsed = true,
     restoreOnTabSelect = false,
     restoreOnTabOpen = true,
@@ -219,6 +222,7 @@ export function WorkspaceDockSlot<TabId extends string>(props: WorkspaceDockSlot
 
     const launcher = (
       <PanelLauncher<TabId>
+        dropActive={emptyDropActive}
         open={addMenuOpen}
         side={side}
         availableTabs={availableTabs}

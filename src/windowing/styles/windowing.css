@@ -555,6 +555,9 @@ html[data-world-presentation="split"] .foss-earth-joined-surface {
   flex-direction: column;
   align-items: stretch;
 }
+.foss-earth-window-overlay[data-image-compact="true"] > [data-side="left"] { order: 0; }
+.foss-earth-window-overlay[data-image-compact="true"] > [data-side="right"] { order: 1; }
+.foss-earth-window-overlay[data-image-compact="true"] > .foss-earth-joined-surface { order: 2; }
 .foss-earth-compact-row {
   display: flex;
   align-items: flex-end;

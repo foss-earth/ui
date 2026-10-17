@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type DragEventHandler, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { panelHeightLimit } from "./panelHeight.js";
+import { resizePanelAcrossSides } from "./panelWidth.js";
 import { usePresentationHold } from "./presentationHold.js";
 
 function cx(...parts: Array<string | null | undefined | false>): string {
@@ -12,6 +13,9 @@ interface ResizeDragState {
   startY: number;
   startW: number;
   startH: number;
+  startSide: "left" | "right";
+  startMaxWidth: number;
+  view: Window | null;
   pointerId: number;
   moved: boolean;
   /** The pointer has moved far enough that this drag is resizing, not a click. */
@@ -70,6 +74,12 @@ export interface DockPanelProps {
   width: number;
   maxWidth: number;
   onWidthChange: (width: number) => void;
+  /**
+   * A compact overlay window may resize through full width onto the opposite
+   * side. Receives side and width together, instead of `onWidthChange`. Keep
+   * this panel mounted when its side changes so the gesture can continue.
+   */
+  onResizeSideChange?: (side: "left" | "right", width: number) => void;
   collapsed: boolean;
   onCollapsedChange: (collapsed: boolean) => void;
   addMenuOpen?: boolean;
@@ -132,6 +142,7 @@ export function DockPanel(props: DockPanelProps) {
     width,
     maxWidth,
     onWidthChange,
+    onResizeSideChange,
     collapsed,
     onCollapsedChange,
     addMenuOpen = false,
@@ -179,11 +190,13 @@ export function DockPanel(props: DockPanelProps) {
     const cap = maxHeightRatio && viewport > 0 ? viewport * maxHeightRatio : undefined;
     return panelHeightLimit(viewport, topPx, maxHeightPaddingPx, minHeight, cap);
   };
+  const resizeEndRef = useRef(onResizeEnd);
+  resizeEndRef.current = onResizeEnd;
   const finishResize = (drag: ResizeDragState | null) => {
     if (!drag?.resizing) return;
     drag.resizing = false;
-    containerRef.current?.ownerDocument.defaultView?.dispatchEvent(new Event("foss-earth-panel-resize-end"));
-    onResizeEnd?.();
+    drag.view?.dispatchEvent(new Event("foss-earth-panel-resize-end"));
+    resizeEndRef.current?.();
   };
   const headerRef = useRef<HTMLDivElement | null>(null);
   const bodyRef = useRef<HTMLDivElement | null>(null);
@@ -192,6 +205,13 @@ export function DockPanel(props: DockPanelProps) {
   const [panelHeight, setPanelHeight] = useState(initialHeight);
   const [fitState, setFitState] = useState<ContentFitState | null>(null);
   const [dragActive, setDragActive] = useState(false);
+
+  useEffect(() => () => {
+    const drag = dragRef.current;
+    dragRef.current = null;
+    hold.cancel();
+    finishResize(drag);
+  }, [hold.cancel]);
 
   const fitKey = contentFit?.key;
   const measureFit = contentFit?.measure;
@@ -265,7 +285,7 @@ export function DockPanel(props: DockPanelProps) {
   }, [side]);
 
   const onHandlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0) return;
+    if (event.button !== 0 || dragRef.current) return;
     event.preventDefault();
     event.stopPropagation();
 
@@ -278,6 +298,9 @@ export function DockPanel(props: DockPanelProps) {
       startY: event.clientY,
       startW: rect.width,
       startH: rect.height,
+      startSide: side,
+      startMaxWidth: Math.max(minWidth, maxWidth),
+      view: panelElement.ownerDocument.defaultView,
       pointerId: event.pointerId,
       moved: false,
       resizing: false,
@@ -298,15 +321,19 @@ export function DockPanel(props: DockPanelProps) {
     ) {
       if (!drag.resizing) {
         drag.resizing = true;
-        containerRef.current?.ownerDocument.defaultView?.dispatchEvent(new Event("foss-earth-panel-resize-start"));
+        drag.view?.dispatchEvent(new Event("foss-earth-panel-resize-start"));
       }
       drag.moved = true;
       hold.cancel();
     }
 
+    let anchoredResize: { side: "left" | "right"; width: number } | null = null;
     if (resizeAxes === "both") {
       const deltaX = event.clientX - drag.startX;
-      const rawW = drag.startW + (isRightPanel ? -deltaX : deltaX);
+      const resized = onResizeSideChange
+        ? resizePanelAcrossSides(drag.startSide, drag.startW, drag.startMaxWidth, deltaX)
+        : { side, width: drag.startW + (isRightPanel ? -deltaX : deltaX) };
+      const rawW = resized.width;
       if (rawW < minWidth) {
         finishResize(drag);
         onCollapsedChange(true);
@@ -314,7 +341,8 @@ export function DockPanel(props: DockPanelProps) {
         event.currentTarget.releasePointerCapture?.(event.pointerId);
         return;
       }
-      onWidthChange(Math.min(Math.max(minWidth, maxWidth), rawW));
+      if (onResizeSideChange) anchoredResize = resized;
+      else onWidthChange(Math.min(Math.max(minWidth, maxWidth), rawW));
     }
 
     const maxH = heightLimit();
@@ -330,6 +358,9 @@ export function DockPanel(props: DockPanelProps) {
       setPanelHeight(resizedHeight);
       if (drag.moved) onHeightChange?.(resizedHeight);
     }
+    // A side change can move the whole workspace slot. Save its height first,
+    // while this event's callbacks still refer to the side where it started.
+    if (anchoredResize) onResizeSideChange?.(anchoredResize.side, anchoredResize.width);
   };
 
   const onHandlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -337,6 +368,7 @@ export function DockPanel(props: DockPanelProps) {
     if (!drag || drag.pointerId !== event.pointerId) return;
 
     const wasHold = hold.take();
+    hold.cancel();
     if (!drag.moved && !wasHold) onCollapsedChange(true);
     finishResize(drag);
 
@@ -348,6 +380,7 @@ export function DockPanel(props: DockPanelProps) {
   const onHandlePointerCancel = (event: React.PointerEvent<HTMLDivElement>) => {
     const drag = dragRef.current;
     if (drag?.pointerId !== event.pointerId) return;
+    hold.cancel();
     finishResize(drag);
     dragRef.current = null;
   };
@@ -462,6 +495,7 @@ export function DockPanel(props: DockPanelProps) {
             onPointerMove={onHandlePointerMove}
             onPointerUp={onHandlePointerUp}
             onPointerCancel={onHandlePointerCancel}
+            onLostPointerCapture={onHandlePointerCancel}
             onContextMenu={onHoldPresentation ? (event) => event.preventDefault() : undefined}
             data-axes={resizeAxes}
             data-at={resizeGrip.at}

@@ -156,6 +156,32 @@ describe("shared window and log layout", () => {
     });
   });
 
+  it.each(["left", "right"] as const)("keeps the only occupied %s window there as the browser narrows", side => {
+    const other = side === "left" ? "right" : "left";
+    const open = { left: side === "left", right: side === "right" };
+    for (const availableWidth of [280, 390, 412, 515]) {
+      for (const presentation of [undefined, "auto", "overlay", "split"] as const) {
+        for (const edges of ["flush", "inset"] as const) {
+          // Occupancy wins over an old resize of the side which is now empty.
+          const layout = resolveDockLayout({ ...insetPreferences, availableWidth, presentation, edges, open, widened: other, compactSide: other });
+          expect(layout, JSON.stringify({ side, availableWidth, presentation, edges })).toMatchObject({
+            mode: "stacked", side, edges, presentation: presentation === "split" ? "split" : "overlay",
+            windowWidthFixed: presentation === "split",
+          });
+        }
+      }
+    }
+  });
+
+  it("prefers the focused compact side when both windows are occupied", () => {
+    for (const side of ["left", "right"] as const) {
+      expect(resolveDockLayout({
+        ...insetPreferences, availableWidth: 390, compactSide: side,
+        widened: side === "left" ? "right" : "left", open: { left: true, right: true },
+      }).side).toBe(side);
+    }
+  });
+
   it("gives the one open split window the full width on a screen that could hold two", () => {
     expect(resolveDockLayout({ ...insetPreferences, availableWidth: 1200, presentation: "split", open: { left: false, right: true } })).toMatchObject({
       mode: "columns", presentation: "split", side: "right", windowWidthFixed: true, secondaryWidth: 1200, logVisible: false,

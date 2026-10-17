@@ -230,9 +230,9 @@ it("owns responsive launchers, cross-side tab moves, minimize/restore, and injec
     await open("left", "Location");
     width = 390;
     await act(async () => window.dispatchEvent(new Event("resize")));
-    expect(host.querySelector('[aria-label="Open left panel"]')).toBeNull();
-    expect(host.querySelector('[data-side="left"]')).toBeNull();
-    expect(right.querySelectorAll(".foss-earth-tab-button")).toHaveLength(2);
+    expect(host.querySelector('[aria-label="Open right panel"]')).toBeNull();
+    expect(host.querySelector('[data-side="right"]')).toBeNull();
+    expect(host.querySelector('[data-side="left"]')!.querySelectorAll(".foss-earth-tab-button")).toHaveLength(2);
     // Location/search behavior stays in engine; this fixture renders host content only.
     width = 1200;
     await act(async () => window.dispatchEvent(new Event("resize")));
@@ -278,7 +278,7 @@ it("folds tabs for a growing log and restores their homes without resurrecting c
   } finally { await act(async () => root.unmount()); }
 });
 
-it("opens or selects a tab on the left when both slots fit, and on the right when they do not", async () => {
+it("opens or selects a tab on the left and keeps it there when the browser narrows", async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   let width = 1200;
   vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(() => width);
@@ -308,14 +308,13 @@ it("opens or selects a tab on the left when both slots fit, and on the right whe
     expect(left.querySelector(".foss-earth-tab-shell-selected .foss-earth-tab-button")?.textContent).toBe("Debug");
     width = 390;
     await act(async () => window.dispatchEvent(new Event("resize")));
-    expect(host.querySelector('[data-side="left"]')).toBeNull();
+    expect(host.querySelector('[data-side="right"]')).toBeNull();
     expect(document.documentElement.dataset.dockLayout).toBe("stacked");
-    const right = host.querySelector<HTMLElement>('[data-side="right"]')!;
-    expect(right.querySelector(".foss-earth-tab-button")?.textContent).toBe("Debug");
-    await act(async () => right.querySelector<HTMLButtonElement>('[aria-label="Close Debug tab"]')!.click());
+    expect(host.querySelector('[data-side="left"] .foss-earth-tab-button')?.textContent).toBe("Debug");
+    await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Close Debug tab"]')!.click());
     await act(async () => overlayApiRef.current!.openOrSelectTab("debug"));
-    expect(host.querySelector('[data-side="left"]')).toBeNull();
-    expect(host.querySelector('[data-side="right"] .foss-earth-tab-button')?.textContent).toBe("Debug");
+    expect(host.querySelector('[data-side="right"]')).toBeNull();
+    expect(host.querySelector('[data-side="left"] .foss-earth-tab-button')?.textContent).toBe("Debug");
   } finally { await act(async () => root.unmount()); }
 });
 
@@ -742,14 +741,14 @@ it("saves the layout a wide window on the globe would show, even while folded or
   try {
     await act(async () => first.api.current!.openOrSelectTab("location"));
     await act(async () => first.api.current!.openOrSelectTab("map"));
-    // A phone folds both tabs onto the right; what is saved keeps them on the left.
+    // A phone keeps a lone left window and saves its tabs on that same side.
     vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(390);
     await act(async () => window.dispatchEvent(new Event("resize")));
-    expect(first.host.querySelector('[data-side="left"]')).toBeNull();
+    expect(first.host.querySelector('[data-side="right"]')).toBeNull();
     expect(saved().primary).toMatchObject({ tabs: ["location", "map"], activeTab: "map" });
     // Inside a sphere the map's tabs are hidden; what is saved still has them.
     await show({ title: "Northrop Mall", onScreen: true });
-    expect(first.host.querySelector('[data-side="right"] .foss-earth-tab-button')?.textContent).toBe("Northrop Mall");
+    expect(first.host.querySelector('[data-side="left"] .foss-earth-tab-button')?.textContent).toBe("Northrop Mall");
     expect(saved().primary).toMatchObject({ tabs: ["location", "map"], activeTab: "map" });
     expect(saved().secondary.tabs).toEqual([]);
   } finally { await act(async () => first.root.unmount()); }

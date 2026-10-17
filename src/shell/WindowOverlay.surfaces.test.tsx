@@ -227,7 +227,8 @@ it("stacks both labelled strips under the breakpoint and folds again only when n
     await act(async () => panel(host, "right").querySelector<HTMLButtonElement>('[aria-label="Close Photo B tab"]')!.click());
     await click(host, "left", "Settings");
     expect(host.querySelector(".foss-earth-window-overlay")?.hasAttribute("data-image-compact")).toBe(false);
-    expect(host.querySelector('[data-side="left"]')).toBeNull();
+    expect(host.querySelector('[data-side="right"]')).toBeNull();
+    expect(labels(host, "left")).toEqual(["Settings", "Photo A"]);
     const folded = api.current!.workspace.getSnapshot();
     expect(folded.primary.tabs).toEqual(["settings", "image-a"]);
     expect(folded.primary.activeTab).toBe("settings");

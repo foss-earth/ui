@@ -30,6 +30,8 @@ export interface PanelLauncherProps<TabId extends string> {
   dropWidth?: number;
   dropMaxWidth?: number;
   dropHeight?: number;
+  /** An already-running drag from another window, supplied when this launcher mounts late. */
+  dropActive?: boolean;
   getLabel: (tabId: TabId) => string;
   classNames?: PanelLauncherClassNames;
   strings?: PanelLauncherStrings;
@@ -51,6 +53,7 @@ export function PanelLauncher<TabId extends string>(props: PanelLauncherProps<Ta
     dropWidth,
     dropMaxWidth,
     dropHeight,
+    dropActive = false,
     getLabel,
     classNames,
     strings,
@@ -116,7 +119,8 @@ export function PanelLauncher<TabId extends string>(props: PanelLauncherProps<Ta
     ? (classNames?.menuAlignRight ?? "foss-earth-window-menu-align-right")
     : (classNames?.menuAlignLeft ?? "foss-earth-window-menu-align-left");
 
-  const dropStyle: CSSProperties | undefined = dragActive
+  const activeDrop = dragActive || dropActive;
+  const dropStyle: CSSProperties | undefined = activeDrop
     ? {
         width: dropWidth,
         maxWidth: dropMaxWidth,
@@ -129,7 +133,7 @@ export function PanelLauncher<TabId extends string>(props: PanelLauncherProps<Ta
       ref={rootRef}
       className={cx(
         "foss-earth-panel-launcher",
-        dragActive && "foss-earth-panel-launcher-drop-active",
+        activeDrop && "foss-earth-panel-launcher-drop-active",
         classNames?.root,
       )}
       style={dropStyle}

@@ -118,6 +118,23 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
   };
   const updateWorkspace = (next: WindowWorkspaceState<TabId>): void => {
     forgetClosedTabs(next);
+    let movedSides = false;
+    for (const slotId of ["primary", "secondary"] as const) {
+      const moved = next[slotId].tabs.filter(tabId => {
+        const previous = slotIdForOpenTab(workspace.state, tabId);
+        return previous !== null && previous !== slotId;
+      });
+      if (moved.length === 0) continue;
+      movedSides = true;
+      for (const tabId of moved) {
+        if (compactMemory.current) compactMemory.current = forgetCompactWorkspaceTab(compactMemory.current, tabId);
+      }
+      setWidened(slotId === "primary" ? "left" : "right");
+    }
+    if (movedSides && compactMemory.current) {
+      next = restoreWorkspace(next, compactMemory.current);
+      compactMemory.current = null;
+    }
     workspace.setState(next);
   };
   /** A workspace change made by an effect, before the snapshot of this render is committed. */
@@ -133,7 +150,10 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
   const [focusedSide, setFocusedSide] = useState<WindowSlotId | null>(null);
   const [snapshots] = useState(() => createWorkspaceSnapshotStore<TabId>(workspaceSnapshotFields(workspace.state)));
   const activateSide = (slotId: WindowSlotId, tabId: TabId | null): void => {
-    setFocusedSide((tabId === null ? null : slotIdForOpenTab(canonicalWorkspace(), tabId)) ?? slotId);
+    // A drop activates its destination before React has committed the move.
+    const owner = tabId === null ? null : slotIdForOpenTab(workspace.state, tabId);
+    setFocusedSide(owner !== null && owner !== slotId ? slotId
+      : (tabId === null ? null : slotIdForOpenTab(canonicalWorkspace(), tabId)) ?? slotId);
   };
   const [logWidth, setLogWidth] = useState<number | null>(() => logSize.getWidth());
   const [resizePriority, setResizePriority] = useState<DockResizePriority>(logWidth === null ? "windows" : "log");
@@ -144,6 +164,9 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
   const [primaryAddOpen, setPrimaryAddOpen] = useState(false);
   const [secondaryAddOpen, setSecondaryAddOpen] = useState(false);
   const [availableWidth, setAvailableWidth] = useState(0);
+  // A window keeps the same component and captured grip when its anchor changes.
+  const [slotOrder, setSlotOrder] = useState<readonly WindowSlotId[]>(["primary", "secondary"]);
+  const [tabDragSide, setTabDragSide] = useState<DockSide | null>(null);
   // Which window fills a phone. A resize on a wider screen records it; both windows stay until then.
   const [widened, setWidened] = useState<DockSide | null>(null);
   const [holdAt, setHoldAt] = useState<{ x: number; y: number } | null>(null);
@@ -153,6 +176,21 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
     return element ? geometry.observeWidth(element, setAvailableWidth) : undefined;
   }, [geometry]);
 
+  useEffect(() => {
+    const view = overlayRef.current?.ownerDocument.defaultView;
+    if (!view) return;
+    const start = (event: Event): void => setTabDragSide((event as CustomEvent<{ side: DockSide }>).detail.side);
+    const end = (): void => setTabDragSide(null);
+    view.addEventListener("foss-earth-tab-drag-start", start);
+    view.addEventListener("foss-earth-tab-drag-end", end);
+    return () => {
+      view.removeEventListener("foss-earth-tab-drag-start", start);
+      view.removeEventListener("foss-earth-tab-drag-end", end);
+    };
+  }, []);
+
+  const logical = canonicalWorkspace();
+  const compactFocus = compactMemory.current?.into ?? focusedSide;
   const layoutInput = {
     availableWidth,
     primaryWidth: workspace.state.primary.width,
@@ -161,16 +199,16 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
     priority: resizePriority,
     previousMode: layoutMode,
     widened: widened ?? undefined,
+    compactSide: compactFocus === null ? undefined : compactFocus === "primary" ? "left" as const : "right" as const,
     presentation: presentation?.choice,
     edges: presentation?.edges,
-    open: { left: workspace.state.primary.tabs.length > 0, right: workspace.state.secondary.tabs.length > 0 },
+    open: { left: logical.primary.tabs.length > 0, right: logical.secondary.tabs.length > 0 },
   };
   // What the sizes alone choose. A join only keeps the log a tab, so ending it returns to this.
   const sized = resolveDockLayout(layoutInput);
   // Both windows, except on a phone, where the one there is room for holds the other's tabs meanwhile.
   const shown: WindowSlotId | "both" = sized.mode === "stacked" ? (sized.side === "left" ? "primary" : "secondary") : "both";
   // A participating image keeps both logical strips. Folding stays for every other narrow layout.
-  const logical = canonicalWorkspace();
   const imageCompact = Boolean(surfaces) && sized.mode === "stacked" && surfaceParticipates(logical, tabDefinitions);
   // Undo a width-made fold before paint, so this render's strips are the logical sides.
   if (imageCompact && compactMemory.current) {
@@ -230,7 +268,7 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
       const baseline = resizePriority === "log"
         ? setWorkspaceSlotSize(current, other, { width: other === "primary" ? layout.primaryWidth : layout.secondaryWidth })
         : current;
-      return setWorkspaceSlotSize(baseline, slotId, { width });
+      return setWorkspaceSlotSize(baseline, slotId, { width: layout.mode === "stacked" && width >= layout.maxWindowWidth ? null : width });
     });
   };
 
@@ -530,6 +568,33 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
   });
 
 
+  const resizeAnchoredWindow = (slotId: WindowSlotId, side: DockSide, width: number): void => {
+    const target: WindowSlotId = side === "left" ? "primary" : "secondary";
+    if (target === slotId) {
+      resizeWindow(slotId, width);
+      return;
+    }
+    // Crossing full width is an explicit move of this window, including any
+    // borrowed compact tabs. Its hidden context tabs follow it as well.
+    compactMemory.current = null;
+    const opposite = (id: WindowSlotId): WindowSlotId => id === "primary" ? "secondary" : "primary";
+    const memory = contextMemory.current;
+    memory.base = memory.base.map(entry => ({ ...entry, slotId: opposite(entry.slotId) }));
+    memory.context = memory.context.map(entry => ({ ...entry, slotId: opposite(entry.slotId) }));
+    if (memory.opened) memory.opened = { ...memory.opened, slotId: opposite(memory.opened.slotId) };
+    logHome.current = opposite(logHome.current);
+    for (const [tabId, id] of pendingOpens.current) pendingOpens.current.set(tabId, opposite(id));
+    setSlotOrder(order => order.map(opposite));
+    setFocusedSide(target);
+    setWidened(side);
+    setResizePriority("windows");
+    setPrimaryAddOpen(false);
+    setSecondaryAddOpen(false);
+    workspace.setState(current => setWorkspaceSlotSize({ primary: current.secondary, secondary: current.primary }, target, {
+      width: width >= layout.maxWindowWidth ? null : width,
+    }));
+  };
+
   // Flush windows meet the top and their side's edge.
   const flushPanel = layout.edges === "flush" ? { edgeOffsetPx: 0, topOffsetPx: "env(safe-area-inset-top, 0px)" } : undefined;
   // The grip changes the width exactly when the layout uses it, so its arrows cannot promise a
@@ -550,6 +615,9 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
     onHeightChange: (height: number) => workspace.setSize(slotId, { height }),
     liftResizeHandle: layout.presentation === "split",
     onResizeEnd: () => settleResize(slotId),
+    ...(layout.mode === "stacked" && layout.presentation === "overlay" && !imageCompact
+      ? { onResizeSideChange: (side: DockSide, width: number) => resizeAnchoredWindow(slotId, side, width) }
+      : {}),
     ...(imageCompact
       ? {
           flow: true,
@@ -572,58 +640,41 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
 
   return (
     <div ref={setOverlay} className="foss-earth-window-overlay" data-image-compact={imageCompact ? "true" : undefined}>
-      <WorkspaceDockSlot<TabId>
-        side="left"
-        slotId="primary"
-        visible={presented !== "secondary"}
-        workspaceState={display}
-        rowLabel={imageCompact ? "Left" : undefined}
-        onWorkspaceStateChange={updateWorkspace}
-        onWidthChange={(width) => resizeWindow("primary", width)}
-        tabDefinitions={tabDefinitions}
-        getTabLabel={(tabId) => tabDefinitions.find((tab) => tab.id === tabId)?.label ?? tabId}
-        renderTabIcon={tabIcon}
-        renderTabContent={renderTabContent}
-        restoreOnTabSelect
-        width={imageCompact ? compactWidth : layout.primaryWidth}
-        maxWidth={layout.maxWindowWidth}
-        dockPanelProps={panelProps("primary")}
-        addMenuOpen={primaryAddOpen}
-        onAddMenuOpenChange={(open) => { setPrimaryAddOpen(open); if (open) setSecondaryAddOpen(false); }}
-        strings={{ openPanelTabAriaLabel: "Open left panel", openPanelTabTitle: "Open left panel" }}
-        onBeforeCloseTab={beforeCloseTab}
-        menuContainer={overlayElement}
-        menuBottom={geometry.menuBottom}
-        onHoldPresentation={presentation ? setHoldAt : undefined}
-        joined={joined !== null}
-        onActivate={(tabId) => activateSide("primary", tabId)}
-      />
-      <WorkspaceDockSlot<TabId>
-        side="right"
-        slotId="secondary"
-        workspaceState={display}
-        rowLabel={imageCompact ? "Right" : undefined}
-        onWorkspaceStateChange={updateWorkspace}
-        onWidthChange={(width) => resizeWindow("secondary", width)}
-        tabDefinitions={tabDefinitions}
-        getTabLabel={(tabId) => tabDefinitions.find((tab) => tab.id === tabId)?.label ?? tabId}
-        renderTabIcon={tabIcon}
-        renderTabContent={renderTabContent}
-        restoreOnTabSelect
-        width={imageCompact ? compactWidth : layout.secondaryWidth}
-        maxWidth={layout.maxWindowWidth}
-        dockPanelProps={panelProps("secondary")}
-        addMenuOpen={secondaryAddOpen}
-        onAddMenuOpenChange={(open) => { setSecondaryAddOpen(open); if (open) setPrimaryAddOpen(false); }}
-        visible={presented !== "primary"}
-        strings={{ openPanelTabAriaLabel: "Open right panel", openPanelTabTitle: "Open right panel" }}
-        onBeforeCloseTab={beforeCloseTab}
-        menuContainer={overlayElement}
-        menuBottom={geometry.menuBottom}
-        onHoldPresentation={presentation ? setHoldAt : undefined}
-        joined={joined !== null}
-        onActivate={(tabId) => activateSide("secondary", tabId)}
-      />
+      {slotOrder.map((slotId, identity) => {
+        const primary = slotId === "primary";
+        const side = primary ? "left" : "right";
+        return <WorkspaceDockSlot<TabId>
+          key={identity}
+          side={side}
+          slotId={slotId}
+          visible={presented === "both" || presented === slotId || tabDragSide !== null}
+          emptyDropActive={tabDragSide !== null && tabDragSide !== side}
+          workspaceState={display}
+          rowLabel={imageCompact ? (primary ? "Left" : "Right") : undefined}
+          onWorkspaceStateChange={updateWorkspace}
+          onWidthChange={(width) => resizeWindow(slotId, width)}
+          tabDefinitions={tabDefinitions}
+          getTabLabel={(tabId) => tabDefinitions.find((tab) => tab.id === tabId)?.label ?? tabId}
+          renderTabIcon={tabIcon}
+          renderTabContent={renderTabContent}
+          restoreOnTabSelect
+          width={imageCompact ? compactWidth : primary ? layout.primaryWidth : layout.secondaryWidth}
+          maxWidth={layout.maxWindowWidth}
+          dockPanelProps={panelProps(slotId)}
+          addMenuOpen={primary ? primaryAddOpen : secondaryAddOpen}
+          onAddMenuOpenChange={(open) => {
+            if (primary) { setPrimaryAddOpen(open); if (open) setSecondaryAddOpen(false); }
+            else { setSecondaryAddOpen(open); if (open) setPrimaryAddOpen(false); }
+          }}
+          strings={{ openPanelTabAriaLabel: `Open ${side} panel`, openPanelTabTitle: `Open ${side} panel` }}
+          onBeforeCloseTab={beforeCloseTab}
+          menuContainer={overlayElement}
+          menuBottom={geometry.menuBottom}
+          onHoldPresentation={presentation ? setHoldAt : undefined}
+          joined={joined !== null}
+          onActivate={(tabId) => activateSide(slotId, tabId)}
+        />;
+      })}
       {joined && surfaces && overlayElement ? (
         <JoinedSurface
           overlay={overlayElement}
