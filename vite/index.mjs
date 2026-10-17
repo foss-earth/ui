@@ -102,7 +102,8 @@ export function browserRecovery(options = {}) {
     transformIndexHtml() {
       const runtime = `"use strict";\n${recoveryRuntime()}\ninstallBrowserRecovery(document, ${JSON.stringify({ appId })});\n`;
       const jsonText = JSON.stringify(runtime).replace(/</g, "\\u003c");
-      const children = `eval(JSON.parse(${JSON.stringify(jsonText)}))\n`;
+      // The first script in the page marks when its HTML started to run (docs/proposals/startup-loading.md).
+      const children = `self.performance?.mark?.("boot:html")\neval(JSON.parse(${JSON.stringify(jsonText)}))\n`;
       return [{ tag: "script", attrs: { "data-foss-earth-browser-recovery": appId }, children, injectTo: "head-prepend" }];
     },
   };

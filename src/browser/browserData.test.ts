@@ -494,12 +494,15 @@ describe("inline recovery script", () => {
     expect(tags[0]?.injectTo).toBe("head-prepend");
     expect(tags[0]?.attrs["data-foss-earth-browser-recovery"]).toBe("umn-vr-tour");
     expect(tags[0]?.children).not.toContain("<");
-    const encoded = tags[0]?.children.match(/^eval\(JSON\.parse\(([\s\S]*)\)\)\n$/)?.[1];
+    expect(tags[0]?.children.startsWith('self.performance?.mark?.("boot:html")\n')).toBe(true);
+    const encoded = tags[0]?.children.match(/\neval\(JSON\.parse\(([\s\S]*)\)\)\n$/)?.[1];
     const source = JSON.parse(JSON.parse(encoded ?? "null") as string) as string;
     expect(source).toContain('installBrowserRecovery(document, {"appId":"umn-vr-tour"})');
     window.history.replaceState(null, "", "/tour/minneapolis/?resetBrowserData=1");
     window.localStorage.setItem("foss-earth.theme", "dark");
+    performance.clearMarks("boot:html");
     new Function("document", tags[0]!.children)(document);
+    expect(performance.getEntriesByName("boot:html", "mark")).toHaveLength(1);
     expect(document.querySelector(".foss-earth-browser-recovery")?.textContent).toContain("Clear this site's browser data");
     expect(window.localStorage.getItem("foss-earth.theme")).toBe("dark");
     expect(document.querySelector("[data-foss-earth-browser-recovery]")).toBeNull();
