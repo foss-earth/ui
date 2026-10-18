@@ -22,6 +22,13 @@ const pinned = (files, base) => files.map(file => {
   if (!file || !/^[a-f0-9]{64}$/.test(file.sha256) || !Number.isSafeInteger(file.sizeBytes) || file.sizeBytes < 0) throw new TypeError("An extra/retained file needs an exact SHA-256 and byte length.");
   return { url: filePath(file.url, base), sha256: file.sha256, sizeBytes: file.sizeBytes };
 });
+/** Whether a build's worker may isolate its pages (ui/src/browser/isolation.ts): "off", the default, "report-only" or "enforce". */
+const ISOLATION_MODES = ["off", "report-only", "enforce"];
+function isolationMode(value) {
+  const mode = value ?? "off";
+  if (!ISOLATION_MODES.includes(mode)) throw new TypeError(`Worker isolation must be one of ${ISOLATION_MODES.join(", ")}.`);
+  return mode;
+}
 export function appFilesWorker(fileNames, options = {}) {
   if (!Array.isArray(fileNames) || fileNames.length > 32768) throw new RangeError("Worker file manifest must be a finite array of at most 32768 files.");
   if (fileNames.some(name => typeof name !== "string" || !name)) throw new TypeError("Every worker bundle filename must be a nonempty string.");
@@ -34,6 +41,9 @@ export function appFilesWorker(fileNames, options = {}) {
   if (typeof cacheNamespace !== "string" || !cacheNamespace.trim()) throw new TypeError("Worker cache namespace is required.");
   const retention = options.retention ?? "retain-older";
   if (!["retain-older", "current-only"].includes(retention)) throw new TypeError("Unknown kept-file retention policy.");
+  const isolation = isolationMode(options.isolation);
+  const keepFiles = options.keepFiles ?? true;
+  if (typeof keepFiles !== "boolean") throw new TypeError("keepFiles must be true or false.");
   const candidates = fileNames.filter(name => typeof name === "string" && !name.endsWith(".html") && !name.endsWith(".map") && filePath(name, base) !== workerPath);
   const kept = [...new Set(candidates.filter(name => HASHED.test(name)))].sort();
   const unhashed = [...new Set(candidates.filter(name => !HASHED.test(name)))].sort();
@@ -55,7 +65,7 @@ export function appFilesWorker(fileNames, options = {}) {
   }
   if (options.identity != null && (typeof options.identity !== "string" || !options.identity.trim())) throw new TypeError("Deployment identity must be a nonempty string.");
   const manifest = { schemaVersion: 1, base, scope, workerFile, cacheNamespace, identity: options.identity ?? null,
-    retention, files: [...seen.values()].sort((a,b) => a.url.localeCompare(b.url)), retainedFiles: [...retained.values()].sort((a,b) => a.url.localeCompare(b.url)) };
+    retention, isolation, keepFiles, files: [...seen.values()].sort((a,b) => a.url.localeCompare(b.url)), retainedFiles: [...retained.values()].sort((a,b) => a.url.localeCompare(b.url)) };
   const template = readFileSync(new URL("./appFilesWorker.js", import.meta.url), "utf8");
   const source = `"use strict";\n${template}\ninstall(self, ${JSON.stringify(manifest)});\n`;
   const manifestBytes = JSON.stringify(manifest) + "\n";
@@ -63,18 +73,27 @@ export function appFilesWorker(fileNames, options = {}) {
     templateSha256: digest(template), manifestSha256: digest(manifestBytes), workerSha256: digest(source), workerSizeBytes: Buffer.byteLength(source) } };
 }
 export function appFiles(options = {}) {
-  let base = options.base ?? "/", stamps = {};
+  let base = options.base ?? "/", stamps = {}, building = false;
+  const isolation = isolationMode(options.isolation);
   return {
     name: "foss-earth-ui-app-files",
     config(config, env) {
       base = options.base ?? config.base ?? "/";
       stamps = env.command === "build" ? (typeof options.stamps === "function" ? options.stamps(config, env) : options.stamps ?? {}) : {};
-      return { define: { __FOSS_EARTH_APP_FILES__: JSON.stringify(env.command === "build" ? options.workerFile ?? APP_FILES_WORKER : "") } };
+      building = env.command === "build";
+      return { define: { __FOSS_EARTH_APP_FILES__: JSON.stringify(building ? options.workerFile ?? APP_FILES_WORKER : ""),
+        __FOSS_EARTH_ISOLATION__: JSON.stringify(building ? isolation : "off") } };
     },
-    transformIndexHtml: () => Object.entries(stamps).filter(([,value]) => value).map(([name, content]) => ({ tag: "meta", attrs: { name, content }, injectTo: "head" })),
+    transformIndexHtml() {
+      const tags = Object.entries(stamps).filter(([,value]) => value).map(([name, content]) => ({ tag: "meta", attrs: { name, content }, injectTo: "head" }));
+      // A build whose worker may isolate starts each page with the script that asks it to (ui/src/browser/isolation.ts).
+      if (building && isolation !== "off") tags.unshift(isolationScript({ worker: posix.join(basePath(base), options.workerFile ?? APP_FILES_WORKER), scope: basePath(options.scope ?? base), mode: isolation,
+        ...(options.keepFiles === false ? { keep: false } : {}) }));
+      return tags;
+    },
     generateBundle(_output, bundle) {
       const result = appFilesWorker(Object.keys(bundle), { ...options, base });
-      if (result.unhashed.length) this.warn(`${result.unhashed.length} built file(s) have no content hash in their names, so the app's worker does not keep them: ${result.unhashed.slice(0,5).join(", ")}`);
+      if (result.manifest.keepFiles && result.unhashed.length) this.warn(`${result.unhashed.length} built file(s) have no content hash in their names, so the app's worker does not keep them: ${result.unhashed.slice(0,5).join(", ")}`);
       this.emitFile({ type: "asset", fileName: options.workerFile ?? APP_FILES_WORKER, source: result.source });
       if (options.manifestFile) this.emitFile({ type: "asset", fileName: options.manifestFile, source: JSON.stringify(result.manifest) + "\n" });
       options.onProduced?.(result);
@@ -98,6 +117,12 @@ function inlineRuntime(file, purpose) {
   return transpiled;
 }
 const recoveryRuntime = () => inlineRuntime("browserData.ts", "Browser recovery runtime");
+/** The first script of a page whose worker may isolate it: before browser recovery's and the app's. */
+function isolationScript(options) {
+  const runtime = `"use strict";\n${inlineRuntime("isolation.ts", "Isolation script")}\ninstallIsolation(document, ${JSON.stringify(options)});\n`;
+  const jsonText = JSON.stringify(runtime).replace(/</g, "\\u003c");
+  return { tag: "script", attrs: { "data-foss-earth-isolation": options.mode }, children: `eval(JSON.parse(${JSON.stringify(jsonText)}))\n`, injectTo: "head-prepend" };
+}
 /** Inlines the review so a failed application bundle can still offer it. */
 export function browserRecovery(options = {}) {
   const appId = options.appId;

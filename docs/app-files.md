@@ -45,12 +45,79 @@ content's hash in its name (`index-BTEeolEJ.js`), so a copy kept under that name
   (`import.meta.env.BASE_URL`), not the page's own folder, so the workers the app starts from
   its `assets/` folder are answered too. On the UMN tour that is the whole site: the club's
   landing page passes through it untouched.
-- **Off removes it.** Turning the setting off tells the worker to stop keeping, unregisters it
-  and deletes what it kept; the page keeps working, and the browser's own cache applies again.
-  Settings → App files shows what is kept and whether this visit was answered from it.
+- **Off stops it keeping.** Turning the setting off tells the worker to stop keeping and
+  deletes what it kept; the page keeps working, and the browser's own cache applies again. The
+  worker itself goes too, unless it still isolates the page
+  ([Cross-origin isolation](#cross-origin-isolation)): then it stays, keeps nothing, and
+  deletes what an earlier worker kept as it takes over. Settings → App files shows what is kept
+  and whether this visit was answered from it.
 
 Nothing is fetched ahead: a file is kept when the app first asks for it, so a visit downloads
 only what it uses, once.
+
+## Cross-origin isolation
+
+A threaded WebAssembly core shares memory with its workers, and a browser allows that only in
+a page it has isolated from other sites: `crossOriginIsolated` is true in a page that came with
+`Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp`
+([webassembly.md](https://github.com/foss-earth/docs/blob/main/docs/proposals/webassembly.md),
+step 3). GitHub Pages
+sends neither. The same worker adds them to what it answers.
+
+- **The build says whether its worker may.** `appFiles({ isolation })` takes `"enforce"`,
+  `"report-only"` or `"off"`. FOSS Earth's `appFiles()` (`foss-earth/vite`) enforces unless
+  `FOSS_EARTH_ISOLATION=report-only` or `off` is set when the app is built
+  (`deployedIsolation()`); this package's own is off unless asked. A build whose worker may
+  isolate starts each of its pages with the script below.
+- **The page says whether it wants it, in the worker's address.** Settings → App files →
+  Cross-origin isolation (`app.isolation`, on by default) and Keep the app's files make the
+  address the page registers, as `foss-earth-sw.js?keep=1&isolate=1`. A worker the browser
+  stopped and started again reads its policy from there; a change registers another address,
+  which replaces the worker.
+- **The worker adds the headers where they count.** To the page, whether navigation preload or
+  the worker fetched it, to the app's own worker scripts, and to the files it keeps, it adds
+  COOP `same-origin`, COEP `require-corp`, and `Cross-Origin-Resource-Policy: cross-origin`.
+  The site's other files pass by: an isolated page loads its own site's files without them.
+  Other sites' files pass by too, and an isolated page loads them only when they come with
+  CORS or a CORP header. The maps, search, airports and the tour's photos all do (checked
+  below). `require-corp` rather than `credentialless`, which Safari may lack.
+- **The page's first script asks for it.** The `appFiles` plugin writes
+  [src/browser/isolation.ts](../src/browser/isolation.ts) into the start of each page, before
+  anything else loads, and the app's modules wait for it. A page that is not isolated and
+  should be registers the worker, waits up to 4 s for it to take over, and reloads once; the
+  worker answers that reload, with the headers. A page that is isolated and should not be,
+  because the setting was turned off, reloads once in the same way to end it, and with keeping
+  off too it removes the worker first.
+- **Once per tab.** The reload is marked in `sessionStorage` (`foss-earth.isolation.v1`). A
+  page that finds the mark and still did not get what it asked for starts without isolation
+  and says why. A browser whose worker answered the reload and which still did not isolate the
+  page is remembered for a week, with its user agent, in `localStorage`
+  (`foss-earth.isolation-refused.v1`), and its pages start without the reload until then, or
+  until the browser is updated.
+- **Where it cannot, the app starts at once.** Inside another site's frame, without service
+  workers (some private windows turn them off; an `http:` address other than localhost has
+  none), on the browser-data review page, or where storage cannot hold the mark, the page does
+  not reload. It starts unisolated, the threaded core runs single-threaded, and the report says
+  why.
+- **A Shift-reload in Chrome** skips the worker, so that page comes unisolated; it reloads
+  once, through the worker, and is isolated again.
+- **Chrome's back/forward cache.** In Chrome 155 a later reload could bring back the page from
+  before the isolating reload, out of the back/forward cache, frozen just after it asked for
+  that reload. A page waiting for its reload listens on a `BroadcastChannel`
+  (`foss-earth.isolation`) and every page posts on it as it loads; Chrome evicts a cached page
+  that is sent a message. A page that is brought back all the same asks once more, and the
+  second time starts unisolated.
+- **What it says.** Copy report has a line such as `Isolation: isolated (crossOriginIsolated
+  true, enforce, setting on, after one reload); worker
+  https://foss-earth.github.io/app/foss-earth-sw.js?keep=1&isolate=1`. The state is
+  `isolated`, `pending`, `unavailable` (with why), `off` or `report-only`.
+- **Report-only** sends `Cross-Origin-Opener-Policy-Report-Only` and
+  `Cross-Origin-Embedder-Policy-Report-Only` instead: nothing is isolated and nothing is
+  blocked, and the browser's console names what isolation would block. The page does not list
+  those reports itself yet.
+
+A development server's pages have no such script: `FOSS_EARTH_ISOLATION=enforce npm run dev`
+sends the headers itself (`crossOriginIsolation()` in `foss-earth/vite`).
 
 ## The page, and a browser's copy of it
 

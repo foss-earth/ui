@@ -3,12 +3,16 @@ export interface KeptFilePin { url: string; sha256: string; sizeBytes: number }
 export interface KeptFilesProducerOptions {
   base?: string; scope?: string; workerFile?: string; cacheNamespace?: string; identity?: string;
   retention?: "retain-older" | "current-only";
+  /** Whether the worker may isolate its pages, when they ask in its address (ui/src/browser/isolation.ts). Default "off". */
+  isolation?: "off" | "report-only" | "enforce";
+  /** False for a worker that only isolates, for an app that keeps none of its files on the device. Default true. */
+  keepFiles?: boolean;
   extraFiles?: readonly KeptFilePin[]; retainedFiles?: readonly KeptFilePin[];
 }
 export interface KeptFilesWorkerResult {
   source: string; kept: string[]; unhashed: string[];
   manifest: { schemaVersion: 1; base: string; scope: string; workerFile: string; cacheNamespace: string; identity: string | null;
-    retention: "retain-older" | "current-only"; files: readonly { url: string; sha256?: string; sizeBytes?: number }[]; retainedFiles: readonly KeptFilePin[] };
+    retention: "retain-older" | "current-only"; isolation: "off" | "report-only" | "enforce"; keepFiles: boolean; files: readonly { url: string; sha256?: string; sizeBytes?: number }[]; retainedFiles: readonly KeptFilePin[] };
   receipt: { state: "PRODUCED_NOT_QUALIFIED"; schemaVersion: 1; templateSha256: string; manifestSha256: string; workerSha256: string; workerSizeBytes: number };
 }
 export const APP_FILES_WORKER: "foss-earth-sw.js";
@@ -22,7 +26,8 @@ export interface KeptFilesPlugin extends KeptFilesProducerOptions {
 export interface AppFilesPlugin {
   name: string;
   config(config: KeptFilesPluginConfig, env: { command: "build" | "serve" }): { define: Record<string, string> };
-  transformIndexHtml(): { tag: string; attrs: { name: string; content: string }; injectTo: "head" }[];
+  transformIndexHtml(): ({ tag: "meta"; attrs: { name: string; content: string }; injectTo: "head" }
+    | { tag: "script"; attrs: { "data-foss-earth-isolation": string }; children: string; injectTo: "head-prepend" })[];
   generateBundle(this: { warn(message: string): void; emitFile(file: { type: "asset"; fileName: string; source: string }): unknown }, output: unknown, bundle: Record<string, unknown>): void;
 }
 export function appFiles(options?: KeptFilesPlugin): AppFilesPlugin;
