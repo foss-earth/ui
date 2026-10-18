@@ -273,3 +273,31 @@ it("draws a scrollbar under the tabs only while they do not fit, as long and as 
     expect(strip.dataset.overflowing).toBeUndefined();
   } finally { await act(async () => root.unmount()); }
 });
+
+/**
+ * A tab's button and its + menu item name the tab, so a host can fetch a
+ * closed tab's code while the pointer is on its way to it.
+ */
+it("names each tab on its button and its + menu item", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const panel = document.createElement("div");
+  document.body.append(panel);
+  const root = createRoot(panel);
+  try {
+    await act(async () => root.render(<TabStrip
+      openTabs={["map"]}
+      activeTab="map"
+      availableTabs={["controls"]}
+      addMenuOpen
+      onSelectTab={() => {}}
+      onCloseTab={() => {}}
+      onOpenTab={() => {}}
+      onAddMenuOpenChange={() => {}}
+      getLabel={(id) => `Tab ${id}`}
+    />));
+    expect(panel.querySelector('.foss-earth-tab-button[data-tab-id="map"]')?.textContent).toBe("Tab map");
+    expect(document.querySelector('[role="menuitem"][data-tab-id="controls"]')?.textContent).toBe("Tab controls");
+    // The close button is not the tab.
+    expect(panel.querySelector(".foss-earth-tab-close")?.hasAttribute("data-tab-id")).toBe(false);
+  } finally { await act(async () => root.unmount()); }
+});

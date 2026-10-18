@@ -257,6 +257,7 @@ export function TabStrip<TabId extends string>(props: TabStripProps<TabId>) {
               >
                 <button
                   type="button"
+                  data-tab-id={tabId}
                   onClick={() => { if (hold.take()) return; onSelectTab(tabId); }}
                   className={cx(
                     "foss-earth-tab-button",
@@ -337,6 +338,7 @@ export function TabStrip<TabId extends string>(props: TabStripProps<TabId>) {
                   key={tabId}
                   type="button"
                   role="menuitem"
+                  data-tab-id={tabId}
                   className={cx("foss-earth-window-menu-item", classNames?.addMenuItem)}
                   onMouseDown={(event) => event.stopPropagation()}
                   onClick={(event) => {

@@ -188,6 +188,7 @@ export function PanelLauncher<TabId extends string>(props: PanelLauncherProps<Ta
                 key={tabId}
                 type="button"
                 role="menuitem"
+                data-tab-id={tabId}
                 className={cx("foss-earth-window-menu-item", classNames?.menuItem)}
                 onMouseDown={(event) => event.stopPropagation()}
                 onClick={(event) => {
