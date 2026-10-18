@@ -101,11 +101,15 @@ export function stringifyValue(value: ParameterValue): string {
   return String(value);
 }
 
+// One formatter for every call: toLocaleString with options builds a new one each time, which the settings
+// panels' hundreds of numbers made a noticeable cost at startup.
+const NUMBER_FORMAT = new Intl.NumberFormat("en-US", { maximumFractionDigits: 3 });
+
 export function formatNumber(value: number): string {
   if (!Number.isFinite(value)) return String(value);
   const magnitude = Math.abs(value);
   const rounded = magnitude >= 100 ? Math.round(value) : magnitude >= 1 ? Math.round(value * 100) / 100 : Math.round(value * 1000) / 1000;
-  return rounded.toLocaleString("en-US", { maximumFractionDigits: 3 });
+  return NUMBER_FORMAT.format(rounded);
 }
 
 const UNIT_TEXT: Record<BuiltInParameterUnit, string> = {
