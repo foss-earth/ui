@@ -168,7 +168,7 @@ async function change(view: Window, container: ServiceWorkerContainer, options: 
  * Runs first in each page: says whether the page is isolated as Settings →
  * App files asks, and when it is not, and a reload can change that, makes the
  * worker answer and reloads this tab once. Everything that cannot isolate —
- * no service workers, a frame, the recovery page, storage that cannot hold
+ * a page that is not secure, no service workers, a frame, the recovery page, storage that cannot hold
  * the once-only flag, a reload that did not isolate — starts the app without
  * isolation and says why.
  */
@@ -206,7 +206,9 @@ export function installIsolation(document: Document, options: IsolationOptions):
   try { recovery = new URL(view.location.href).searchParams.get(RECOVERY_QUERY) === "1"; } catch { /* no address, no recovery page */ }
   if (recovery) return settle("unavailable", "The browser-data review page is not isolated.");
   if (framed(view)) return settle("unavailable", wanted ? "The page is inside a frame, which only an isolated page that allows it can isolate." : "The page is inside a frame.");
-  const container = view.isSecureContext && "serviceWorker" in view.navigator ? view.navigator.serviceWorker : null;
+  // As over http from a network address: the browser isolates no such page, whatever its worker or server sends.
+  if (!view.isSecureContext) return settle("unavailable", "Only a secure page (HTTPS or localhost) can be isolated, and this one is not: open it over HTTPS.");
+  const container = "serviceWorker" in view.navigator ? view.navigator.serviceWorker : null;
   if (!container) return settle("unavailable", "This browser gives this page no service worker, which a private window can turn off; without one nothing can isolate it.");
   const controlled = (): boolean => container.controller?.scriptURL === worker;
   if (attempt === direction) {

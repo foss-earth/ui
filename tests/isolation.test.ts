@@ -12,7 +12,7 @@ class MemoryStorage {
 }
 
 /** A page as the script sees it: its address, storage, service workers and frame. */
-function page(fields: { href?: string; isolated?: boolean; controller?: string | null; secure?: boolean; framed?: boolean;
+function page(fields: { href?: string; isolated?: boolean; controller?: string | null; secure?: boolean; workers?: boolean; framed?: boolean;
   session?: MemoryStorage | "throws"; local?: MemoryStorage; activates?: boolean; refuses?: Error; broadcast?: boolean } = {}) {
   const session = fields.session ?? new MemoryStorage(), local = fields.local ?? new MemoryStorage();
   const registered: { url: string; options: RegistrationOptions | undefined }[] = [];
@@ -43,7 +43,7 @@ function page(fields: { href?: string; isolated?: boolean; controller?: string |
     crossOriginIsolated: fields.isolated ?? false,
     isSecureContext: fields.secure ?? true,
     location: { href: fields.href ?? "https://host.test/app/", reload },
-    navigator: { userAgent: "TestBrowser/1", serviceWorker: container },
+    navigator: { userAgent: "TestBrowser/1", ...(fields.workers === false ? {} : { serviceWorker: container }) },
     localStorage: local,
     get sessionStorage() { if (session === "throws") throw new Error("denied"); return session; },
     setTimeout: (work: () => void, ms: number) => setTimeout(work, ms),
@@ -128,9 +128,11 @@ describe("the isolation script", () => {
     expect(after.container.register).not.toHaveBeenCalled();
   });
 
-  it("starts at once where nothing can isolate: no service worker, a frame, the recovery page, unusable storage", async () => {
+  it("starts at once where nothing can isolate: an insecure page, no service worker, a frame, the recovery page, unusable storage", async () => {
     for (const [fields, words] of [
-      [{ secure: false }, "no service worker"],
+      // Over http from a network address, as a phone opening a development server.
+      [{ secure: false, href: "http://192.168.0.103:5374/app/" }, "secure page (HTTPS or localhost)"],
+      [{ workers: false }, "no service worker"],
       [{ framed: true }, "inside a frame"],
       [{ href: "https://host.test/app/?resetBrowserData=1" }, "review page"],
       [{ session: "throws" as const }, "once-only flag"],
