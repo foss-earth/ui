@@ -235,6 +235,12 @@ export function createParameterSection(settings: SettingsRegistry, options: Para
 }
 
 export interface SectionsElementEntry {
+  /**
+   * "map.detail", or "detail" in a host's own list. The tab's main section
+   * ("renderer.main", "main") holds its everyday controls and is drawn on the
+   * tab itself, with no disclosure or title; a section is only for what is
+   * worth grouping or tucking away, such as debug settings.
+   */
   id: string;
   title: string;
   element: HTMLElement;
@@ -269,6 +275,14 @@ export function createSectionsElement(entries: readonly SectionsElementEntry[], 
     if (disposed) throw new Error("Sections element is disposed.");
     if (ids.has(entry.id)) throw new Error(`Duplicate Settings section "${entry.id}".`);
     ids.add(entry.id);
+    if (entry.id === "main" || entry.id.endsWith(".main")) {
+      const main = document.createElement("div");
+      main.className = "foss-earth-panel-main";
+      main.dataset.section = entry.id;
+      main.append(entry.element);
+      element.append(main);
+      return;
+    }
     const details = document.createElement("details");
     details.className = "foss-earth-panel-section";
     details.dataset.section = entry.id;

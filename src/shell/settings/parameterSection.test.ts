@@ -221,8 +221,11 @@ describe("parameter section", () => {
     const helpButton = line.querySelector(".foss-earth-parameter__help-button")!;
     const track = control("t.budget").querySelector(".foss-earth-track")!;
     expect(line.contains(control("t.budget").querySelector(".foss-earth-parameter__field"))).toBe(true);
+    // One phrase, label first and help last: "Budget [300] MiB ?".
+    expect([...line.children].map(child => child.classList[0])).toEqual([
+      "foss-earth-parameter__label", "foss-earth-parameter__readout", "foss-earth-parameter__reading", "foss-earth-parameter__status", "foss-earth-choice",
+    ]);
     expect(helpButton.previousElementSibling).toBe(line.querySelector(".foss-earth-parameter__status"));
-    expect(line.querySelector(".foss-earth-parameter__status")!.previousElementSibling).toBe(line.querySelector(".foss-earth-parameter__label"));
     expect(track.previousElementSibling).toBe(line);
     const helpId = helpButton.getAttribute("aria-controls")!;
     expect(document.getElementById(helpId)!.querySelector(".foss-earth-parameter__note")!.textContent).toMatch(/outside 32 MiB to 1,024 MiB/);
@@ -258,6 +261,28 @@ describe("parameter section", () => {
     expect(control("t.key").textContent).toContain("Set");
     [...control("t.key").querySelectorAll("button")].find(button => button.textContent === "Clear")!.click();
     expect(settings.get("t.key")).toBe("");
+  });
+
+  it("sizes text and number fields to their text, after their label", () => {
+    const { settings, control } = setup();
+    const key = control("t.key");
+    const field = input(key, "input");
+    expect(key.querySelector(".foss-earth-parameter__header")!.firstElementChild!.classList.contains("foss-earth-parameter__label")).toBe(true);
+    expect(field.size).toBe("Paste key".length + 1);
+    field.value = "a key longer than its placeholder";
+    field.dispatchEvent(new Event("input"));
+    expect(field.size).toBe(field.value.length + 1);
+    // Save, Clear and ? wrap as one, help last.
+    const tail = key.querySelector(".foss-earth-parameter__tail")!;
+    expect([...tail.querySelectorAll("button")].map(button => button.textContent)).toEqual(["Save", "Clear", "?"]);
+    expect(tail.lastElementChild!.matches(".foss-earth-parameter__help-button")).toBe(true);
+    // A slider's field is as wide as the widest end of its range, 32 to 1024, and
+    // never narrows, so a drag that changes its digits does not move the track.
+    const budget = input(control("t.budget"), ".foss-earth-parameter__field");
+    for (const value of [300, 1000, 32]) {
+      settings.set("t.budget", value);
+      expect([budget.value, budget.size, budget.style.getPropertyValue("--field-chars")]).toEqual([String(value), 4, "4"]);
+    }
   });
 
   it("says where a value came from when it is not the user's", () => {
@@ -379,6 +404,8 @@ describe("parameter section", () => {
     expect([...named.querySelectorAll("label")].map(label => label.textContent)).toEqual(["Off", "Value"]);
     expect([...named.querySelectorAll<HTMLInputElement>("input[type=radio]")].every(radio => !radio.hidden && radio.getAttribute("aria-hidden") === null)).toBe(true);
     expect(line.lastElementChild!.classList.contains("foss-earth-parameter__help-button")).toBe(true);
+    // Off shows in its segment only, not again in the readout: "Cap [Off | Value] ?".
+    expect(cap.querySelector(".foss-earth-parameter__readout")!.textContent).toBe("");
     // A number without named values has no empty track.
     expect(control("t.budget").querySelector(".foss-earth-parameter__named")).toBeNull();
   });
@@ -529,19 +556,33 @@ describe("sections", () => {
     expect(detail!.parentElement).toBe(sections.element);
     sections.destroy();
   });
+
+  it("draws a tab's everyday controls on the tab itself, with no disclosure or title", () => {
+    const controls = document.createElement("div");
+    const sections = createSectionsElement([
+      { id: "renderer.main", title: "Renderer", element: controls },
+      { id: "renderer.clipping", title: "Depth range", element: document.createElement("div"), defaultOpen: false },
+    ], { document, storage: memoryStorage() });
+    const main = sections.element.firstElementChild as HTMLElement;
+    expect([main.dataset.section, main.firstElementChild === controls]).toEqual(["renderer.main", true]);
+    expect(main.querySelector("details, summary")).toBeNull();
+    expect(sections.has("renderer.main")).toBe(true);
+    expect([...sections.element.querySelectorAll(".foss-earth-panel-section__title")].map(title => title.textContent)).toEqual(["Depth range"]);
+    sections.destroy();
+  });
 });
 
 describe("host sections in FOSS Earth's tabs", () => {
   it("adds a section for each host section of a tab, titled by the host", () => {
     const settings = createSettingsRegistry({ storage: null });
     settings.register(specs);
-    const sections = createSectionsElement([{ id: "renderer.backend", title: "Renderer", element: document.createElement("div"), defaultOpen: true }], { document });
-    const hosts = appendHostSections(settings, "renderer", sections, ["backend"]);
+    const sections = createSectionsElement([{ id: "renderer.main", title: "Renderer", element: document.createElement("div") }], { document });
+    const hosts = appendHostSections(settings, "renderer", sections, ["main"]);
     settings.setSectionTitle("renderer", "instruments", "Instruments");
     settings.register([{ ...base, id: "osfs.renderer.attitudeIndicator", label: "Attitude indicator", description: "Its renderer.", unit: "none", kind: "choice", choices: [{ id: "auto", label: "Auto" }, { id: "canvas2d", label: "Canvas 2D" }], default: "auto", home: { tab: "renderer", section: "instruments", level: "main" } }]);
     settings.setNote("osfs.renderer.attitudeIndicator", "Drawing with Canvas 2D.");
     const titles = [...sections.element.querySelectorAll(".foss-earth-panel-section__title")].map(title => title.textContent);
-    expect(titles).toEqual(["Renderer", "Instruments"]);
+    expect(titles).toEqual(["Instruments"]);
     expect(sections.element.textContent).toContain("Drawing with Canvas 2D.");
     hosts.destroy();
   });

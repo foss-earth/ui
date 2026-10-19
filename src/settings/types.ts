@@ -127,8 +127,9 @@ export interface ParameterSpec<T extends ParameterValue = ParameterValue> {
   /** A single slider for a choice with exactly two positions. */
   choiceControl?: "two-position";
   /**
-   * choice: draw the segments before the label, when that reads better as a phrase, as
-   * Interface → Toolbar's On / Auto / Off rows do. The label comes first otherwise.
+   * Draw the control before the label, when that reads better as a phrase, as
+   * Interface → Toolbar's [On / Auto / Off] rows do. The label comes first otherwise,
+   * for choices, numbers, tracks and text fields alike: "Resolution [1] ×".
    */
   controlFirst?: boolean;
   /** number and range: the accepted values, which may depend on the device. */

@@ -187,7 +187,7 @@ function withParameterActions(document: Document, settings: SettingsRegistry, sp
   status.className = "foss-earth-parameter__status";
   status.setAttribute("role", "status");
   status.hidden = true;
-  (header?.querySelector(".foss-earth-parameter__slider-line") ?? header ?? control.element).append(status, help);
+  (header?.querySelector(".foss-earth-parameter__slider-line, .foss-earth-parameter__tail") ?? header ?? control.element).append(status, help);
   control.element.append(explanation);
   const updateActions = (): void => {
     const state = settings.inspect(spec.id);
@@ -490,11 +490,12 @@ function createChoicePills(document: Document, settings: SettingsRegistry, spec:
   return { element, update, destroy: () => { element.removeEventListener("change", onChange); element.remove(); } };
 }
 
-/** Shrink a number box to the digits it is showing. */
-function fitNumberField(field: HTMLInputElement): void {
-  const chars = Math.max(1, field.value.length);
+/** Shrink a number box to the digits it is showing, or `atLeast` characters; returns the width used. */
+function fitNumberField(field: HTMLInputElement, atLeast = 1): number {
+  const chars = Math.max(atLeast, field.value.length);
   field.size = chars;
   field.style.setProperty("--field-chars", String(chars));
+  return chars;
 }
 
 /** The number a field shows: a fraction as a percentage. */
@@ -508,16 +509,21 @@ function fromField(spec: ParameterSpec, text: string): number | null {
   return spec.unit === "fraction" ? value / 100 : value;
 }
 
-/** Field, label, named values and help stay one phrase; the track follows and wraps when its length does not fit. */
-function placeSlider(header: HTMLElement, readout: HTMLElement, reading: HTMLElement, label: HTMLElement, track: HTMLElement, named?: HTMLElement): void {
+/**
+ * Label, field, named values and help stay one phrase, in the header's order;
+ * the track follows and wraps when its length does not fit. Named values follow
+ * the label, so "Value" sits beside its number: "Frame rate cap [Off | Value] 60 ?".
+ */
+function placeSlider(header: HTMLElement, track: HTMLElement, named?: HTMLElement): void {
   const line = header.ownerDocument.createElement("span");
   line.className = "foss-earth-parameter__slider-line";
-  line.append(readout, reading, label, ...(named ? [named] : []));
+  line.append(...Array.from(header.childNodes));
+  if (named) line.querySelector(".foss-earth-parameter__label")!.after(named);
   header.append(line, track);
 }
 
-/** Label first reads best for a two-position control ("Priorities [Auto | Custom]"); a quantity's field leads its label. */
-function createHeader(document: Document, spec: ParameterSpec, labelFirst = false): { header: HTMLElement; readout: HTMLElement; reading: HTMLElement } {
+/** The label leads its control, as a phrase reads ("Resolution [1] ×", "Priorities [Auto | Custom]"), unless the spec asks for controlFirst. */
+function createHeader(document: Document, spec: ParameterSpec, labelFirst: boolean): { header: HTMLElement; readout: HTMLElement; reading: HTMLElement } {
   const header = document.createElement("div");
   header.className = "foss-earth-parameter__header";
   const label = document.createElement("span");
@@ -546,7 +552,7 @@ function createNumberField(document: Document, settings: SettingsRegistry, spec:
   const element = document.createElement("div");
   element.className = "foss-earth-parameter foss-earth-parameter--inline foss-earth-parameter--number-field";
   element.dataset.parameter = spec.id;
-  const { header, readout, reading } = createHeader(document, spec);
+  const { header, readout, reading } = createHeader(document, spec, !spec.controlFirst);
   const field = document.createElement("input");
   field.type = "number";
   field.className = "foss-earth-parameter__field";
@@ -566,9 +572,7 @@ function createNumberField(document: Document, settings: SettingsRegistry, spec:
     field.disabled = Boolean(spec.readOnly) || state.provenance === "host";
     field.min = state.bounds ? fieldNumber(spec, state.bounds.min) : "";
     field.max = state.bounds ? fieldNumber(spec, state.bounds.max) : "";
-    const digits = Math.max(3, field.min.length, field.max.length, fieldNumber(spec, value).length);
-    field.style.width = `calc(${digits}ch + 24px)`;
-    if (document.activeElement !== field) field.value = fieldNumber(spec, value);
+    if (document.activeElement !== field) { field.value = fieldNumber(spec, value); fitNumberField(field); }
     showReading(settings, spec.id, reading);
     setNote(note, noteFor(state, start));
   };
@@ -579,9 +583,11 @@ function createNumberField(document: Document, settings: SettingsRegistry, spec:
     if (!result.ok) setNote(note, result.reason, true);
     else update();
   };
+  const onFieldInput = (): void => { fitNumberField(field); };
   field.addEventListener("change", onChange);
+  field.addEventListener("input", onFieldInput);
   update();
-  return { element, update, destroy() { field.removeEventListener("change", onChange); element.remove(); } };
+  return { element, update, destroy() { field.removeEventListener("change", onChange); field.removeEventListener("input", onFieldInput); element.remove(); } };
 }
 
 /** A value track: one thumb, the default ticked, named values as one compact segmented track beside its label. */
@@ -590,7 +596,7 @@ function createValueTrack(document: Document, settings: SettingsRegistry, spec: 
   const element = document.createElement("div");
   element.className = "foss-earth-parameter foss-earth-parameter--slider";
   element.dataset.parameter = spec.id;
-  const { header, readout, reading } = createHeader(document, spec);
+  const { header, readout, reading } = createHeader(document, spec, !spec.controlFirst);
   const field = document.createElement("input");
   field.type = "number";
   field.className = "foss-earth-parameter__field";
@@ -619,7 +625,7 @@ function createValueTrack(document: Document, settings: SettingsRegistry, spec: 
   named.hidden = namedPills.length === 0;
   named.append(...namedPills.map(option => option.element), ...(numberPill ? [numberPill.element] : []));
   const note = createNote(document);
-  placeSlider(header, readout, reading, header.querySelector(".foss-earth-parameter__label")!, track.element, namedPills.length ? named : undefined);
+  placeSlider(header, track.element, namedPills.length ? named : undefined);
   element.append(header, note);
 
   const onNamed = (event: Event): void => {
@@ -642,7 +648,10 @@ function createValueTrack(document: Document, settings: SettingsRegistry, spec: 
     if (!result.ok) setNote(note, result.reason, true);
     else update();
   };
-  const onFieldInput = (): void => { fitNumberField(field); };
+  // The field shares a line with the track, so it never shrinks: a field that
+  // narrowed as a drag changed its digits would move the track under the pointer.
+  let fieldChars = 1;
+  const onFieldInput = (): void => { fieldChars = fitNumberField(field, fieldChars); };
   field.addEventListener("change", onField);
   field.addEventListener("input", onFieldInput);
 
@@ -676,8 +685,11 @@ function createValueTrack(document: Document, settings: SettingsRegistry, spec: 
     field.hidden = number === null;
     field.disabled = locked;
     if (document.activeElement !== field && number !== null) field.value = fieldNumber(spec, number);
-    if (number !== null && document.activeElement !== field) fitNumberField(field);
-    unit.textContent = number === null ? formatValue(spec, value, state.choices) : spec.unit === "fraction" ? "%" : formatQuantity(spec.unit, 1).replace(/^1\s?/, "");
+    if (number !== null && document.activeElement !== field) {
+      fieldChars = fitNumberField(field, Math.max(fieldChars, fieldNumber(spec, bounds.min).length, fieldNumber(spec, bounds.max).length));
+    }
+    // A named value shows in its segment, so the readout does not repeat it: "Frame rate cap [Off | Value] ?".
+    unit.textContent = number === null ? (namedPills.length ? "" : formatValue(spec, value, state.choices)) : spec.unit === "fraction" ? "%" : formatQuantity(spec.unit, 1).replace(/^1\s?/, "");
     showReading(settings, spec.id, reading);
     setNote(note, noteFor(state, start));
   };
@@ -700,7 +712,7 @@ function createRangeTrack(document: Document, settings: SettingsRegistry, spec: 
   const element = document.createElement("div");
   element.className = "foss-earth-parameter foss-earth-parameter--slider";
   element.dataset.parameter = spec.id;
-  const { header, readout, reading } = createHeader(document, spec);
+  const { header, readout, reading } = createHeader(document, spec, !spec.controlFirst);
   const note = createNote(document);
   const start = parameterStartValue(settings, spec.id);
   // Left and right thumbs; on a reversed track the left one is the range's max.
@@ -724,7 +736,7 @@ function createRangeTrack(document: Document, settings: SettingsRegistry, spec: 
     },
     onCommit: () => update(),
   });
-  placeSlider(header, readout, reading, header.querySelector(".foss-earth-parameter__label")!, track.element);
+  placeSlider(header, track.element);
   element.append(header, note);
   const update = (): void => {
     const state = settings.inspect(spec.id);
@@ -753,19 +765,27 @@ function createRangeTrack(document: Document, settings: SettingsRegistry, spec: 
   return { element, update, destroy: () => { track.destroy(); element.remove(); } };
 }
 
-/** A text field. A secret is never shown: typing replaces it, Clear forgets it. */
+/** Size a text box to what it shows: its value, or its placeholder while empty. */
+function fitTextField(input: HTMLInputElement): void {
+  input.size = Math.max(4, (input.value || input.placeholder).length + 1);
+}
+
+/**
+ * A text field as one phrase, "Date (UTC) [2026-04-20] Save Clear ?", sized to
+ * its text. A secret is never shown: typing replaces it, Clear forgets it.
+ */
 function createTextField(document: Document, settings: SettingsRegistry, spec: ParameterSpec): ParameterControlHandle {
   const element = document.createElement("div");
-  element.className = "foss-earth-parameter foss-earth-parameter--line foss-earth-parameter--text";
+  element.className = "foss-earth-parameter foss-earth-parameter--inline foss-earth-parameter--text";
   element.dataset.parameter = spec.id;
-  const { header, readout } = createHeader(document, spec);
+  const { header, readout } = createHeader(document, spec, !spec.controlFirst);
   const input = document.createElement("input");
   input.type = spec.sensitive ? "password" : "text";
   input.autocomplete = "off";
   input.spellcheck = false;
   input.className = "foss-earth-parameter__text";
   input.setAttribute("aria-label", spec.label);
-  const actions = document.createElement("div");
+  const actions = document.createElement("span");
   actions.className = "foss-earth-parameter__named";
   const save = document.createElement("button");
   save.type = "button";
@@ -776,8 +796,13 @@ function createTextField(document: Document, settings: SettingsRegistry, spec: P
   clear.className = "foss-earth-choice foss-earth-parameter__action";
   clear.textContent = "Clear";
   actions.append(save, clear);
+  // Save, Clear and ? wrap together, so ? never sits alone on a line.
+  const tail = document.createElement("span");
+  tail.className = "foss-earth-parameter__tail";
+  tail.append(actions);
   const note = createNote(document);
-  element.append(header, input, actions, note);
+  header.append(input, tail);
+  element.append(header, note);
   const start = parameterStartValue(settings, spec.id);
   const onSave = (): void => {
     const result = settings.set(spec.id, input.value.trim());
@@ -787,15 +812,19 @@ function createTextField(document: Document, settings: SettingsRegistry, spec: P
   };
   const onClear = (): void => { settings.reset(spec.id); input.value = ""; update(); };
   const onKey = (event: KeyboardEvent): void => { if (event.key === "Enter") onSave(); };
+  const onInput = (): void => { fitTextField(input); };
   save.addEventListener("click", onSave);
   clear.addEventListener("click", onClear);
   input.addEventListener("keydown", onKey);
+  input.addEventListener("input", onInput);
   const update = (): void => {
     const state = settings.inspect(spec.id);
     const value = typeof state.value === "string" ? state.value : "";
-    readout.textContent = spec.sensitive ? (value ? "Set" : "Not set") : "";
-    input.placeholder = spec.sensitive ? (value ? "Enter a new key to replace it" : "Paste the key") : "";
+    // An empty "Paste key" field and a disabled Clear already say there is none.
+    readout.textContent = spec.sensitive && value ? "Set" : "";
+    input.placeholder = spec.sensitive ? (value ? "New key" : "Paste key") : "";
     if (!spec.sensitive && document.activeElement !== input) input.value = value;
+    fitTextField(input);
     const locked = Boolean(spec.readOnly) || state.provenance === "host";
     input.disabled = locked;
     save.disabled = locked;
@@ -810,6 +839,7 @@ function createTextField(document: Document, settings: SettingsRegistry, spec: P
       save.removeEventListener("click", onSave);
       clear.removeEventListener("click", onClear);
       input.removeEventListener("keydown", onKey);
+      input.removeEventListener("input", onInput);
       element.remove();
     },
   };

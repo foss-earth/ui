@@ -67,6 +67,11 @@
   padding: 0 6px 6px;
 }
 
+/* A tab's main section: its everyday controls, on the tab itself, without a box of their own. */
+.foss-earth-panel-main {
+  min-width: 0;
+}
+
 /* "▸ Imagery selection ?": a section whose title has help. The details spans
    the row; the ? lies over its summary in the column the hidden copy of the
    title sizes, so it follows the title without being inside the summary. */
@@ -486,15 +491,7 @@
   max-width: 100%;
 }
 
-/* Text fields take a whole line. A slider is a phrase: field, label, help, then a track of a set length that wraps under them when the row is shorter than that length. */
-.foss-earth-parameter--line {
-  display: grid;
-  flex-basis: 100%;
-  gap: 4px;
-  min-width: 0;
-  font-size: 12px;
-}
-
+/* A slider is a phrase: label, field, help, then a track of a set length that wraps under them when the row is shorter than that length. */
 .foss-earth-parameter--slider {
   --foss-earth-slider-length: 120px;
   display: flex;
@@ -518,9 +515,11 @@
   max-width: 100%;
 }
 
+/* The phrase wraps at its words rather than squeezing them: "Frame rate cap [60] fps [Off | Value] ?". */
 .foss-earth-parameter__slider-line {
   display: inline-flex;
   flex: 0 1 auto;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   min-width: 0;
@@ -610,8 +609,7 @@
 
 /* Every parameter is one logical component: its label, control and help share one rounded group. */
 .foss-earth-parameter--inline > .foss-earth-parameter__header,
-.foss-earth-parameter--slider > .foss-earth-parameter__header,
-.foss-earth-parameter--line > .foss-earth-parameter__header {
+.foss-earth-parameter--slider > .foss-earth-parameter__header {
   box-sizing: border-box;
   max-width: 100%;
   border: 1px solid rgba(148, 163, 184, 0.4);
@@ -972,15 +970,32 @@
   font-size: 12px;
 }
 
+/* A number box is as wide as the digits it shows (controls.ts sets --field-chars), not a
+   fixed width. The arrow keys still step it; the spin buttons would only widen it. */
 .foss-earth-parameter__field {
-  width: 76px;
-  padding: 2px 6px;
-  text-align: right;
+  width: calc(var(--field-chars, 2) * 1ch + 12px);
+  min-width: calc(1ch + 12px);
+  max-width: 100%;
+  padding: 2px 4px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  appearance: textfield;
+  -moz-appearance: textfield;
 }
 
+.foss-earth-parameter__field::-webkit-inner-spin-button,
+.foss-earth-parameter__field::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+/* A text box is as wide as its text or placeholder (its size, or field-sizing where the browser has it). */
 .foss-earth-parameter__text {
-  width: 100%;
-  padding: 5px 8px;
+  width: auto;
+  max-width: 100%;
+  min-width: 0;
+  padding: 2px 6px;
+  field-sizing: content;
 }
 
 .foss-earth-parameter__named {
@@ -988,6 +1003,16 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
+}
+
+/* A text field's Save, Clear, status and ?: one unit when the phrase wraps. */
+.foss-earth-parameter__tail {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .foss-earth-parameter__action {
@@ -1082,9 +1107,7 @@
 
 .foss-earth-preset .foss-earth-parameter__text,
 .foss-earth-preset-save .foss-earth-parameter__text {
-  width: auto;
-  flex: 1 1 12em;
-  min-width: 0;
+  flex: none;
 }
 
 /* Show all parameters reuses the compact controls, with details behind ?. */
@@ -1182,23 +1205,12 @@
   background: rgba(15, 23, 42, 0.03);
 }
 
-/* Log numbers shrink to the digits. Yellow in light, dark maroon in dark. */
+/* Log numbers: yellow in light, dark maroon in dark. */
 [data-settings-section="interface/log"] .foss-earth-parameter__field {
-  width: calc(var(--field-chars, 2) * 1ch + 12px);
-  min-width: calc(1ch + 12px);
-  max-width: 100%;
-  padding: 2px 4px;
   border: 1px solid #7a0019;
   outline: 1px solid #7a0019;
   outline-offset: 1px;
   background: rgba(122, 0, 25, 0.35);
-  text-align: center;
-}
-
-[data-settings-section="interface/log"] .foss-earth-parameter__field::-webkit-inner-spin-button,
-[data-settings-section="interface/log"] .foss-earth-parameter__field::-webkit-outer-spin-button {
-  margin: 0;
-  appearance: none;
 }
 
 :root[data-theme="light"] [data-settings-section="interface/log"] .foss-earth-parameter__field {
@@ -1260,7 +1272,6 @@
 :root[data-theme="light"] .foss-earth-parameter--compact-choice > .foss-earth-parameter__header,
 :root[data-theme="light"] .foss-earth-parameter--inline > .foss-earth-parameter__header,
 :root[data-theme="light"] .foss-earth-parameter--slider > .foss-earth-parameter__header,
-:root[data-theme="light"] .foss-earth-parameter--line > .foss-earth-parameter__header,
 :root[data-theme="light"] .foss-earth-choice-group {
   background: rgba(255, 255, 255, 0.72);
 }
