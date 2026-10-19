@@ -35,8 +35,8 @@ export function closeHelpTooltipWithin(container: Node): void {
  */
 export function createHelpTooltip(options: HelpTooltipOptions): HelpTooltipHandle {
   const document = options.content.ownerDocument;
+  // A report built in a document without a view is still complete; it opens once shown in one.
   const window = document.defaultView;
-  if (!window) throw new TypeError("Help content requires a host Document with a view.");
   const element = document.createElement("span");
   element.className = "foss-earth-help-tooltip";
   const button = document.createElement("button");
@@ -60,7 +60,7 @@ export function createHelpTooltip(options: HelpTooltipOptions): HelpTooltipHandl
   let opened = false;
 
   const position = (): void => {
-    if (!opened) return;
+    if (!opened || !window) return;
     const anchor = button.getBoundingClientRect();
     const viewport = window.visualViewport;
     const left = viewport?.offsetLeft ?? 0;
@@ -85,13 +85,13 @@ export function createHelpTooltip(options: HelpTooltipOptions): HelpTooltipHandl
     document.removeEventListener("pointerdown", onOutside);
     document.removeEventListener("keydown", onKey, true);
     document.removeEventListener("scroll", position, true);
-    window.removeEventListener("resize", position);
-    window.visualViewport?.removeEventListener("resize", position);
-    window.visualViewport?.removeEventListener("scroll", position);
+    window?.removeEventListener("resize", position);
+    window?.visualViewport?.removeEventListener("resize", position);
+    window?.visualViewport?.removeEventListener("scroll", position);
     if (openHelpByDocument.get(document)?.close === close) openHelpByDocument.delete(document);
   };
   const open = (): void => {
-    if (destroyed || opened) return;
+    if (destroyed || opened || !window) return;
     openHelpByDocument.get(document)?.close();
     options.onOpen?.();
     // Capture the caller's current home, including a relocated settings row.

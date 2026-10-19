@@ -1,4 +1,6 @@
 import { describePreviousVisit, type PreviousVisit } from "../diagnostics/sessionTrail.js";
+import { createExternalLinkIcon } from "./externalLinkIcon.js";
+import { createHelpTooltip } from "./helpTooltip.js";
 
 export interface DiagnosticsSectionHandle {
   element: HTMLElement;
@@ -42,12 +44,26 @@ export function createDiagnosticsSection(source: DiagnosticsSource, options: { r
   element.className = "foss-earth-status-section foss-earth-diagnostics-section";
   element.setAttribute("aria-label", "Diagnostics");
   const last = paragraph(document, "Reading the last visit's trail…");
-  const how = paragraph(document, "The report says what ran, on what, how it is set, and what this visit and the one before it did. It is made on this device and sent nowhere: copy it to whoever is looking into a fault. Keys are left out of it.");
-  if (options.reportOnlyHref) { const link = document.createElement("a"); link.href = options.reportOnlyHref; link.textContent = "Open the report-only page"; how.append(" ", link); }
+  // What the report holds and where it goes, behind ? beside the action.
+  const how = document.createElement("p");
+  how.textContent = "The report says what ran, on what, how it is set, and what this visit and the one before it did. It is made on this device and sent nowhere: copy it to whoever is looking into a fault. Keys are left out of it.";
+  if (options.reportOnlyHref) {
+    const link = document.createElement("a");
+    link.href = options.reportOnlyHref;
+    link.textContent = "Report-only page";
+    link.append(" ", createExternalLinkIcon(document));
+    how.append(" ", link);
+  }
+  const helpContent = document.createElement("div");
+  helpContent.append(how);
+  const help = createHelpTooltip({ label: "Explain the report", content: helpContent });
   const copyButton = document.createElement("button");
   copyButton.type = "button";
   copyButton.className = "foss-earth-choice foss-earth-parameter__action";
   copyButton.textContent = "Copy report";
+  const actions = document.createElement("div");
+  actions.className = "foss-earth-choices";
+  actions.append(copyButton, help.element);
   const status = paragraph(document, "");
   status.setAttribute("role", "status");
   status.hidden = true;
@@ -58,7 +74,7 @@ export function createDiagnosticsSection(source: DiagnosticsSource, options: { r
   text.rows = 12;
   text.hidden = true;
   text.setAttribute("aria-label", "The report");
-  element.append(last, copyButton, how, status, text);
+  element.append(last, actions, status, text);
 
   let disposed = false;
   void Promise.resolve().then(() => disposed ? null : source.previous()).then(previous => {
@@ -100,6 +116,7 @@ export function createDiagnosticsSection(source: DiagnosticsSource, options: { r
       if (disposed) return;
       disposed = true;
       copyButton.removeEventListener("click", onCopy);
+      help.destroy();
       text.value = "";
       element.remove();
     },

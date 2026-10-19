@@ -1,5 +1,8 @@
 import { createIssueDraft, issueReportAttachment, issueReportFilename, redactIssueReport, validateIssueReporterConfig, type IssueReporterConfig } from "../diagnostics/issueReport.js";
 import type { DiagnosticsSource } from "./diagnosticsSection.js";
+import { createExternalLinkIcon } from "./externalLinkIcon.js";
+import { createHelpTooltip } from "./helpTooltip.js";
+import { createIconButton, setIconButtonLabel } from "./iconButton.js";
 
 export interface BugReportPanelHandle {
   element: HTMLElement;
@@ -61,7 +64,14 @@ export function createBugReportPanel(source: DiagnosticsSource, options: BugRepo
   description.required = true;
   description.placeholder = "What you did, what you expected, and what went wrong";
   descriptionLabel.append(description);
-  const review = paragraph(document, "Review the report and remove any personal details before continuing. Known keys, recognized secrets, email addresses, coordinates and URL queries are removed automatically. Download the report, then open the GitHub issue and attach that file. GitHub attachments become public when uploaded; Submit publishes the issue. The draft contains a short summary; the file keeps the full report.");
+  // What someone must see before continuing stays visible; the rest is behind ?.
+  const review = paragraph(document, "Remove personal details from the report before continuing. GitHub attachments become public when uploaded. ");
+  const reviewHelp = document.createElement("div");
+  const reviewText = document.createElement("p");
+  reviewText.textContent = "Known keys, recognized secrets, email addresses, coordinates and URL queries are removed automatically. Download the report, then open the GitHub issue and attach that file. Submit publishes the issue. The draft contains a short summary; the file keeps the full report.";
+  reviewHelp.append(reviewText);
+  const reviewTooltip = createHelpTooltip({ label: "Explain the bug report", content: reviewHelp });
+  review.append(reviewTooltip.element);
   const reportText = document.createElement("textarea");
   reportText.className = "foss-earth-settings-transfer__text";
   reportText.name = "report";
@@ -70,25 +80,19 @@ export function createBugReportPanel(source: DiagnosticsSource, options: BugRepo
   reportText.setAttribute("aria-label", "Activity report to attach");
   const result = paragraph(document, "");
   result.setAttribute("role", "status");
-  const download = document.createElement("a");
-  download.className = "foss-earth-choice foss-earth-parameter__action";
-  download.textContent = "Download report";
+  const download = createIconButton(document, { icon: "download", label: "Download report", tag: "a" });
   download.setAttribute("aria-disabled", "true");
   const open = document.createElement("a");
   open.className = "foss-earth-choice foss-earth-parameter__action";
-  open.textContent = "Open GitHub issue";
+  open.append("GitHub issue ", createExternalLinkIcon(document));
+  open.setAttribute("aria-label", "Open GitHub issue");
+  open.title = "Open GitHub issue, in a new tab";
   open.target = "_blank";
   open.rel = "noopener noreferrer";
   open.setAttribute("aria-disabled", "true");
-  const copyReviewed = document.createElement("button");
-  copyReviewed.type = "button";
-  copyReviewed.className = "foss-earth-choice foss-earth-parameter__action";
-  copyReviewed.textContent = "Copy reviewed report";
+  const copyReviewed = createIconButton(document, { icon: "copy", label: "Copy reviewed report" });
   copyReviewed.hidden = true;
-  const refresh = document.createElement("button");
-  refresh.type = "button";
-  refresh.className = "foss-earth-choice foss-earth-parameter__action";
-  refresh.textContent = "Refresh report";
+  const refresh = createIconButton(document, { icon: "refresh", label: "Refresh report" });
   panel.append(titleLabel, descriptionLabel, review, reportText, result, download, open, copyReviewed, refresh);
 
   let generation = 0;
@@ -181,12 +185,12 @@ export function createBugReportPanel(source: DiagnosticsSource, options: BugRepo
       filename = issueReportFilename(config, options.now());
       ready = true;
       reportText.disabled = false;
-      refresh.textContent = "Refresh report";
+      setIconButtonLabel(refresh, "Refresh report");
       updateLinks();
     }).catch(() => {
       if (disposed || current !== generation) return;
-      refresh.textContent = "Try report again";
-      result.textContent = "The activity report could not be prepared. Choose Try report again, or use Copy report in Settings → Diagnostics.";
+      setIconButtonLabel(refresh, "Try report again");
+      result.textContent = "The activity report could not be prepared. Try again with ↻, or use Copy report in Settings → Diagnostics.";
     }).finally(() => {
       if (disposed || current !== generation) return;
       refresh.disabled = false;
@@ -206,7 +210,7 @@ export function createBugReportPanel(source: DiagnosticsSource, options: BugRepo
     refresh.disabled = false;
     copyReviewed.hidden = true;
     copyReviewed.disabled = false;
-    refresh.textContent = "Refresh report";
+    setIconButtonLabel(refresh, "Refresh report");
   };
   const onDownload = (event: MouseEvent): void => {
     if (!updateLinks() || !objectUrl) { event.preventDefault(); return; }
@@ -264,6 +268,7 @@ export function createBugReportPanel(source: DiagnosticsSource, options: BugRepo
       title.removeEventListener("input", onEdit);
       description.removeEventListener("input", onEdit);
       reportText.removeEventListener("input", onEdit);
+      reviewTooltip.destroy();
       panel.remove();
     },
   };

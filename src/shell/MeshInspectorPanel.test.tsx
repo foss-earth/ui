@@ -177,7 +177,7 @@ describe("MeshInspectorPanel", () => {
     await act(async () => root.render(<MeshInspectorPanel inspector={null} />));
     expect(unsubscribe).toHaveBeenCalledOnce();
     expect(host.textContent).toContain("No meshes loaded.");
-    expect(host.querySelector("button")).toBeNull();
+    expect(host.querySelector("button:not(.foss-earth-parameter__help-button)")).toBeNull();
     expect(host.querySelector("input")).toBeNull();
   });
 });

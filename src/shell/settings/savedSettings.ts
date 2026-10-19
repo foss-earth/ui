@@ -9,7 +9,7 @@ export interface SavedSettingsSectionHandle {
 
 /**
  * Everything saved on this device at once: the values this visit's URL set
- * (with "Keep these values", the only way they are saved), export, import and
+ * (with Keep, the only way they are saved), export, import and
  * reset of the whole record, and whether saving works in this browser.
  */
 export function createSavedSettingsSection(settings: SettingsRegistry, document: Document): SavedSettingsSectionHandle {
@@ -18,29 +18,27 @@ export function createSavedSettingsSection(settings: SettingsRegistry, document:
   const session = document.createElement("div");
   session.className = "foss-earth-choices";
   const heading = document.createElement("div");
-  heading.className = "foss-earth-choices__heading";
+  heading.className = "foss-earth-choices__heading foss-earth-choices__heading--inline";
   heading.textContent = "From the URL for this visit";
   const list = document.createElement("p");
   list.className = "foss-earth-choices__note";
   const keep = document.createElement("button");
   keep.type = "button";
   keep.className = "foss-earth-choice foss-earth-parameter__action";
-  keep.textContent = "Keep these values";
+  keep.textContent = "Keep";
+  keep.setAttribute("aria-label", "Keep the values from the URL");
   const kept = document.createElement("p");
   kept.className = "foss-earth-choices__note";
   kept.setAttribute("role", "status");
   kept.hidden = true;
   session.append(heading, list, keep, kept);
-  const allHeading = document.createElement("div");
-  allHeading.className = "foss-earth-choices__heading";
-  allHeading.textContent = "Every saved value";
-  const about = document.createElement("p");
-  about.className = "foss-earth-choices__note";
-  about.textContent = "Only values that differ from their defaults are saved, on this device. Keys and secrets are never exported.";
-  const transfer = createSettingsTransfer(settings, {}, "all", document);
+  const transfer = createSettingsTransfer(settings, {}, "all", document, {
+    title: "Every saved value",
+    help: "Only values that differ from their defaults are saved, on this device. Keys and secrets are never exported.",
+  });
   const storage = document.createElement("p");
   storage.className = "foss-earth-choices__note";
-  element.append(session, allHeading, about, transfer.element, storage);
+  element.append(session, transfer.element, storage);
 
   const update = (): void => {
     const ids = settings.sessionValueIds();

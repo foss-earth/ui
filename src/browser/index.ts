@@ -13,6 +13,7 @@ export * from "../shell/settings/twoPositionSlider.js";
 export * from "../shell/choiceGroup.js";
 export * from "../shell/helpTooltip.js";
 export * from "../shell/externalLinkIcon.js";
+export * from "../shell/iconButton.js";
 export * from "../shell/panelSectionsOpen.js";
 export * from "../shell/dial.js";
 export * from "../shell/settings/themeControl.js";

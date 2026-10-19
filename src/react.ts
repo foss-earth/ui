@@ -9,3 +9,4 @@ export * from "./shell/SectionsPanel.js";
 export * from "./shell/WindowOverlay.js";
 export * from "./shell/MeshInspectorPanel.js";
 export * from "./shell/meshInspectorPorts.js";
+export * from "./shell/reactControls.js";

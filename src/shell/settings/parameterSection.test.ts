@@ -55,16 +55,25 @@ describe("parameter section", () => {
     expect(control("t.hidden")).toBeNull();
   });
 
-  it("puts the checkbox and its label before help, and the source in that explanation", () => {
+  it("puts the label, then the switch, before help, and the source in that explanation", () => {
     const { settings, control } = setup();
     const flag = control("t.flag");
     const header = flag.querySelector(".foss-earth-parameter__header")!;
-    expect([...header.children].map(item => item.tagName)).toEqual(["LABEL", "LABEL", "BUTTON"]);
+    expect([...header.children].map(item => item.tagName)).toEqual(["LABEL", "LABEL", "SPAN", "BUTTON"]);
+    expect(header.firstElementChild!.classList.contains("foss-earth-parameter__label")).toBe(true);
+    // The native checkbox stays focusable inside the switch, never hidden.
+    const toggle = header.querySelector<HTMLInputElement>(".foss-earth-switch input[type=checkbox]")!;
+    expect(toggle.hidden).toBe(false);
+    expect(toggle.getAttribute("aria-label")).toBe("Flag");
+    expect(header.lastElementChild!.classList.contains("foss-earth-parameter__help-button")).toBe(true);
     const help = header.querySelector<HTMLButtonElement>('[aria-label="Explain Flag"]')!;
     expect(flag.querySelector('[aria-label="Reset Flag"]')).toBeNull();
     expect(header.querySelector("a")).toBeNull();
     const source = flag.querySelector<HTMLAnchorElement>(".foss-earth-parameter-row__source")!;
-    expect(source.textContent).toBe("src/test.ts");
+    expect(source.textContent).toBe("↗");
+    expect(source.getAttribute("aria-label")).toContain("src/test.ts");
+    expect(source.parentElement?.className).toBe("foss-earth-parameter-row__id");
+    expect(source.parentElement?.lastElementChild).toBe(source);
     expect(source.href).toBe("https://example.test/blob/main/src/test.ts");
     expect(source.title).toContain("The code that reads t.flag");
     expect(help.textContent).toBe("?");
@@ -85,13 +94,15 @@ describe("parameter section", () => {
     const visibility = control("t.visibility");
     const header = visibility.querySelector(".foss-earth-parameter__header")!;
     expect(visibility.classList.contains("foss-earth-parameter--compact-choice")).toBe(true);
+    // Label first by default: "Visibility [On / A / Off] ?".
     expect([...header.children].map(child => child.className)).toEqual([
-      "foss-earth-parameter__pills",
       "foss-earth-choices__heading",
+      "foss-earth-parameter__pills",
+      "foss-earth-parameter__status",
       "foss-earth-choice foss-earth-parameter__action foss-earth-parameter__icon-action foss-earth-parameter__help-button",
     ]);
     expect(visibility.querySelector(".foss-earth-parameter__header a")).toBeNull();
-    expect(visibility.querySelector(".foss-earth-parameter-row__source")!.textContent).toBe("src/test.ts");
+    expect(visibility.querySelector(".foss-earth-parameter-row__source")!.textContent).toBe("↗");
     const labels = [...visibility.querySelectorAll<HTMLLabelElement>(".foss-earth-parameter__pills label")];
     expect(labels.map(label => label.textContent)).toEqual(["", "A", ""]);
     expect(labels.map(label => Boolean(label.querySelector('svg[aria-hidden="true"]')))).toEqual([true, false, true]);
@@ -106,7 +117,7 @@ describe("parameter section", () => {
     settings.reset("t.visibility");
     expect(settings.get("t.visibility")).toBe("auto");
     expect(input(visibility, 'input[value="auto"]').checked).toBe(true);
-    // Every choice uses the same switch: options in the track, then the label and help.
+    // Every choice uses the same track: the label, options in the track, then help.
     const mode = control("t.mode");
     expect(mode.classList.contains("foss-earth-parameter--compact-choice")).toBe(true);
     expect(mode.querySelector(".foss-earth-parameter__pills")!.parentElement).toBe(mode.querySelector(".foss-earth-parameter__header"));
@@ -210,7 +221,8 @@ describe("parameter section", () => {
     const helpButton = line.querySelector(".foss-earth-parameter__help-button")!;
     const track = control("t.budget").querySelector(".foss-earth-track")!;
     expect(line.contains(control("t.budget").querySelector(".foss-earth-parameter__field"))).toBe(true);
-    expect(helpButton.previousElementSibling).toBe(line.querySelector(".foss-earth-parameter__label"));
+    expect(helpButton.previousElementSibling).toBe(line.querySelector(".foss-earth-parameter__status"));
+    expect(line.querySelector(".foss-earth-parameter__status")!.previousElementSibling).toBe(line.querySelector(".foss-earth-parameter__label"));
     expect(track.previousElementSibling).toBe(line);
     const helpId = helpButton.getAttribute("aria-controls")!;
     expect(document.getElementById(helpId)!.querySelector(".foss-earth-parameter__note")!.textContent).toMatch(/outside 32 MiB to 1,024 MiB/);
@@ -345,6 +357,72 @@ describe("parameter section", () => {
     expect(section.element.querySelector(".foss-earth-parameter-row")).toBeNull();
   });
 
+  it("draws a choice's segments before its label only when the spec asks", () => {
+    const { settings, control } = setup();
+    settings.register([{
+      ...base, id: "t.row", label: "Toolbar", description: "Visibility.", unit: "none", kind: "choice", default: "on", controlFirst: true,
+      choices: [{ id: "on", label: "On" }, { id: "off", label: "Off" }], home: { tab: "map", section: "loading", level: "main" },
+    }]);
+    const header = control("t.row").querySelector(".foss-earth-parameter__header")!;
+    expect(header.firstElementChild!.classList.contains("foss-earth-parameter__pills")).toBe(true);
+    expect(header.children[1]!.classList.contains("foss-earth-choices__heading")).toBe(true);
+    expect(header.lastElementChild!.classList.contains("foss-earth-parameter__help-button")).toBe(true);
+  });
+
+  it("keeps named values in one segmented track on the label's line, with accessible radios", () => {
+    const { control } = setup();
+    const cap = control("t.cap");
+    const line = cap.querySelector(".foss-earth-parameter__slider-line")!;
+    const named = line.querySelector<HTMLElement>(".foss-earth-parameter__pills.foss-earth-parameter__named")!;
+    expect(named.getAttribute("role")).toBe("radiogroup");
+    expect(named.previousElementSibling).toBe(line.querySelector(".foss-earth-parameter__label"));
+    expect([...named.querySelectorAll("label")].map(label => label.textContent)).toEqual(["Off", "Value"]);
+    expect([...named.querySelectorAll<HTMLInputElement>("input[type=radio]")].every(radio => !radio.hidden && radio.getAttribute("aria-hidden") === null)).toBe(true);
+    expect(line.lastElementChild!.classList.contains("foss-earth-parameter__help-button")).toBe(true);
+    // A number without named values has no empty track.
+    expect(control("t.budget").querySelector(".foss-earth-parameter__named")).toBeNull();
+  });
+
+  it("shows Changes pending with Apply & reload and Discard for a value that applies on the next start", () => {
+    const storage = memoryStorage();
+    const settings = createSettingsRegistry({ storage });
+    const home = { tab: "renderer", section: "backend", level: "main" } as const;
+    settings.register([
+      { ...base, appliesLive: false, id: "t.backend", label: "Backend", description: "Applies after a reload.", unit: "none", kind: "choice", default: "auto", choices: [{ id: "auto", label: "Auto" }, { id: "webgl2", label: "WebGL2" }], home },
+      { ...base, appliesLive: false, id: "t.workers", label: "Workers", description: "Applies after a reload.", unit: "count", kind: "number", numberControl: "field", bounds: () => ({ min: 1, max: 8 }), step: 1, default: 2, home },
+    ]);
+    settings.set("t.workers", 4);
+    const reload = vi.fn();
+    const section = createParameterSection(settings, { tab: home.tab, section: home.section, reload });
+    document.body.append(section.element);
+    const bar = section.element.querySelector<HTMLElement>(".foss-earth-parameter-section__pending")!;
+    const status = (id: string) => section.element.querySelector(`[data-parameter="${id}"] .foss-earth-parameter__status`)!;
+    // Values saved before this start are already in effect.
+    expect(bar.hidden).toBe(true);
+    input(section.element, '[data-parameter="t.backend"] input[value="webgl2"]').click();
+    expect(settings.get("t.backend")).toBe("webgl2");
+    expect(bar.hidden).toBe(false);
+    expect(bar.querySelector("[role=status]")!.textContent).toBe("Changes pending");
+    expect(status("t.backend").textContent).toBe("Pending");
+    expect(section.element.querySelector('[data-parameter="t.backend"]')!.classList.contains("is-pending")).toBe(true);
+    expect(status("t.workers").textContent).toBe("");
+    const field = input(section.element, '[data-parameter="t.workers"] input[type="number"]');
+    field.value = "6";
+    field.dispatchEvent(new Event("change"));
+    expect(status("t.workers").textContent).toBe("Pending");
+    const button = (label: string) => bar.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
+    button("Apply pending changes and reload").click();
+    expect(reload).toHaveBeenCalledTimes(1);
+    // Discard returns each value to what this start used: the default is reset, a saved value restored.
+    button("Discard pending changes").click();
+    expect(settings.get("t.backend")).toBe("auto");
+    expect(settings.inspect("t.backend").provenance).toBe("default");
+    expect(settings.get("t.workers")).toBe(4);
+    expect(bar.hidden).toBe(true);
+    expect(status("t.backend").textContent).toBe("");
+    section.destroy();
+  });
+
   it("draws a mark before a compact choice label and skips Show all when nothing is extra", () => {
     const settings = createSettingsRegistry({ storage: memoryStorage() });
     const home = { tab: "interface", section: "toolbar", level: "main" } as const;
@@ -425,6 +503,34 @@ describe("parameter section", () => {
   });
 });
 
+describe("sections", () => {
+  it("follows a section title with its ?, which opens without opening or closing the section", () => {
+    const sections = createSectionsElement([
+      { id: "map.selection", title: "Imagery selection", element: document.createElement("div"), defaultOpen: false, help: "How 2D imagery is chosen as the view moves." },
+      { id: "map.detail", title: "Detail", element: document.createElement("div"), defaultOpen: true },
+    ], { document, storage: memoryStorage() });
+    document.body.append(sections.element);
+    const [selection, detail] = [...sections.element.querySelectorAll("details")];
+    const summary = selection!.querySelector("summary")!;
+    // The summary is a button, so the ? is beside it, never inside it.
+    expect(summary.textContent).toBe("Imagery selection");
+    expect(summary.querySelector("button")).toBeNull();
+    const frame = selection!.parentElement!;
+    expect(frame.classList.contains("foss-earth-panel-section__frame")).toBe(true);
+    const help = frame.querySelector<HTMLButtonElement>(":scope > .foss-earth-panel-section__help .foss-earth-parameter__help-button")!;
+    expect(help.getAttribute("aria-label")).toBe("Explain Imagery selection");
+    help.click();
+    expect(selection!.open).toBe(false);
+    expect(help.getAttribute("aria-expanded")).toBe("true");
+    expect(document.getElementById(help.getAttribute("aria-controls")!)!.textContent).toBe("How 2D imagery is chosen as the view moves.");
+    // The title itself still opens the section.
+    summary.click();
+    expect(selection!.open).toBe(true);
+    expect(detail!.parentElement).toBe(sections.element);
+    sections.destroy();
+  });
+});
+
 describe("host sections in FOSS Earth's tabs", () => {
   it("adds a section for each host section of a tab, titled by the host", () => {
     const settings = createSettingsRegistry({ storage: null });
@@ -449,7 +555,7 @@ describe("saved settings", () => {
     const saved = createSavedSettingsSection(settings, document);
     document.body.append(saved.element);
     expect(saved.element.textContent).toContain("Budget: 512 MiB");
-    const keep = [...saved.element.querySelectorAll("button")].find(button => button.textContent === "Keep these values")!;
+    const keep = [...saved.element.querySelectorAll("button")].find(button => button.textContent === "Keep")!;
     keep.click();
     expect(JSON.parse(storage.data.get("foss-earth.settings.v1")!).values).toEqual({ "t.budget": 512 });
     expect(saved.element.textContent).toContain("Saved 1 value.");
@@ -465,7 +571,7 @@ describe("saved settings", () => {
     const saved = createSavedSettingsSection(settings, document);
     document.body.append(saved.element);
     [...saved.element.querySelectorAll("button")].find(button => button.textContent === "Export")!.click();
-    [...saved.element.querySelectorAll("button")].find(button => button.textContent === "Copy")!.click();
+    [...saved.element.querySelectorAll("button")].find(button => button.getAttribute("aria-label") === "Copy the settings")!.click();
     expect(writeText).toHaveBeenCalledWith(expect.stringContaining("\"format\": \"foss-earth.settings\""));
     vi.unstubAllGlobals();
     saved.destroy();

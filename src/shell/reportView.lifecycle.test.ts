@@ -13,7 +13,7 @@ function mountedReport() {
   document.body.append(view.element);
   const diagnosticsButton = view.element.querySelector<HTMLButtonElement>('[aria-label="Diagnostics"] button')!;
   const bugReport = view.element.querySelector<HTMLElement>('[aria-label="Bug report"]')!;
-  const refresh = [...bugReport.querySelectorAll("button")].find(button => button.textContent === "Refresh report")!;
+  const refresh = [...bugReport.querySelectorAll("button")].find(button => button.getAttribute("aria-label") === "Refresh report")!;
   return { view, report, diagnosticsButton, bugReport, refresh };
 }
 

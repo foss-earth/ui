@@ -1,6 +1,7 @@
 import type { SettingsRegistry } from "../../settings/registry.js";
 import type { ParameterSpec, SettingsFilter, SettingsPreset } from "../../settings/types.js";
 import { formatValue } from "../../settings/values.js";
+import { createIconButton } from "../iconButton.js";
 
 function paragraph(document: Document, className: string, text = ""): HTMLParagraphElement {
   const element = document.createElement("p");
@@ -166,19 +167,19 @@ export function createPresetsSection(settings: SettingsRegistry, document: Docum
   // A preset exported here, or on another device, comes back as the user's.
   const importer = document.createElement("div");
   importer.className = "foss-earth-choices foss-earth-preset-import";
-  const pick = document.createElement("label");
-  pick.className = "foss-earth-choice foss-earth-parameter__action";
-  pick.textContent = "Import a preset…";
+  const pick = createIconButton(document, { icon: "upload", label: "Import a preset" });
   const file = document.createElement("input");
   file.type = "file";
   file.accept = "application/json,.json";
   file.hidden = true;
+  file.tabIndex = -1;
   file.setAttribute("aria-label", "Preset file to import");
-  pick.append(file);
+  const onPick = (): void => file.click();
+  pick.addEventListener("click", onPick);
   const imported = paragraph(document, "foss-earth-choices__note");
   imported.setAttribute("role", "status");
   imported.hidden = true;
-  importer.append(pick, imported);
+  importer.append(pick, file, imported);
   const onFile = async (): Promise<void> => {
     const chosen = file.files?.[0];
     if (!chosen) return;
@@ -202,7 +203,7 @@ export function createPresetsSection(settings: SettingsRegistry, document: Docum
     block.dataset.preset = preset.id;
     const own = settings.isUserPreset(preset.id);
     const heading = document.createElement("div");
-    heading.className = "foss-earth-choices__heading";
+    heading.className = "foss-earth-choices__heading foss-earth-preset__title";
     heading.textContent = own ? `${preset.name} (yours)` : preset.name;
     const description = paragraph(document, "foss-earth-choices__note", preset.description);
 
@@ -225,10 +226,12 @@ export function createPresetsSection(settings: SettingsRegistry, document: Docum
     }
     values.append(summary, items);
 
+    // The title is the first item of the row its actions share.
     const actions = document.createElement("div");
-    actions.className = "foss-earth-choices";
+    actions.className = "foss-earth-choices foss-earth-preset__row";
     const apply = action(document, "Apply…");
-    actions.append(apply);
+    apply.setAttribute("aria-label", `Apply ${preset.name}…`);
+    actions.append(heading, apply);
     const confirm = document.createElement("div");
     confirm.className = "foss-earth-choices foss-earth-preset__confirm";
     confirm.hidden = true;
@@ -258,7 +261,7 @@ export function createPresetsSection(settings: SettingsRegistry, document: Docum
       if (diff.rejected.length > 0) {
         confirm.append(paragraph(document, "foss-earth-choices__note", `Left as they are: ${diff.rejected.map(entry => `${settings.spec(entry.id)?.label ?? entry.id} (${entry.reason})`).join("; ")}`));
       }
-      const yes = action(document, diff.changes.length === 0 ? "Close" : "Apply these changes");
+      const yes = action(document, diff.changes.length === 0 ? "Close" : "Apply");
       const no = action(document, "Cancel");
       if (diff.changes.length === 0) no.hidden = true;
       yes.addEventListener("click", () => {
@@ -273,7 +276,7 @@ export function createPresetsSection(settings: SettingsRegistry, document: Docum
     });
 
     if (own) {
-      const rename = action(document, "Rename");
+      const rename = createIconButton(document, { icon: "pencil", label: `Rename ${preset.name}` });
       const field = document.createElement("input");
       field.type = "text";
       field.className = "foss-earth-parameter__text";
@@ -287,20 +290,25 @@ export function createPresetsSection(settings: SettingsRegistry, document: Docum
         if (event.key === "Enter" && settings.renamePreset(preset.id, field.value)) render();
         if (event.key === "Escape") field.hidden = true;
       });
-      const exported = document.createElement("a");
-      exported.className = "foss-earth-choice foss-earth-parameter__action";
-      exported.textContent = "Export";
+      const exported = createIconButton(document, { icon: "download", label: `Export ${preset.name}`, tag: "a" });
       const { id, name, description } = preset;
       exported.href = `data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify({ id, name, description, values: preset.values }, null, 2))}`;
       exported.download = `foss-earth-preset-${id.replace(/^user:/, "")}.json`;
-      const remove = action(document, "Delete");
+      const remove = createIconButton(document, { icon: "trash", label: `Delete ${preset.name}` });
       remove.addEventListener("click", () => {
-        if (remove.dataset.confirm !== "1") { remove.dataset.confirm = "1"; remove.textContent = `Delete ${preset.name}?`; return; }
+        // The confirmation is in words: deleting cannot be undone.
+        if (remove.dataset.confirm !== "1") {
+          remove.dataset.confirm = "1";
+          remove.classList.remove("foss-earth-parameter__icon-action");
+          remove.removeAttribute("aria-label");
+          remove.textContent = `Delete ${preset.name}?`;
+          return;
+        }
         if (settings.deletePreset(preset.id)) render();
       });
       actions.append(rename, field, exported, remove);
     }
-    block.append(heading, description, values, actions, confirm, done);
+    block.append(actions, description, values, confirm, done);
     return block;
   };
 
@@ -323,6 +331,7 @@ export function createPresetsSection(settings: SettingsRegistry, document: Docum
       unsubscribe();
       saveAll.destroy();
       file.removeEventListener("change", onChange);
+      pick.removeEventListener("click", onPick);
       element.remove();
     },
   };

@@ -126,6 +126,11 @@ export interface ParameterSpec<T extends ParameterValue = ParameterValue> {
   kind: ParameterKind;
   /** A single slider for a choice with exactly two positions. */
   choiceControl?: "two-position";
+  /**
+   * choice: draw the segments before the label, when that reads better as a phrase, as
+   * Interface → Toolbar's On / Auto / Off rows do. The label comes first otherwise.
+   */
+  controlFirst?: boolean;
   /** number and range: the accepted values, which may depend on the device. */
   bounds?: (context: DeviceContext) => ParameterBounds;
   /** number and range: the control's step in the unit (or in log2 of it for a log2 scale). */

@@ -80,7 +80,7 @@ describe("supplied DOM realm", () => {
       const buttons = [...handle.element.querySelectorAll("button")];
       buttons.find(button => button.textContent === "Export")!.click();
       const selected = vi.spyOn(handle.element.querySelector("textarea")!, "select");
-      buttons.find(button => button.textContent === "Copy")!.click();
+      buttons.find(button => button.getAttribute("aria-label") === "Copy the settings")!.click();
       expect(selected).toHaveBeenCalledOnce();
       expect(handle.element.querySelector('[role="status"]')?.textContent).toBe("Select the text and copy it.");
     } finally { handle.destroy(); }

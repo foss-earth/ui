@@ -81,6 +81,39 @@ export function describeProvenance(state: ParameterState): string {
   }
 }
 
+const startValues = new WeakMap<SettingsRegistry, Map<string, ParameterValue>>();
+
+/**
+ * The value a parameter had when the page started, as far as the controls know:
+ * every registered value is recorded the first time any control asks, and a
+ * parameter registered later when it is first asked about.
+ */
+export function parameterStartValue(settings: SettingsRegistry, id: string): ParameterValue {
+  let values = startValues.get(settings);
+  if (!values) {
+    values = new Map();
+    for (const spec of settings.list()) values.set(spec.id, settings.get(spec.id));
+    startValues.set(settings, values);
+  }
+  if (!values.has(id)) values.set(id, settings.get(id));
+  return values.get(id)!;
+}
+
+/** True when a value that applies on the next start differs from the one the page started with. */
+export function isParameterPending(settings: SettingsRegistry, id: string): boolean {
+  const spec = settings.spec(id);
+  return Boolean(spec && !spec.appliesLive && !sameValue(settings.get(id), parameterStartValue(settings, id)));
+}
+
+/** The terse state shown beside a control; the explanation holds the full reason. */
+function statusFor(state: ParameterState, startValue: ParameterValue): string {
+  if (!state.spec.appliesLive && !sameValue(state.value, startValue)) return "Pending";
+  if (state.provenance === "host") return "Set by the app";
+  if (state.spec.readOnly) return "Read-only";
+  if (state.provenance === "url") return "From the URL";
+  return "";
+}
+
 function noteFor(state: ParameterState, startValue: ParameterValue): string {
   const parts: string[] = [];
   if (state.note) parts.push(state.note);
@@ -88,7 +121,7 @@ function noteFor(state: ParameterState, startValue: ParameterValue): string {
     const words = describeProvenance(state);
     parts.push(sentence(words.charAt(0).toUpperCase() + words.slice(1)));
   }
-  if (!state.spec.appliesLive && !sameValue(state.value, startValue)) parts.push("Applies when the app next starts.");
+  if (!state.spec.appliesLive && !sameValue(state.value, startValue)) parts.push("Changes pending: applies after Apply & reload.");
   if (state.spec.readOnly) parts.push(state.spec.readOnly);
   return parts.join(" ");
 }
@@ -131,7 +164,9 @@ function withParameterActions(document: Document, settings: SettingsRegistry, sp
   const url = settings.sourceUrl(spec.id);
   const source = document.createElement(url ? "a" : "span");
   source.className = "foss-earth-parameter-row__source";
-  source.textContent = spec.source;
+  source.textContent = "↗";
+  source.setAttribute("aria-label", `Source for ${spec.label}: ${spec.source}`);
+  source.title = spec.source;
   if (url) {
     const link = source as HTMLAnchorElement;
     link.href = url;
@@ -139,7 +174,7 @@ function withParameterActions(document: Document, settings: SettingsRegistry, sp
     link.rel = "noopener noreferrer";
     link.title = `The code that reads ${spec.id}. Opens in a new tab.`;
   }
-  explanation.append(source);
+  code.append(" ", source);
   let header = control.element.querySelector<HTMLElement>(".foss-earth-parameter__header");
   const heading = control.element.querySelector<HTMLElement>(".foss-earth-choices__heading, .foss-earth-parameter__label");
   if (!header && heading) {
@@ -148,11 +183,18 @@ function withParameterActions(document: Document, settings: SettingsRegistry, sp
     heading.before(header);
     header.append(heading);
   }
-  if (heading) heading.after(help);
-  else (header ?? control.element).append(help);
+  const status = document.createElement("span");
+  status.className = "foss-earth-parameter__status";
+  status.setAttribute("role", "status");
+  status.hidden = true;
+  (header?.querySelector(".foss-earth-parameter__slider-line") ?? header ?? control.element).append(status, help);
   control.element.append(explanation);
   const updateActions = (): void => {
     const state = settings.inspect(spec.id);
+    const text = statusFor(state, parameterStartValue(settings, spec.id));
+    status.hidden = text === "";
+    if (status.textContent !== text) status.textContent = text;
+    control.element.classList.toggle("is-pending", text === "Pending");
     const describe = (value: ParameterValue): string => spec.booleanControl === "auto-custom" ? (value === true ? "Custom" : "Auto") : formatValue(spec, value, state.choices);
     const value = spec.sensitive ? (state.value ? "set" : "not set") : describe(state.value);
     const defaultValue = spec.sensitive ? (state.defaultValue ? "set" : "none") : describe(state.defaultValue);
@@ -296,12 +338,15 @@ function describeTitle(spec: ParameterSpec): string {
   return spec.description;
 }
 
-/** A switch: one pill with a checkbox, outlined while on. */
+/** A switch: the label, then a native checkbox drawn as a sliding switch. */
 function createSwitch(document: Document, settings: SettingsRegistry, spec: ParameterSpec): ParameterControlHandle {
   const element = document.createElement("div");
-  element.className = "foss-earth-parameter foss-earth-parameter--inline";
+  element.className = "foss-earth-parameter foss-earth-parameter--inline foss-earth-parameter--switch";
   element.dataset.parameter = spec.id;
   const toggle = pill(document, "checkbox", `foss-earth-parameter-${++controlCount}`, "on", "");
+  toggle.element.classList.add("foss-earth-switch");
+  toggle.text.className = "foss-earth-switch__knob";
+  toggle.text.setAttribute("aria-hidden", "true");
   toggle.element.title = describeTitle(spec);
   toggle.input.setAttribute("aria-label", spec.label);
   toggle.input.id = `${toggle.input.name}-toggle`;
@@ -311,10 +356,10 @@ function createSwitch(document: Document, settings: SettingsRegistry, spec: Para
   setParameterLabel(document, heading, spec);
   const header = document.createElement("div");
   header.className = "foss-earth-parameter__header";
-  header.append(toggle.element, heading);
+  header.append(heading, toggle.element);
   const note = createNote(document);
   element.append(header, note);
-  const start = settings.get(spec.id);
+  const start = parameterStartValue(settings, spec.id);
   const onChange = (): void => { settings.set(spec.id, toggle.input.checked); update(); };
   toggle.input.addEventListener("change", onChange);
   const update = (): void => {
@@ -332,7 +377,7 @@ function createAutoCustomSlider(document: Document, settings: SettingsRegistry, 
   const element = document.createElement("div");
   element.className = "foss-earth-parameter foss-earth-parameter--inline";
   element.dataset.parameter = spec.id;
-  const { header, readout } = createHeader(document, spec);
+  const { header, readout } = createHeader(document, spec, true);
   const slider = createTwoPositionSlider({ document,
     label: spec.label,
     options: [{ label: "Auto" }, { label: "Custom" }],
@@ -341,7 +386,7 @@ function createAutoCustomSlider(document: Document, settings: SettingsRegistry, 
   readout.append(slider.element);
   const note = createNote(document);
   element.append(header, note);
-  const start = settings.get(spec.id);
+  const start = parameterStartValue(settings, spec.id);
   const update = (): void => {
     const state = settings.inspect(spec.id);
     slider.update(state.value === true ? 1 : 0, Boolean(spec.readOnly) || state.provenance === "host");
@@ -370,7 +415,7 @@ function createChoiceSlider(document: Document, settings: SettingsRegistry, spec
   element.dataset.parameter = spec.id;
   element.setAttribute("role", "group");
   element.setAttribute("aria-label", spec.label);
-  const { header, readout } = createHeader(document, spec);
+  const { header, readout } = createHeader(document, spec, !spec.controlFirst);
   const slider = createTwoPositionSlider({ document,
     label: spec.label,
     options: [
@@ -379,13 +424,10 @@ function createChoiceSlider(document: Document, settings: SettingsRegistry, spec
     ],
     onInput: index => { settings.set(spec.id, ends[index].id); update(); },
   });
-  const longest = Math.max(...ends.map(choice => (choice.shortLabel ?? choice.label).length));
-  if (longest > 10) slider.element.style.width = "248px";
-  else if (longest > 4) slider.element.style.width = "156px";
   readout.append(slider.element);
   const note = createNote(document);
   element.append(header, note);
-  const start = settings.get(spec.id);
+  const start = parameterStartValue(settings, spec.id);
   // Auto follows the presentation the shell is actually using.
   const shownEnd = (): 0 | 1 => element.ownerDocument.documentElement.dataset.worldPresentation === ends[1].id ? 1 : 0;
   const update = (): void => {
@@ -421,9 +463,9 @@ function createChoicePills(document: Document, settings: SettingsRegistry, spec:
   pills.className = "foss-earth-parameter__pills";
   const note = createNote(document);
   element.classList.add("foss-earth-parameter--compact-choice");
-  header.prepend(pills);
+  if (spec.controlFirst) header.prepend(pills); else header.append(pills);
   element.append(header, note);
-  const start = settings.get(spec.id);
+  const start = parameterStartValue(settings, spec.id);
   let shownChoices: ParameterState["choices"] | null = null;
   const onChange = (event: Event): void => {
     const input = event.target as HTMLInputElement | null;
@@ -466,15 +508,16 @@ function fromField(spec: ParameterSpec, text: string): number | null {
   return spec.unit === "fraction" ? value / 100 : value;
 }
 
-/** Field, label and help stay one phrase; the track follows and wraps when its length does not fit. */
-function placeSlider(header: HTMLElement, readout: HTMLElement, reading: HTMLElement, label: HTMLElement, track: HTMLElement): void {
+/** Field, label, named values and help stay one phrase; the track follows and wraps when its length does not fit. */
+function placeSlider(header: HTMLElement, readout: HTMLElement, reading: HTMLElement, label: HTMLElement, track: HTMLElement, named?: HTMLElement): void {
   const line = header.ownerDocument.createElement("span");
   line.className = "foss-earth-parameter__slider-line";
-  line.append(readout, reading, label);
+  line.append(readout, reading, label, ...(named ? [named] : []));
   header.append(line, track);
 }
 
-function createHeader(document: Document, spec: ParameterSpec): { header: HTMLElement; readout: HTMLElement; reading: HTMLElement } {
+/** Label first reads best for a two-position control ("Priorities [Auto | Custom]"); a quantity's field leads its label. */
+function createHeader(document: Document, spec: ParameterSpec, labelFirst = false): { header: HTMLElement; readout: HTMLElement; reading: HTMLElement } {
   const header = document.createElement("div");
   header.className = "foss-earth-parameter__header";
   const label = document.createElement("span");
@@ -487,7 +530,8 @@ function createHeader(document: Document, spec: ParameterSpec): { header: HTMLEl
   const reading = document.createElement("span");
   reading.className = "foss-earth-parameter__reading";
   reading.hidden = true;
-  header.append(readout, reading, label);
+  if (labelFirst) header.append(label, readout, reading);
+  else header.append(readout, reading, label);
   return { header, readout, reading };
 }
 
@@ -515,7 +559,7 @@ function createNumberField(document: Document, settings: SettingsRegistry, spec:
   readout.append(field, unit);
   const note = createNote(document);
   element.append(header, note);
-  const start = settings.get(spec.id);
+  const start = parameterStartValue(settings, spec.id);
   const update = (): void => {
     const state = settings.inspect(spec.id);
     const value = typeof state.value === "number" ? state.value : 0;
@@ -540,7 +584,7 @@ function createNumberField(document: Document, settings: SettingsRegistry, spec:
   return { element, update, destroy() { field.removeEventListener("change", onChange); element.remove(); } };
 }
 
-/** A value track: one thumb, the default ticked, named values as pills beside it. */
+/** A value track: one thumb, the default ticked, named values as one compact segmented track beside its label. */
 function createValueTrack(document: Document, settings: SettingsRegistry, spec: ParameterSpec): ParameterControlHandle {
   const name = `foss-earth-parameter-${++controlCount}`;
   const element = document.createElement("div");
@@ -554,7 +598,7 @@ function createValueTrack(document: Document, settings: SettingsRegistry, spec: 
   const unit = document.createElement("span");
   unit.className = "foss-earth-parameter__unit";
   readout.append(field, unit);
-  const start = settings.get(spec.id);
+  const start = parameterStartValue(settings, spec.id);
   const track: TrackHandle = createTrack({ document,
     ariaLabel: spec.label,
     ramp: spec.track?.ramp ?? "neutral",
@@ -566,15 +610,17 @@ function createValueTrack(document: Document, settings: SettingsRegistry, spec: 
     },
     onCommit: () => update(),
   });
-  const named = document.createElement("div");
-  named.className = "foss-earth-parameter__named";
+  const named = document.createElement("span");
+  named.className = "foss-earth-parameter__pills foss-earth-parameter__named";
+  named.setAttribute("role", "radiogroup");
+  named.setAttribute("aria-label", spec.label);
   const namedPills = (spec.named ?? []).map(option => choicePill(document, name, option));
   const numberPill = spec.named?.length ? pill(document, "radio", name, "", "Value") : null;
   named.hidden = namedPills.length === 0;
   named.append(...namedPills.map(option => option.element), ...(numberPill ? [numberPill.element] : []));
   const note = createNote(document);
-  placeSlider(header, readout, reading, header.querySelector(".foss-earth-parameter__label")!, track.element);
-  element.append(header, named, note);
+  placeSlider(header, readout, reading, header.querySelector(".foss-earth-parameter__label")!, track.element, namedPills.length ? named : undefined);
+  element.append(header, note);
 
   const onNamed = (event: Event): void => {
     const input = event.target as HTMLInputElement | null;
@@ -656,7 +702,7 @@ function createRangeTrack(document: Document, settings: SettingsRegistry, spec: 
   element.dataset.parameter = spec.id;
   const { header, readout, reading } = createHeader(document, spec);
   const note = createNote(document);
-  const start = settings.get(spec.id);
+  const start = parameterStartValue(settings, spec.id);
   // Left and right thumbs; on a reversed track the left one is the range's max.
   const left = spec.track?.reversed ? "max" : "min";
   const track = createTrack({ document,
@@ -732,7 +778,7 @@ function createTextField(document: Document, settings: SettingsRegistry, spec: P
   actions.append(save, clear);
   const note = createNote(document);
   element.append(header, input, actions, note);
-  const start = settings.get(spec.id);
+  const start = parameterStartValue(settings, spec.id);
   const onSave = (): void => {
     const result = settings.set(spec.id, input.value.trim());
     if (!result.ok) { setNote(note, result.reason, true); return; }

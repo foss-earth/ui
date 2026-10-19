@@ -67,6 +67,44 @@
   padding: 0 6px 6px;
 }
 
+/* "▸ Imagery selection ?": a section whose title has help. The details spans
+   the row; the ? lies over its summary in the column the hidden copy of the
+   title sizes, so it follows the title without being inside the summary. */
+.foss-earth-panel-section__frame {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+}
+
+.foss-earth-panel-section__frame > .foss-earth-panel-section {
+  grid-area: 1 / 1 / 2 / 3;
+}
+
+.foss-earth-panel-section__measure {
+  grid-area: 1 / 1;
+  display: flex;
+  gap: 4px;
+  height: 0;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  overflow: hidden;
+  visibility: hidden;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.foss-earth-panel-section__measure::before {
+  content: "\25B8";
+}
+
+.foss-earth-panel-section__frame > .foss-earth-panel-section__help {
+  grid-area: 1 / 2;
+  justify-self: start;
+  z-index: 1;
+  margin: 3px 0 0;
+}
+
 :root[data-theme="light"] .foss-earth-panel-section {
   border-color: rgba(71, 85, 105, 0.22);
   background: rgba(15, 23, 42, 0.02);
@@ -85,8 +123,12 @@
 }
 
 .foss-earth-choice-panel {
-  display: grid;
-  gap: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .foss-earth-choices {
@@ -96,6 +138,11 @@
   gap: 3px;
 }
 
+/* A React host's mount point takes no box: its control joins the surrounding row. */
+.foss-earth-react-host {
+  display: contents;
+}
+
 .foss-earth-choices[hidden] {
   display: none;
 }
@@ -103,6 +150,12 @@
 .foss-earth-choices__heading,
 .foss-earth-choices__note {
   flex-basis: 100%;
+}
+
+/* A group title that starts its row, its controls beside it. */
+.foss-earth-choices__heading.foss-earth-choices__heading--inline {
+  flex-basis: auto;
+  margin-right: 2px;
 }
 
 .foss-earth-choices__heading {
@@ -481,8 +534,8 @@
   max-width: 100%;
 }
 
-.foss-earth-parameter--slider .foss-earth-parameter__named {
-  flex: 1 1 100%;
+.foss-earth-parameter__named[hidden] {
+  display: none;
 }
 
 .foss-earth-parameter--group {
@@ -540,9 +593,10 @@
   max-width: 100%;
 }
 
+/* A label too long to share the line with its track puts the track, then ?, on the next line. */
 .foss-earth-parameter--compact-choice > .foss-earth-parameter__header {
   flex-basis: auto;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   min-width: 0;
   align-items: center;
   justify-content: flex-start;
@@ -552,6 +606,102 @@
   border-radius: 10px;
   padding: 3px 6px;
   background: rgba(148, 163, 184, 0.08);
+}
+
+/* Every parameter is one logical component: its label, control and help share one rounded group. */
+.foss-earth-parameter--inline > .foss-earth-parameter__header,
+.foss-earth-parameter--slider > .foss-earth-parameter__header,
+.foss-earth-parameter--line > .foss-earth-parameter__header {
+  box-sizing: border-box;
+  max-width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 10px;
+  padding: 3px 6px;
+  background: rgba(148, 163, 184, 0.08);
+}
+
+.foss-earth-parameter--inline,
+.foss-earth-parameter--slider {
+  max-width: 100%;
+}
+
+.foss-earth-parameter__status {
+  flex: none;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0.8;
+}
+
+.foss-earth-parameter.is-pending > .foss-earth-parameter__header {
+  border-color: rgba(245, 158, 11, 0.75);
+}
+
+.foss-earth-parameter.is-pending .foss-earth-parameter__status {
+  color: #f59e0b;
+  opacity: 1;
+}
+
+/* A native checkbox drawn as a sliding switch: no visible checkbox glyph. */
+.foss-earth-choice.foss-earth-switch {
+  position: relative;
+  flex: none;
+  width: 30px;
+  min-height: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid rgba(148, 163, 184, 0.55);
+  background: rgba(15, 23, 42, 0.18);
+}
+
+.foss-earth-switch input[type="checkbox"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.foss-earth-switch__knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(148, 163, 184, 0.9);
+  transition: left 120ms ease;
+}
+
+.foss-earth-choice.foss-earth-switch:has(input:checked) {
+  border-color: rgba(56, 189, 248, 0.85);
+  background: rgba(56, 189, 248, 0.45);
+}
+
+.foss-earth-switch:has(input:checked) > .foss-earth-switch__knob {
+  left: 14px;
+  background: #fff;
+}
+
+.foss-earth-switch:has(input:disabled) {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.foss-earth-parameter--inline > .foss-earth-parameter__header > .foss-earth-choice.foss-earth-switch {
+  min-width: 30px;
+  padding: 0;
+}
+
+.foss-earth-parameter__header > .foss-earth-parameter__label[for] {
+  cursor: pointer;
+}
+
+.foss-earth-choice-group__status {
+  flex: none;
+  margin: 0;
+  font-size: 11px;
+  opacity: 0.8;
 }
 
 .foss-earth-parameter--compact-choice .foss-earth-choices__heading {
@@ -569,11 +719,6 @@
 
 .foss-earth-parameter--compact-choice .foss-earth-parameter__help-button {
   flex: none;
-}
-
-/* Position readout names the control, then offers the switch. */
-[data-settings-section="interface/position"] .foss-earth-parameter--compact-choice > .foss-earth-parameter__header > .foss-earth-choices__heading {
-  order: -1;
 }
 
 /* Toolbar and position readout: the text/switch cards flow as a paragraph and
@@ -605,8 +750,26 @@
   flex: none;
 }
 
-.foss-earth-parameter--compact-choice .foss-earth-parameter__pills > .foss-earth-choice {
+/* Default discrete choices: one natural-width rounded track, no visible radio glyphs.
+   Reuse the parameter control's segmented styling in every custom choice factory. */
+/* A logical control is one compact rounded group when it flows in a paragraph. */
+.foss-earth-choice-group {
+  width: max-content;
+  max-width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 10px;
+  padding: 3px 6px;
+  background: rgba(148, 163, 184, 0.08);
+  box-sizing: border-box;
+}
+.foss-earth-choice-group > .foss-earth-choices__heading { flex-basis: auto; }
+.foss-earth-choice-group .foss-earth-choice:has(input:disabled) { opacity: 0.45; cursor: default; }
+.foss-earth-choice-group .foss-earth-choice__credit { margin: -1px -5px -1px 0; padding: 0 3px; }
+
+.foss-earth-parameter--compact-choice .foss-earth-parameter__pills > .foss-earth-choice,
+.foss-earth-parameter__named > .foss-earth-choice {
   position: relative;
+  flex-shrink: 0;
   justify-content: center;
   min-width: 1.6em;
   min-height: 22px;
@@ -623,7 +786,8 @@
   height: 16px;
 }
 
-.foss-earth-parameter--compact-choice .foss-earth-parameter__pills input[type="radio"] {
+.foss-earth-parameter--compact-choice .foss-earth-parameter__pills input[type="radio"],
+.foss-earth-parameter__named input[type="radio"] {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -631,7 +795,8 @@
   clip-path: inset(50%);
 }
 
-.foss-earth-parameter--compact-choice .foss-earth-parameter__pills {
+.foss-earth-parameter--compact-choice .foss-earth-parameter__pills,
+.foss-earth-parameter__pills.foss-earth-parameter__named {
   flex: 0 1 auto;
   flex-wrap: wrap;
   width: max-content;
@@ -644,12 +809,14 @@
   background: rgba(15, 23, 42, 0.18);
 }
 
-.foss-earth-parameter--compact-choice .foss-earth-parameter__pills > .foss-earth-choice:has(input:checked) {
+.foss-earth-parameter--compact-choice .foss-earth-parameter__pills > .foss-earth-choice:has(input:checked),
+.foss-earth-parameter__named > .foss-earth-choice:has(input:checked) {
   background: rgba(56, 189, 248, 0.32);
   box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.65);
 }
 
-.foss-earth-parameter--compact-choice .foss-earth-parameter__pills > .foss-earth-choice:focus-within {
+.foss-earth-parameter--compact-choice .foss-earth-parameter__pills > .foss-earth-choice:focus-within,
+.foss-earth-parameter__named > .foss-earth-choice:focus-within {
   outline: 2px solid var(--globe-accent, #60a5fa);
   outline-offset: 1px;
 }
@@ -660,11 +827,13 @@
   align-items: center;
 }
 
+/* Natural width: two equal halves, each as wide as the longer choice, so the thumb covers one. */
 .foss-earth-two-position-slider {
   position: relative;
-  display: inline-flex;
+  display: inline-grid;
   flex: none;
-  width: 64px;
+  grid-template-columns: 1fr 1fr;
+  width: max-content;
   height: 28px;
   align-items: center;
   border-radius: 14px;
@@ -672,7 +841,7 @@
 }
 
 .foss-earth-two-position-slider--text {
-  width: 112px;
+  height: 24px;
   font-size: 11px;
 }
 
@@ -696,12 +865,15 @@
 
 .foss-earth-two-position-slider__option {
   position: relative;
-  width: 50%;
-  overflow: hidden;
+  min-width: 18px;
+  padding: 0 6px;
   text-align: center;
   white-space: nowrap;
-  text-overflow: ellipsis;
   pointer-events: none;
+}
+
+.foss-earth-two-position-slider--text .foss-earth-two-position-slider__option {
+  padding: 0 7px;
 }
 
 .foss-earth-two-position-slider__input {
@@ -859,6 +1031,15 @@
   font-size: 12px;
 }
 
+.foss-earth-preset__row {
+  align-items: center;
+}
+
+.foss-earth-preset__row > .foss-earth-preset__title {
+  flex-basis: auto;
+  margin-right: 2px;
+}
+
 .foss-earth-preset__values ul,
 .foss-earth-preset__changes {
   flex-basis: 100%;
@@ -907,6 +1088,33 @@
 }
 
 /* Show all parameters reuses the compact controls, with details behind ?. */
+.foss-earth-parameter-section__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.foss-earth-parameter-section__pending {
+  align-items: center;
+}
+
+.foss-earth-parameter-section__pending[hidden] {
+  display: none;
+}
+
+.foss-earth-parameter-section__pending-text {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #f59e0b;
+}
+
+:root[data-theme="light"] .foss-earth-parameter-section__pending-text {
+  color: #b45309;
+}
+
 .foss-earth-parameter-section__footer {
   justify-content: flex-start;
 }
@@ -1037,18 +1245,46 @@
   background: rgba(29, 78, 216, 0.08);
 }
 
-:root[data-theme="light"] .foss-earth-parameter--compact-choice .foss-earth-parameter__pills {
+:root[data-theme="light"] .foss-earth-parameter--compact-choice .foss-earth-parameter__pills,
+:root[data-theme="light"] .foss-earth-parameter__pills.foss-earth-parameter__named {
   background: rgba(15, 23, 42, 0.04);
 }
 
-:root[data-theme="light"] .foss-earth-parameter--compact-choice .foss-earth-parameter__pills > .foss-earth-choice:has(input:checked) {
+:root[data-theme="light"] .foss-earth-parameter--compact-choice .foss-earth-parameter__pills > .foss-earth-choice:has(input:checked),
+:root[data-theme="light"] .foss-earth-parameter__named > .foss-earth-choice:has(input:checked) {
   border-color: transparent;
   background: rgba(29, 78, 216, 0.12);
   box-shadow: inset 0 0 0 1px #1d4ed8;
 }
 
-:root[data-theme="light"] .foss-earth-parameter--compact-choice > .foss-earth-parameter__header {
+:root[data-theme="light"] .foss-earth-parameter--compact-choice > .foss-earth-parameter__header,
+:root[data-theme="light"] .foss-earth-parameter--inline > .foss-earth-parameter__header,
+:root[data-theme="light"] .foss-earth-parameter--slider > .foss-earth-parameter__header,
+:root[data-theme="light"] .foss-earth-parameter--line > .foss-earth-parameter__header,
+:root[data-theme="light"] .foss-earth-choice-group {
   background: rgba(255, 255, 255, 0.72);
+}
+
+:root[data-theme="light"] .foss-earth-choice.foss-earth-switch {
+  border-color: rgba(71, 85, 105, 0.45);
+  background: rgba(15, 23, 42, 0.06);
+}
+
+:root[data-theme="light"] .foss-earth-switch__knob {
+  background: rgba(71, 85, 105, 0.75);
+}
+
+:root[data-theme="light"] .foss-earth-choice.foss-earth-switch:has(input:checked) {
+  border-color: #1d4ed8;
+  background: #1d4ed8;
+}
+
+:root[data-theme="light"] .foss-earth-parameter.is-pending .foss-earth-parameter__status {
+  color: #b45309;
+}
+
+:root[data-theme="light"] .foss-earth-parameter.is-pending > .foss-earth-parameter__header {
+  border-color: #d97706;
 }
 
 :root[data-theme="light"] .foss-earth-choice__credit {

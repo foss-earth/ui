@@ -10,7 +10,7 @@ const reporter = { repository: "UMN-VR/UMN-VR.github.io", appName: "Campus tour"
 const rawReport = "Browser: Android Firefox Mobile\nBuild: abc123\nRenderer: webgl2\nGPU: Adreno 740\nThis visit, oldest first:\n1.0 s FULL_ACTIVITY_MARKER\n2.0 s Failed with opaque-settings-key\n";
 
 function action<T extends HTMLElement = HTMLButtonElement>(name: string): T {
-  return [...section!.element.querySelectorAll("button, a")].find(element => element.textContent === name) as T;
+  return [...section!.element.querySelectorAll("button, a")].find(element => element.textContent === name || element.getAttribute("aria-label") === name) as T;
 }
 
 function fields(): { title: HTMLInputElement; description: HTMLTextAreaElement; report: HTMLTextAreaElement } {

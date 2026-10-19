@@ -1,5 +1,6 @@
 import { memo, useCallback, useRef, useLayoutEffect, useState, useSyncExternalStore } from "react";
 import type { MeshInspectorPanelPort as MeshInspectorHandle, MeshInspectorPanelNode as MeshInspectorNode } from "./meshInspectorPorts.js";
+import { createHelpTooltip } from "./helpTooltip.js";
 
 export interface MeshInspectorPanelProps {
   inspector: MeshInspectorHandle | null;
@@ -75,6 +76,23 @@ function MeshTree({ roots, inspector }: { roots: readonly MeshInspectorNode[]; i
   return renderNodes(roots);
 }
 
+/** The shared ? explanation, owned by this component's lifetime. */
+function HelpButton({ label, text }: { label: string; text: string }) {
+  const host = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const element = host.current;
+    if (!element) return;
+    const content = element.ownerDocument.createElement("div");
+    const paragraph = element.ownerDocument.createElement("p");
+    paragraph.textContent = text;
+    content.append(paragraph);
+    const tooltip = createHelpTooltip({ label, content });
+    element.append(tooltip.element);
+    return () => tooltip.destroy();
+  }, [label, text]);
+  return <span ref={host} className="foss-earth-mesh-inspector__help" />;
+}
+
 /** An event-driven mesh hierarchy; selecting changes highlighting, never visibility. */
 export const MeshInspectorPanel = memo(function MeshInspectorPanel({ inspector }: MeshInspectorPanelProps) {
   const subscribe = useCallback((listener: () => void) => inspector?.subscribe(listener) ?? unsubscribeEmpty, [inspector]);
@@ -83,7 +101,7 @@ export const MeshInspectorPanel = memo(function MeshInspectorPanel({ inspector }
 
   return (
     <div className="foss-earth-mesh-inspector" role="group" aria-label="Mesh selection">
-      <p>Select meshes to highlight their polygon edges. Groups include their descendants. Selection does not hide geometry.</p>
+      <p>Select meshes to highlight their polygon edges. <HelpButton label="Explain mesh selection" text="Groups include their descendants. Selection does not hide geometry." /></p>
       {snapshot.error && <p role="alert">{snapshot.error}</p>}
       {inspector && snapshot.roots.length > 0 ? <>
         <div className="foss-earth-mesh-inspector__actions">

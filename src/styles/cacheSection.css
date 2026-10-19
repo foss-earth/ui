@@ -7,8 +7,10 @@
   font-size: 12px;
 }
 
+/* Usage sits in the title's row, after the summary, before Clear and ?. */
 .foss-earth-map-cache-section progress {
-  flex-basis: 100%;
+  flex: 0 1 96px;
+  min-width: 48px;
   height: 8px;
   accent-color: #38bdf8;
 }

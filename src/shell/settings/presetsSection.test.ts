@@ -39,7 +39,7 @@ function setup() {
   document.body.append(panel.element, loading.element, camera.element);
   const block = (id: string) => panel.element.querySelector<HTMLElement>(`[data-preset="${id}"]`)!;
   const button = (within: HTMLElement, text: string) =>
-    [...within.querySelectorAll<HTMLElement>("button, a")].find(element => element.textContent === text && !element.hidden)!;
+    [...within.querySelectorAll<HTMLElement>("button, a")].find(element => (element.textContent === text || element.getAttribute("aria-label") === text) && !element.hidden)!;
   const status = (section: HTMLElement) => section.querySelector<HTMLElement>(".foss-earth-preset-status")!;
   return { settings, panel, loading, camera, block, button, status };
 }
@@ -68,7 +68,7 @@ describe("presets", () => {
     expect(settings.get("t.budget")).toBe(128);
 
     button(block("lean"), "Apply…").click();
-    button(confirm, "Apply these changes").click();
+    button(confirm, "Apply").click();
     expect(settings.get("t.budget")).toBe(64);
     expect(settings.get("t.cap")).toBe(30);
     expect(status(panel.element).textContent).toBe("Matches Lean");
@@ -84,7 +84,7 @@ describe("presets", () => {
     button(block("defaults"), "Apply…").click();
     const back = block("defaults").querySelector<HTMLElement>(".foss-earth-preset__confirm")!;
     expect([...back.querySelectorAll("li")].map(item => item.textContent)).toEqual(["Budget: 96 MiB → 128 MiB", "Cap: 30 fps → Off"]);
-    button(back, "Apply these changes").click();
+    button(back, "Apply").click();
     expect(settings.inspect("t.budget").provenance).toBe("default");
     expect(status(panel.element).textContent).toBe("Matches Defaults");
   });
@@ -115,16 +115,16 @@ describe("presets", () => {
     settings.reset("t.tilt");
 
     expect(block(saved.id).querySelector(".foss-earth-choices__heading")!.textContent).toBe("Big budget (yours)");
-    const exported = button(block(saved.id), "Export") as HTMLAnchorElement;
+    const exported = button(block(saved.id), "Export Big budget") as HTMLAnchorElement;
     expect(JSON.parse(decodeURIComponent(exported.href.split(",").slice(1).join(",")))).toMatchObject({ name: "Big budget", values: saved.values });
 
-    button(block(saved.id), "Rename").click();
+    button(block(saved.id), "Rename Big budget").click();
     const field = block(saved.id).querySelector<HTMLInputElement>(".foss-earth-parameter__text")!;
     field.value = "Roomy";
-    button(block(saved.id), "Rename").click();
+    button(block(saved.id), "Rename Big budget").click();
     expect(block(saved.id).querySelector(".foss-earth-choices__heading")!.textContent).toBe("Roomy (yours)");
 
-    button(block(saved.id), "Delete").click();
+    button(block(saved.id), "Delete Roomy").click();
     expect(settings.listPresets().some(preset => preset.id === saved.id)).toBe(true);
     button(block(saved.id), "Delete Roomy?").click();
     expect(settings.listPresets().some(preset => preset.id === saved.id)).toBe(false);

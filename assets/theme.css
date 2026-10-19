@@ -123,6 +123,17 @@
   background: var(--ui-accent-soft);
 }
 
+/* A switch that is on fills with the accent in both appearances; as specific as the base light rule, and later. */
+:root[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-choice.foss-earth-switch:has(input:checked),
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-choice.foss-earth-switch:has(input:checked) {
+  border-color: var(--ui-accent);
+  background: var(--ui-accent);
+}
+
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-switch:has(input:checked) > .foss-earth-switch__knob {
+  background: var(--ui-accent-contrast);
+}
+
 [data-ui-theme]:not([data-ui-theme="earth"]) :is(.foss-earth-choice__credit, .foss-earth-parameter-row__source, .foss-earth-about__link, .foss-earth-about__above, .foss-earth-location-panel a, .map-source-hud__credit, .scene-credit-chip .foss-earth-external-link-icon) {
   color: var(--ui-accent);
 }

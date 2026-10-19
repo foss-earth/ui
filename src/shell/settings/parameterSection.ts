@@ -1,8 +1,10 @@
 import type { SettingsRegistry, SettingsStorage } from "../../settings/registry.js";
 import { loadPanelSectionsOpen, savePanelSectionsOpen } from "../panelSectionsOpen.js";
-import { createParameterControl, isStandaloneParameterControl, type ParameterControlHandle } from "./controls.js";
+import { createParameterControl, isParameterPending, isStandaloneParameterControl, parameterStartValue, type ParameterControlHandle } from "./controls.js";
+import { sameValue } from "../../settings/values.js";
 import { createParameterList, createSettingsTransfer, type ParameterListHandle, type SettingsTransferHandle } from "./parameterList.js";
 import { createPresetStatus } from "./presetsSection.js";
+import { createHelpTooltip } from "../helpTooltip.js";
 
 export interface ParameterSectionOptions {
   /** Host-owned DOM realm; every control uses this document. */
@@ -21,6 +23,8 @@ export interface ParameterSectionOptions {
   panelStorage?: SettingsStorage | null;
   /** Required shared host refresh authority; the section starts no clock. */
   refresh: { subscribe(listener: () => void): () => void };
+  /** Apply & reload for values that apply on the next start. Defaults to reloading the page. */
+  reload?: () => void;
 }
 
 export interface ParameterSectionHandle {
@@ -60,18 +64,61 @@ export function createParameterSection(settings: SettingsRegistry, options: Para
   const auto = document.createElement("div");
   auto.className = "foss-earth-choices foss-earth-parameter-section__main";
   element.append(auto);
+  // Values that apply on the next start: say so at once, with an explicit apply.
+  const pending = document.createElement("div");
+  pending.className = "foss-earth-choices foss-earth-parameter-section__pending";
+  pending.hidden = true;
+  const pendingText = document.createElement("p");
+  pendingText.className = "foss-earth-parameter-section__pending-text";
+  pendingText.setAttribute("role", "status");
+  const applyButton = document.createElement("button");
+  applyButton.type = "button";
+  applyButton.className = "foss-earth-choice foss-earth-parameter__action";
+  applyButton.textContent = "Apply & reload";
+  applyButton.setAttribute("aria-label", "Apply pending changes and reload");
+  const discardButton = document.createElement("button");
+  discardButton.type = "button";
+  discardButton.className = "foss-earth-choice foss-earth-parameter__action";
+  discardButton.textContent = "Discard";
+  discardButton.setAttribute("aria-label", "Discard pending changes");
+  pending.append(pendingText, applyButton, discardButton);
+  element.append(pending);
   if (options.footer) element.append(options.footer);
   const controls = new Map<string, ParameterControlHandle>();
+  const pendingIds = (): string[] => settings.list({ tab, section }).filter(spec => isParameterPending(settings, spec.id)).map(spec => spec.id);
+  const syncPending = (): void => {
+    const ids = pendingIds();
+    pending.hidden = ids.length === 0;
+    const text = ids.length === 0 ? "" : "Changes pending";
+    if (pendingText.textContent !== text) pendingText.textContent = text;
+  };
+  const onApply = (): void => { if (options.reload) options.reload(); else document.defaultView?.location.reload(); };
+  const onDiscard = (): void => {
+    for (const id of pendingIds()) {
+      const start = parameterStartValue(settings, id);
+      if (sameValue(start, settings.inspect(id).defaultValue)) settings.reset(id);
+      else settings.set(id, start);
+    }
+  };
+  applyButton.addEventListener("click", onApply);
+  discardButton.addEventListener("click", onDiscard);
 
   const allKey = `all:${tab}/${section}`;
   const toggleLabel = document.createElement("label");
-  toggleLabel.className = "foss-earth-choice foss-earth-parameter-section__toggle";
+  toggleLabel.className = "foss-earth-parameter-section__toggle";
   const toggle = document.createElement("input");
   toggle.type = "checkbox";
   toggle.name = `foss-earth-show-all-${++sectionCount}`;
   const toggleText = document.createElement("span");
   toggleText.textContent = "Show all parameters";
-  toggleLabel.append(toggle, toggleText);
+  // The label text first, then the native checkbox drawn as a switch.
+  const toggleSwitch = document.createElement("span");
+  toggleSwitch.className = "foss-earth-choice foss-earth-switch";
+  const toggleKnob = document.createElement("span");
+  toggleKnob.className = "foss-earth-switch__knob";
+  toggleKnob.setAttribute("aria-hidden", "true");
+  toggleSwitch.append(toggle, toggleKnob);
+  toggleLabel.append(toggleText, toggleSwitch);
   const toggleRow = document.createElement("div");
   toggleRow.className = "foss-earth-choices foss-earth-parameter-section__footer";
   element.append(toggleRow);
@@ -123,6 +170,7 @@ export function createParameterSection(settings: SettingsRegistry, options: Para
     }
     toggleRow.hidden = !showExtras;
     presetStatus.update();
+    syncPending();
   };
   const onToggle = (): void => {
     savePanelSectionsOpen({ ...loadPanelSectionsOpen(panelStorage), [allKey]: toggle.checked }, panelStorage);
@@ -163,7 +211,7 @@ export function createParameterSection(settings: SettingsRegistry, options: Para
       else rebuildMain = true;
     }
     if (rebuildMain) syncMain();
-    else if (touched) presetStatus.update();
+    else if (touched) { presetStatus.update(); syncPending(); }
     list?.update(changed);
   });
 
@@ -175,6 +223,8 @@ export function createParameterSection(settings: SettingsRegistry, options: Para
       unsubscribe();
       stopReadings();
       toggle.removeEventListener("change", onToggle);
+      applyButton.removeEventListener("click", onApply);
+      discardButton.removeEventListener("click", onDiscard);
       for (const control of controls.values()) control.destroy();
       controls.clear();
       list?.destroy();
@@ -189,6 +239,10 @@ export interface SectionsElementEntry {
   title: string;
   element: HTMLElement;
   defaultOpen?: boolean;
+  /** What the whole section is for, behind a ? that ends its title, also while it is collapsed. */
+  help?: string | HTMLElement;
+  /** The ? button's accessible name. Defaults to "Explain <title>". */
+  helpLabel?: string;
 }
 
 export interface SectionsElementHandle {
@@ -222,6 +276,28 @@ export function createSectionsElement(entries: readonly SectionsElementEntry[], 
     const summary = document.createElement("summary");
     summary.className = "foss-earth-panel-section__title";
     summary.textContent = entry.title;
+    let frame: HTMLElement | null = null;
+    if (entry.help !== undefined) {
+      const content = document.createElement("div");
+      if (typeof entry.help === "string") {
+        const text = document.createElement("p");
+        text.textContent = entry.help;
+        content.append(text);
+      } else content.append(entry.help);
+      const help = createHelpTooltip({ label: entry.helpLabel ?? `Explain ${entry.title}`, content });
+      help.element.classList.add("foss-earth-panel-section__help");
+      // The ? sits just after the title but outside the summary, which is a
+      // button: a button inside it would join its name, and open the section.
+      // An invisible copy of the title sizes the grid column the ? follows.
+      const measure = document.createElement("span");
+      measure.className = "foss-earth-panel-section__measure";
+      measure.setAttribute("aria-hidden", "true");
+      measure.textContent = entry.title;
+      frame = document.createElement("div");
+      frame.className = "foss-earth-panel-section__frame";
+      frame.append(measure, help.element);
+      stops.push(() => help.destroy());
+    }
     const body = document.createElement("div");
     body.className = "foss-earth-panel-section__body";
     body.append(entry.element);
@@ -234,7 +310,10 @@ export function createSectionsElement(entries: readonly SectionsElementEntry[], 
     };
     details.addEventListener("toggle", onToggle);
     stops.push(() => details.removeEventListener("toggle", onToggle));
-    element.append(details);
+    if (frame) {
+      frame.prepend(details);
+      element.append(frame);
+    } else element.append(details);
   };
   for (const entry of entries) append(entry);
   return {

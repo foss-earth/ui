@@ -1,6 +1,8 @@
 import type { SettingsRegistry } from "../../settings/registry.js";
 import type { SettingsFilter } from "../../settings/types.js";
 import { createParameterControl, isStandaloneParameterControl, type ParameterControlHandle } from "./controls.js";
+import { createHelpTooltip, type HelpTooltipHandle } from "../helpTooltip.js";
+import { createIconButton } from "../iconButton.js";
 
 export interface ParameterListHandle {
   element: HTMLElement;
@@ -77,11 +79,18 @@ export interface SettingsTransferHandle {
   destroy(): void;
 }
 
+export interface SettingsTransferOptions {
+  /** A title drawn as the first item of the row, before Export. */
+  title?: string;
+  /** An explanation behind a ? at the end of the row. */
+  help?: string;
+}
+
 /**
  * Export, import and reset for a set of parameters: JSON the user can copy or
  * save, and a paste box that applies the valid entries and lists the rest.
  */
-export function createSettingsTransfer(settings: SettingsRegistry, filter: SettingsFilter, name: string, document: Document): SettingsTransferHandle {
+export function createSettingsTransfer(settings: SettingsRegistry, filter: SettingsFilter, name: string, document: Document, options: SettingsTransferOptions = {}): SettingsTransferHandle {
   const element = document.createElement("div");
   element.className = "foss-earth-choices foss-earth-settings-transfer";
   const button = (text: string): HTMLButtonElement => {
@@ -103,19 +112,33 @@ export function createSettingsTransfer(settings: SettingsRegistry, filter: Setti
   text.spellcheck = false;
   const panelActions = document.createElement("div");
   panelActions.className = "foss-earth-choices";
-  const copy = button("Copy");
-  const download = document.createElement("a");
-  download.className = "foss-earth-choice foss-earth-parameter__action";
-  download.textContent = "Save as a file";
+  const copy = createIconButton(document, { icon: "copy", label: "Copy the settings" });
+  const download = createIconButton(document, { icon: "download", label: "Save the settings as a file", tag: "a" });
   const apply = button("Apply");
-  const close = button("Close");
+  const close = createIconButton(document, { icon: "close", label: "Close" });
   panelActions.append(copy, download, apply, close);
   const result = document.createElement("p");
   result.className = "foss-earth-choices__note";
   result.setAttribute("role", "status");
   result.hidden = true;
   panel.append(text, panelActions, result);
-  element.append(exportButton, importButton, resetButton, panel);
+  let help: HelpTooltipHandle | null = null;
+  if (options.title) {
+    const title = document.createElement("div");
+    title.className = "foss-earth-choices__heading foss-earth-choices__heading--inline";
+    title.textContent = options.title;
+    element.append(title);
+  }
+  element.append(exportButton, importButton, resetButton);
+  if (options.help) {
+    const content = document.createElement("div");
+    const text = document.createElement("p");
+    text.textContent = options.help;
+    content.append(text);
+    help = createHelpTooltip({ label: `Explain ${options.title ?? "settings transfer"}`, content });
+    element.append(help.element);
+  }
+  element.append(panel);
 
   let confirmReset = false;
   const show = (mode: "export" | "import"): void => {
@@ -188,6 +211,7 @@ export function createSettingsTransfer(settings: SettingsRegistry, filter: Setti
       close.removeEventListener("click", onClose);
       resetButton.removeEventListener("click", onReset);
       resetButton.removeEventListener("blur", onResetBlur);
+      help?.destroy();
       element.remove();
     },
   };

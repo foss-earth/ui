@@ -255,8 +255,26 @@ against the live tour: after the first visit the worker controlled the page and 
 all 28 tiles in view loaded, which the worker lets by. That was so in five runs, three on the
 app of the evening before and two on that day's. In one other, the first after WebKit was
 installed, the first visit stayed at 4 of its 60 orbs; it did not happen again and is not
-explained. The worker has not been run in Safari itself, nor
-on a phone.
+explained. In Safari 27 on a Mac, on 2026-10-18, the worker controlled the page after the
+first visit's reload, and its cache of the app's files was there at the next reload (the
+isolation check below); what Safari took from the network was not counted. The worker has not
+been run on a phone.
+
+### Cross-origin isolation
+
+On 2026-10-18, FOSS Earth's build, the UMN tour's and 0SFS fly's were each served as GitHub
+Pages serves them, with no isolation headers. In Chrome 155, Firefox 158 and Safari 27 each was
+isolated from the first visit, after its one reload, with the threaded sky on all 4 of its
+threads. A reload, a Shift-reload, the setting off and on again, another site's frame and a
+browser without service workers each did what [Cross-origin isolation](#cross-origin-isolation)
+says, with no reload loop; Safari was not given a Shift-reload, which its WebDriver can't do, or
+an address without service workers. Every map, search, the airports nearby and the tour's
+photos loaded in the isolated page with nothing blocked. In Safari, whose WebDriver shows no
+requests, that means every map and photo drew with no tile error and no COEP report, and search
+and the airports showed their results. One upstream exception: Carto's tiles now say "API key required" to every site, isolated or not.
+The cases and results are in step 3 of
+[webassembly.md](https://github.com/foss-earth/docs/blob/main/docs/proposals/webassembly.md#3-isolation-from-the-service-worker).
+The check is a local script, not committed. Safari has not been tried on a phone.
 
 ### An older copy of the page
 
