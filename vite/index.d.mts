@@ -44,7 +44,7 @@ export interface BootTerminalPluginOptions {
   theme?: "auto" | "dark";
   /** Which pages get the terminal, by their path in the build, such as "/minneapolis/index.html". Default: every page. */
   pages?: (path: string) => boolean;
-  /** Modules, relative to the root, that a page imports lazily and needs before its first frame: their files count as its download. */
+  /** Modules, relative to the root, that a page imports lazily and needs before its first frame: their files count as its download, and the page fetches them at once. */
   waitFor?: readonly string[];
 }
 export interface BootTerminalPlugin {

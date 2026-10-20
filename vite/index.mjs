@@ -239,6 +239,11 @@ export function bootTerminal(options = {}) {
           ? html.match(/<title>([^<]*)<\/title>/i)?.[1].trim() || "Loading"
           : escapeHtml(options.title);
         const graph = ctx.bundle && ctx.chunk ? { base: bootBase(base, ctx.path), files: bootGraph(ctx.bundle, ctx.chunk, waitFor, root) } : null;
+        if (graph && waitFor.length) {
+          // What only `waitFor` brings, which the runtime fetches at once, largest first; Vite preloads the rest.
+          const own = new Set(bootGraph(ctx.bundle, ctx.chunk, [], root).map(([file]) => file));
+          graph.preload = graph.files.filter(([file]) => !own.has(file)).sort((a, b) => b[1] - a[1]).map(([file]) => file);
+        }
         const runtime = `"use strict";(()=>{\n${inlineRuntime("bootTerminal.ts", "The boot terminal's runtime")}\ninstallBootTerminal(window, ${JSON.stringify(graph).replace(/</g, "\\u003c")});\n})();`;
         if (/<\/script|<!--/i.test(runtime)) throw new Error("The boot terminal's runtime cannot hold </script or <!--.");
         const markup = `<div id="foss-earth-boot"><p class="fe-boot__title">${title}</p>`

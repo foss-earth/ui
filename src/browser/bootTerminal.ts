@@ -13,6 +13,8 @@
 export const BOOT_TERMINAL_ID = "foss-earth-boot";
 /** Where the page keeps the terminal: `window.__fossEarthBoot`. */
 export const BOOT_TERMINAL_GLOBAL = "__fossEarthBoot";
+/** Where the isolation script keeps its status (isolation.ts). */
+const ISOLATION_GLOBAL = "__fossEarthIsolation";
 const RECORD_KEY = "foss-earth.boot ";
 /** Until this device has a record: a start's download, then its startup, in ms. */
 const DEFAULT_DOWNLOAD_MS = 3000;
@@ -30,6 +32,8 @@ export interface BootGraph {
   base: string;
   /** Each file under the base, with its compressed size in bytes. */
   files: [path: string, bytes: number][];
+  /** Those the page imports lazily, and their styles, largest first, which it fetches at once: the plugin's `waitFor`. */
+  preload?: string[];
 }
 
 export type BootTone = "info" | "success" | "warning" | "error";
@@ -123,6 +127,19 @@ export function installBootTerminal(view: Window & typeof globalThis, graph: Boo
   };
 
   // ─── The download ────────────────────────────────────────────────
+  // The lazy modules the page waits for come now, not a round trip after the modules that import them have run.
+  // A page about to reload so its worker isolates it does not ask: the reload would drop them halfway.
+  if ((view as unknown as Record<string, { state?: unknown } | undefined>)[ISOLATION_GLOBAL]?.state !== "pending") {
+    for (const file of graph?.preload ?? []) {
+      const link = document.createElement("link");
+      link.setAttribute("rel", file.endsWith(".css") ? "preload" : "modulepreload");
+      if (file.endsWith(".css")) link.setAttribute("as", "style");
+      // As Vite's own preloads ask, so each request is used by the import that follows it.
+      link.setAttribute("crossorigin", "");
+      link.setAttribute("href", graph!.base + file);
+      document.head.append(link);
+    }
+  }
   const sizes = new Map<string, number>();
   let total = 0;
   for (const [file, bytes] of graph?.files ?? []) {

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { bootTerminal } from "../../vite/index.mjs";
 import { attachBootLog, bootReady, bootStep, failBoot, finishBoot } from "./bootSteps.js";
 import { BOOT_TERMINAL_GLOBAL, installBootTerminal, type BootGraph, type BootLogEntry, type FossEarthBoot } from "./bootTerminal.js";
+import { isolationStatus } from "./isolation.js";
 
 const PAGE = "<!doctype html><html><head><meta charset=\"utf-8\"><title>Minneapolis</title></head><body><div id=\"root\"></div></body></html>";
 /** The markup the plugin writes, up to its runtime's script. */
@@ -24,12 +25,13 @@ beforeEach(() => {
 afterEach(() => {
   for (const cleanup of cleanups) cleanup();
   cleanups = [];
+  document.head.innerHTML = "";
   document.body.innerHTML = "";
   delete (globalThis as Record<string, unknown>)[BOOT_TERMINAL_GLOBAL];
 });
 
 /** A page with the terminal, on a clock and a network the test moves. */
-function page(graph: BootGraph | null, options: { reducedMotion?: boolean } = {}) {
+function page(graph: BootGraph | null, options: { reducedMotion?: boolean; isolation?: string } = {}) {
   window.history.replaceState(null, "", "/tour/minneapolis/");
   document.body.innerHTML = MARKUP;
   let time = 0;
@@ -64,6 +66,7 @@ function page(graph: BootGraph | null, options: { reducedMotion?: boolean } = {}
     setInterval: () => 1,
     clearInterval: () => {},
     matchMedia: () => ({ matches: options.reducedMotion ?? false }),
+    __fossEarthIsolation: options.isolation ? { state: options.isolation } : undefined,
   };
   cleanups.push(() => { for (const [type, listener, capture] of listeners) window.removeEventListener(type, listener, capture); });
   installBootTerminal(view as unknown as Window & typeof globalThis, graph);
@@ -122,6 +125,21 @@ describe("boot terminal", () => {
     terminal.at(2500);
     expect(terminal.lines()).toEqual([["success", "Downloaded the app: 2.0 MB in 2.4 s"]]);
     expect(terminal.progress()).toBe(62);
+  });
+
+  it("fetches the lazy modules it waits for at once, unless the page is about to reload to isolate itself", () => {
+    const graph: BootGraph = { ...GRAPH, files: [...GRAPH.files, ["assets/b.css", 9_000]], preload: ["assets/b.js", "assets/b.css"] };
+    const links = () => [...document.head.querySelectorAll("link")].map(link => ["rel", "as", "crossorigin", "href"].map(name => link.getAttribute(name)));
+    page(graph);
+    expect(links()).toEqual([["modulepreload", null, "", "/tour/assets/b.js"], ["preload", "style", "", "/tour/assets/b.css"]]);
+    document.head.innerHTML = "";
+    page(graph, { isolation: "isolated" });
+    expect(links()).toHaveLength(2);
+    document.head.innerHTML = "";
+    const reloading = page(graph, { isolation: "pending" });
+    // Where the isolation script keeps its status.
+    expect(isolationStatus(reloading.view as unknown as Window)?.state).toBe("pending");
+    expect(links()).toEqual([]);
   });
 
   it("says when the app came from this device", () => {

@@ -46,7 +46,7 @@ function terminal(options: Parameters<typeof bootTerminal>[0] = {}, base = "/tou
   return plugin;
 }
 const built = (path: string, entry: string) => ({ path, bundle, chunk: bundle[entry] });
-const graphOf = (html: string) => JSON.parse(html.match(/installBootTerminal\(window, (.*)\);\n\}\)\(\);<\/script>/)![1]!) as { base: string; files: [string, number][] } | null;
+const graphOf = (html: string) => JSON.parse(html.match(/installBootTerminal\(window, (.*)\);\n\}\)\(\);<\/script>/)![1]!) as { base: string; files: [string, number][]; preload?: string[] } | null;
 const headScriptOf = (html: string) => html.match(/<\/style><script>(.*?)<\/script>/)![1]!;
 
 afterEach(() => {
@@ -85,6 +85,10 @@ describe("bootTerminal", () => {
     expect(graphOf(html)).toEqual({ base: "/tour/", files: files.map(file => [file, gzipped(file)]) });
     const waiting = terminal({ waitFor: ["src/flight.ts"] }).transformIndexHtml.handler(PAGE, built("/minneapolis/index.html", "assets/minneapolis-1.js"));
     expect(graphOf(waiting)!.files.map(([file]) => file)).toEqual([...files, "assets/flight-1.js", "assets/physics-1.js"].sort());
+    // Vite preloads the entry's imports; the page fetches the rest at once, largest first.
+    expect(graphOf(html)!.preload).toBeUndefined();
+    expect(graphOf(waiting)!.preload).toEqual(["assets/physics-1.js", "assets/flight-1.js"]);
+    expect(gzipped("assets/physics-1.js")).toBeGreaterThan(gzipped("assets/flight-1.js"));
     expect(() => terminal({ waitFor: ["src/missing.ts"] }).transformIndexHtml.handler(PAGE, built("/minneapolis/index.html", "assets/minneapolis-1.js"))).toThrow(/waitFor names src\/missing\.ts/);
   });
 
