@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 import typescript from "typescript";
 export const APP_FILES_WORKER = "foss-earth-sw.js";
+/** Beside the worker in each build: the script a page linking to the app runs to register that worker ahead (isolation.ts, prepareIsolation). */
+export const APP_ISOLATION_PREPARE = "foss-earth-isolate.js";
 const HASHED = /-[\w-]{8}\.[a-z0-9]+$/i;
 const digest = value => createHash("sha256").update(value).digest("hex");
 const basePath = value => {
@@ -87,8 +89,7 @@ export function appFiles(options = {}) {
     transformIndexHtml() {
       const tags = Object.entries(stamps).filter(([,value]) => value).map(([name, content]) => ({ tag: "meta", attrs: { name, content }, injectTo: "head" }));
       // A build whose worker may isolate starts each page with the script that asks it to (ui/src/browser/isolation.ts).
-      if (building && isolation !== "off") tags.unshift(isolationScript({ worker: posix.join(basePath(base), options.workerFile ?? APP_FILES_WORKER), scope: basePath(options.scope ?? base), mode: isolation,
-        ...(options.keepFiles === false ? { keep: false } : {}) }));
+      if (building && isolation !== "off") tags.unshift(isolationScript(isolationOptions(options, base, isolation)));
       return tags;
     },
     generateBundle(_output, bundle) {
@@ -96,6 +97,8 @@ export function appFiles(options = {}) {
       if (result.manifest.keepFiles && result.unhashed.length) this.warn(`${result.unhashed.length} built file(s) have no content hash in their names, so the app's worker does not keep them: ${result.unhashed.slice(0,5).join(", ")}`);
       this.emitFile({ type: "asset", fileName: options.workerFile ?? APP_FILES_WORKER, source: result.source });
       if (options.manifestFile) this.emitFile({ type: "asset", fileName: options.manifestFile, source: JSON.stringify(result.manifest) + "\n" });
+      // Unhashed, at a fixed address, for other pages to load; it does nothing in a build that does not isolate.
+      this.emitFile({ type: "asset", fileName: APP_ISOLATION_PREPARE, source: isolation === "off" ? "// This build does not isolate its pages.\n" : isolationPrepareScript(isolationOptions(options, base, isolation)) });
       options.onProduced?.(result);
     },
   };
@@ -117,6 +120,15 @@ function inlineRuntime(file, purpose) {
   return transpiled;
 }
 const recoveryRuntime = () => inlineRuntime("browserData.ts", "Browser recovery runtime");
+/** What the isolation script and its ahead-of-time form are told about a build's worker. */
+function isolationOptions(options, base, isolation) {
+  return { worker: posix.join(basePath(base), options.workerFile ?? APP_FILES_WORKER), scope: basePath(options.scope ?? base), mode: isolation,
+    ...(options.keepFiles === false ? { keep: false } : {}) };
+}
+/** The file a page linking to the app loads, async, to register its worker ahead of the visit. */
+function isolationPrepareScript(options) {
+  return `(() => {\n"use strict";\n${inlineRuntime("isolation.ts", "Isolation script")}\nvoid prepareIsolation(document, ${JSON.stringify(options)});\n})();\n`;
+}
 /** The first script of a page whose worker may isolate it: before browser recovery's and the app's. */
 function isolationScript(options) {
   const runtime = `"use strict";\n${inlineRuntime("isolation.ts", "Isolation script")}\ninstallIsolation(document, ${JSON.stringify(options)});\n`;

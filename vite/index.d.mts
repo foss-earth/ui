@@ -16,6 +16,8 @@ export interface KeptFilesWorkerResult {
   receipt: { state: "PRODUCED_NOT_QUALIFIED"; schemaVersion: 1; templateSha256: string; manifestSha256: string; workerSha256: string; workerSizeBytes: number };
 }
 export const APP_FILES_WORKER: "foss-earth-sw.js";
+/** Emitted beside the worker: a page that links to the app loads it, async, so the worker answers the app's first page and isolates it without a reload. */
+export const APP_ISOLATION_PREPARE: "foss-earth-isolate.js";
 export function appFilesWorker(fileNames: readonly string[], options?: KeptFilesProducerOptions): KeptFilesWorkerResult;
 export interface KeptFilesPluginConfig { base?: string; define?: Record<string, unknown>; root?: string }
 export interface KeptFilesPlugin extends KeptFilesProducerOptions {

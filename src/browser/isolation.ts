@@ -131,7 +131,21 @@ function remember(view: Window, key: string, value: string | null, storage: "loc
   }
 }
 
-const sleep = (view: Window, ms: number): Promise<void> => new Promise(resolve => { view.setTimeout(resolve, ms); });
+/** Resolves after `ms`, or as soon as the registration finds a worker or one of its workers changes state. */
+function nextChange(view: Window, registration: ServiceWorkerRegistration, ms: number): Promise<void> {
+  return new Promise(resolve => {
+    const workers = [registration.installing, registration.waiting, registration.active].filter((worker): worker is ServiceWorker => worker !== null);
+    const done = (): void => {
+      view.clearTimeout(timer);
+      registration.removeEventListener("updatefound", done);
+      for (const worker of workers) worker.removeEventListener("statechange", done);
+      resolve();
+    };
+    const timer = view.setTimeout(done, ms);
+    registration.addEventListener("updatefound", done);
+    for (const worker of workers) worker.addEventListener("statechange", done);
+  });
+}
 
 /**
  * Registers the worker at `address` (or, when it should neither keep nor
@@ -154,12 +168,12 @@ async function change(view: Window, container: ServiceWorkerContainer, options: 
   }
   const registration = await container.register(address, { scope: options.scope, updateViaCache: "none" });
   const deadline = Date.now() + waitMs;
-  // Polled rather than followed by events: an update found before this ran sends none.
+  // Checked at each change of its workers, so the reload follows the activation at once, and polled as well: an update found before this ran sends no event.
   while (Date.now() < deadline) {
     const pending = registration.installing ?? registration.waiting;
     if (registration.active?.scriptURL === address && (!pending || pending.scriptURL !== address)) return null;
     if (pending?.state === "redundant") return "The app's worker failed to install.";
-    await sleep(view, POLL_MS);
+    await nextChange(view, registration, POLL_MS);
   }
   return `The app's worker did not take over within ${Math.round(waitMs / 1000)} s.`;
 }
@@ -236,7 +250,11 @@ export function installIsolation(document: Document, options: IsolationOptions):
       reloads += 1;
       view.clearTimeout(reloadTimer);
       reloadTimer = view.setTimeout(() => release("The page did not reload."), RELOAD_WAIT_MS);
-      view.location.reload();
+      // A new load of the same address, which the worker answers with the page the browser just cached, where a reload
+      // would first ask the site whether it changed: a round trip. An address with a fragment would only scroll; it reloads.
+      const address = view.location.href;
+      if (address.includes("#")) view.location.reload();
+      else view.location.replace(address);
     };
     // Chrome can answer a later reload with this page from its back/forward
     // cache: still not isolated, and frozen just after it asked for its reload.
@@ -259,6 +277,35 @@ export function installIsolation(document: Document, options: IsolationOptions):
     }, (error: unknown) => release(`The app's worker could not be registered: ${error instanceof Error ? error.message : String(error)}`));
   });
   return status;
+}
+
+/**
+ * Runs in a page that links to the app from outside its pages, as a site's
+ * home page: registers the worker the app's pages would ask for, so the page
+ * the link opens is answered by it and isolated at once, without a first
+ * visit's reload. It asks nothing where the app's own script would not
+ * isolate: a release that only reports, the setting off, a page that cannot be
+ * isolated, a browser that did not isolate the app before. Resolves with the
+ * worker's address, or null when it registered none.
+ */
+export async function prepareIsolation(document: Document, options: IsolationOptions): Promise<string | null> {
+  const view = document.defaultView;
+  if (!view || options.mode !== "enforce" || view.crossOriginIsolated === true || !view.isSecureContext || framed(view)) return null;
+  if (!savedSwitch(view, ISOLATION_SETTING, true) || refused(view)) return null;
+  const container = "serviceWorker" in view.navigator ? view.navigator.serviceWorker : null;
+  if (!container) return null;
+  const keep = options.keep !== false && savedSwitch(view, KEEP_FILES_SETTING, true);
+  try {
+    const worker = new URL(isolationWorkerAddress(options.worker, keep, true), view.location.href).href;
+    const registration = await container.getRegistration(options.scope);
+    // Already there: registering it again would only ask the site for it again.
+    if ((registration?.installing ?? registration?.waiting ?? registration?.active)?.scriptURL === worker) return worker;
+    await container.register(worker, { scope: options.scope, updateViaCache: "none" });
+    return worker;
+  } catch {
+    // A private window can refuse workers; the app's page then asks for itself.
+    return null;
+  }
 }
 
 /** The page's isolation as its first script found it, or null on a page without that script, as a development build. */

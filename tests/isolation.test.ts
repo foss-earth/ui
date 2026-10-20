@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { describeIsolation, installIsolation, isolationStatus, whenIsolationSettled, type IsolationOptions } from "../src/browser/isolation.js";
+import { describeIsolation, installIsolation, isolationStatus, prepareIsolation, whenIsolationSettled, type IsolationOptions } from "../src/browser/isolation.js";
+import { appFiles } from "../vite/index.mjs";
 
 const OPTIONS: IsolationOptions = { worker: "/app/foss-earth-sw.js", scope: "/app/", mode: "enforce" };
 const ISOLATING = "https://host.test/app/foss-earth-sw.js?keep=1&isolate=1";
@@ -16,6 +17,7 @@ function page(fields: { href?: string; isolated?: boolean; controller?: string |
   session?: MemoryStorage | "throws"; local?: MemoryStorage; activates?: boolean; refuses?: Error; broadcast?: boolean } = {}) {
   const session = fields.session ?? new MemoryStorage(), local = fields.local ?? new MemoryStorage();
   const registered: { url: string; options: RegistrationOptions | undefined }[] = [];
+  /** Each reload the page asks for: "reload", or "replace" and the address it loads again. */
   const reload = vi.fn(), unregister = vi.fn(async () => true);
   const shown: ((event: { persisted: boolean }) => void)[] = [];
   const channels: { name: string; posted: unknown[]; closed: boolean; onmessage: unknown }[] = [];
@@ -25,16 +27,28 @@ function page(fields: { href?: string; isolated?: boolean; controller?: string |
     postMessage(message: unknown) { this.posted.push(message); }
     close() { this.closed = true; }
   }
-  const registration: { active: { scriptURL: string } | null; installing: { scriptURL: string; state: string } | null; waiting: null; unregister: typeof unregister } =
-    { active: null, installing: null, waiting: null, unregister };
+  /** Something with listeners, as a registration or a worker: dispatches what `changes` records. */
+  const listening = () => {
+    const listeners = new Map<string, Set<() => void>>();
+    return {
+      addEventListener(type: string, listener: () => void) { if (!listeners.has(type)) listeners.set(type, new Set()); listeners.get(type)!.add(listener); },
+      removeEventListener(type: string, listener: () => void) { listeners.get(type)?.delete(listener); },
+      dispatch(type: string) { for (const listener of [...listeners.get(type) ?? []]) listener(); },
+    };
+  };
+  type Worker = { scriptURL: string; state: string } & ReturnType<typeof listening>;
+  const worker = (scriptURL: string, state = "activated"): Worker => ({ scriptURL, state, ...listening() });
+  const registration: { active: Worker | null; installing: Worker | null; waiting: null; unregister: typeof unregister } & ReturnType<typeof listening> =
+    { active: null, installing: null, waiting: null, unregister, ...listening() };
   const container = {
     controller: fields.controller ? { scriptURL: fields.controller } : null,
     register: vi.fn(async (url: string, options?: RegistrationOptions) => {
       if (fields.refuses) throw fields.refuses;
       registered.push({ url, options });
-      registration.installing = { scriptURL: url, state: "installing" };
-      // The worker activates a moment later, as skipWaiting makes it.
-      if (fields.activates !== false) setTimeout(() => { registration.active = { scriptURL: url }; registration.installing = null; }, 120);
+      const installing = worker(url, "installing");
+      registration.installing = installing;
+      // The worker activates a moment later, as skipWaiting makes it, and says so.
+      if (fields.activates !== false) setTimeout(() => { registration.active = installing; registration.installing = null; installing.state = "activating"; installing.dispatch("statechange"); }, 120);
       return registration;
     }),
     getRegistration: vi.fn(async () => registration),
@@ -42,7 +56,7 @@ function page(fields: { href?: string; isolated?: boolean; controller?: string |
   const view: Record<string, unknown> = {
     crossOriginIsolated: fields.isolated ?? false,
     isSecureContext: fields.secure ?? true,
-    location: { href: fields.href ?? "https://host.test/app/", reload },
+    location: { href: fields.href ?? "https://host.test/app/", reload: () => reload("reload"), replace: (address: string) => reload("replace", address) },
     navigator: { userAgent: "TestBrowser/1", ...(fields.workers === false ? {} : { serviceWorker: container }) },
     localStorage: local,
     get sessionStorage() { if (session === "throws") throw new Error("denied"); return session; },
@@ -55,7 +69,7 @@ function page(fields: { href?: string; isolated?: boolean; controller?: string |
   const document = { defaultView: view } as unknown as Document;
   /** The browser shows the page: as it loads, or again from its back/forward cache. */
   const show = (persisted: boolean) => { for (const listener of shown) listener({ persisted }); };
-  return { view: view as unknown as Window, document, container, registered, registration, reload, unregister, session, local, show, channels };
+  return { view: view as unknown as Window, document, container, registered, registration, worker, reload, unregister, session, local, show, channels };
 }
 
 /** Whether `promise` has settled after the pending timers up to `ms` ran. */
@@ -81,7 +95,7 @@ describe("the isolation script", () => {
     expect(isolationStatus(p.view)).toBe(status);
   });
 
-  it("on a first visit registers the isolating worker, holds the app and reloads once when that worker is active", async () => {
+  it("on a first visit registers the isolating worker, holds the app and loads its address again as that worker activates", async () => {
     const p = page();
     const status = installIsolation(p.document, OPTIONS)!;
     expect(status.state).toBe("pending");
@@ -90,8 +104,9 @@ describe("the isolation script", () => {
     expect(await settledAfter(started, 100)).toBe(false);
     expect(p.registered).toEqual([{ url: ISOLATING, options: { scope: "/app/", updateViaCache: "none" } }]);
     expect(p.reload).not.toHaveBeenCalled();
-    await vi.advanceTimersByTimeAsync(100);
-    expect(p.reload).toHaveBeenCalledOnce();
+    // At the worker's change of state, not at the next poll: a new load of the same address, which the browser answers from its cache.
+    await vi.advanceTimersByTimeAsync(20);
+    expect(p.reload.mock.calls).toEqual([["replace", "https://host.test/app/"]]);
     expect(status.reason).toContain("Reloading once");
     // The page reloads; until then the app does not start.
     expect(await settledAfter(started, 5000)).toBe(false);
@@ -116,6 +131,13 @@ describe("the isolation script", () => {
     // A week later, or another browser version, it tries again.
     vi.setSystemTime(Date.now() + 8 * 24 * 3600 * 1000);
     expect(installIsolation(page({ local }).document, OPTIONS)!.state).toBe("pending");
+  });
+
+  it("reloads an address with a fragment, which a new load of the same address would only scroll to", async () => {
+    const p = page({ href: "https://host.test/app/#place" });
+    installIsolation(p.document, OPTIONS);
+    await vi.advanceTimersByTimeAsync(200);
+    expect(p.reload.mock.calls).toEqual([["reload"]]);
   });
 
   it("tries again after a Shift-reload skipped the worker of an isolated tab, and says so when its reload skipped it too", () => {
@@ -153,7 +175,7 @@ describe("the isolation script", () => {
     expect(await settledAfter(status.ready, 999)).toBe(false);
     await vi.advanceTimersByTimeAsync(1);
     expect(status).toMatchObject({ state: "unavailable", reason: "The app's worker did not take over within 1 s." });
-    p.registration.active = { scriptURL: ISOLATING }; p.registration.installing = null;
+    p.registration.active = p.worker(ISOLATING); p.registration.installing = null;
     await vi.advanceTimersByTimeAsync(5000);
     expect(p.reload).not.toHaveBeenCalled();
   });
@@ -182,7 +204,7 @@ describe("the isolation script", () => {
 
     // Neither keeping nor isolating: the worker goes instead.
     const neither = page({ isolated: true, href: "https://host.test/app/?set.app.isolation=0&set.app.keepFiles=no" });
-    neither.registration.active = { scriptURL: ISOLATING };
+    neither.registration.active = neither.worker(ISOLATING);
     installIsolation(neither.document, OPTIONS);
     await vi.advanceTimersByTimeAsync(0);
     expect(neither.unregister).toHaveBeenCalledOnce();
@@ -194,7 +216,7 @@ describe("the isolation script", () => {
     const p = page();
     expect(installIsolation(p.document, { ...OPTIONS, keep: false })!.worker).toBe("https://host.test/app/foss-earth-sw.js?keep=0&isolate=1");
     const off = page({ isolated: true, href: "https://host.test/app/?set.app.isolation=off" });
-    off.registration.active = { scriptURL: "https://host.test/app/foss-earth-sw.js?keep=0&isolate=1" };
+    off.registration.active = off.worker("https://host.test/app/foss-earth-sw.js?keep=0&isolate=1");
     installIsolation(off.document, { ...OPTIONS, keep: false });
     await vi.advanceTimersByTimeAsync(0);
     expect(off.unregister).toHaveBeenCalledOnce();
@@ -278,6 +300,71 @@ describe("the isolation script", () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(p.reload).not.toHaveBeenCalled();
     expect(status.reason).toBe("The app's worker did not take over within 1 s.");
+  });
+});
+
+describe("registering the worker ahead, from a page that links to the app", () => {
+  it("registers the worker the app's pages ask for, once, and neither flags nor reloads the page it runs in", async () => {
+    const p = page({ href: "https://host.test/" });
+    expect(await prepareIsolation(p.document, OPTIONS)).toBe(ISOLATING);
+    expect(p.registered).toEqual([{ url: ISOLATING, options: { scope: "/app/", updateViaCache: "none" } }]);
+    expect(p.session.items.size).toBe(0);
+    await vi.advanceTimersByTimeAsync(200);
+    expect(p.reload).not.toHaveBeenCalled();
+    // Registered: the next visit to the linking page asks the site for nothing.
+    expect(await prepareIsolation(p.document, OPTIONS)).toBe(ISOLATING);
+    expect(p.container.register).toHaveBeenCalledOnce();
+    // The app's page that worker answers is isolated as it loads, and does not reload.
+    const app = page({ isolated: true, controller: ISOLATING });
+    expect(installIsolation(app.document, OPTIONS)!.state).toBe("isolated");
+  });
+
+  it("registers the worker for the policy this device chose, replacing another one", async () => {
+    const local = new MemoryStorage();
+    local.setItem("foss-earth.settings.v1", JSON.stringify({ version: 1, values: { "app.keepFiles": false } }));
+    const p = page({ href: "https://host.test/", local });
+    p.registration.active = p.worker(ISOLATING);
+    expect(await prepareIsolation(p.document, OPTIONS)).toBe("https://host.test/app/foss-earth-sw.js?keep=0&isolate=1");
+    expect(p.registered.map(each => each.url)).toEqual(["https://host.test/app/foss-earth-sw.js?keep=0&isolate=1"]);
+  });
+
+  it("asks nothing where the app's page would not isolate, or the browser refuses the worker", async () => {
+    const refusedBefore = new MemoryStorage();
+    refusedBefore.setItem("foss-earth.isolation-refused.v1", JSON.stringify({ userAgent: "TestBrowser/1", at: Date.now() }));
+    for (const [fields, options, words] of [
+      [{}, { ...OPTIONS, mode: "report-only" }, "a release that only reports"],
+      [{ href: "https://host.test/?set.app.isolation=off" }, OPTIONS, "the setting off"],
+      [{ local: refusedBefore }, OPTIONS, "a browser that did not isolate the app"],
+      [{ secure: false, href: "http://192.168.0.103:5374/" }, OPTIONS, "an insecure page"],
+      [{ framed: true }, OPTIONS, "a frame"],
+      [{ workers: false }, OPTIONS, "no service worker"],
+      [{ isolated: true }, OPTIONS, "a page already isolated"],
+      [{ refuses: new Error("The operation is insecure.") }, OPTIONS, "a refused registration"],
+    ] as const) {
+      const p = page(fields);
+      expect(await prepareIsolation(p.document, options), words).toBeNull();
+      expect(p.registered, words).toEqual([]);
+    }
+  });
+
+  it("is the file each build emits beside its worker; a build that does not isolate emits one that does nothing", async () => {
+    const emitted = (isolation: "off" | "enforce") => {
+      const files = new Map<string, string>();
+      const plugin = appFiles({ isolation });
+      plugin.config({ base: "/app/" }, { command: "build" });
+      plugin.generateBundle.call({ warn() {}, emitFile: file => files.set(file.fileName, file.source) }, {}, {});
+      return files;
+    };
+    const enforcing = emitted("enforce");
+    expect([...enforcing.keys()]).toEqual(["foss-earth-sw.js", "foss-earth-isolate.js"]);
+    const p = page({ href: "https://host.test/" });
+    new Function("document", enforcing.get("foss-earth-isolate.js")!)(p.document);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(p.registered).toEqual([{ url: ISOLATING, options: { scope: "/app/", updateViaCache: "none" } }]);
+    const off = page({ href: "https://host.test/" });
+    new Function("document", emitted("off").get("foss-earth-isolate.js")!)(off.document);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(off.registered).toEqual([]);
   });
 });
 
