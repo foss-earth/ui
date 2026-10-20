@@ -1,7 +1,8 @@
 import type { SettingsRegistry } from "../../settings/registry.js";
 import type { NumberRange, ParameterChoice, ParameterSpec, ParameterState, ParameterValue } from "../../settings/types.js";
-import { formatNumber, formatQuantity, formatValue, isNumberRange, sameValue } from "../../settings/values.js";
+import { formatNumber, formatQuantity, formatValue, isNumberRange, numberFaces, parseShownNumber, sameValue, unitText, type NumberFace, type NumberFaces } from "../../settings/values.js";
 import { createTrack, type TrackHandle } from "./track.js";
+import { createTrackPopover } from "./trackPopover.js";
 import { createTwoPositionSlider } from "./twoPositionSlider.js";
 import { createHelpTooltip } from "../helpTooltip.js";
 
@@ -33,13 +34,36 @@ export function trackPosition(spec: ParameterSpec, value: number): number {
 }
 
 /** The value at a track position, rounded to what the control can show. */
-export function valueAtTrackPosition(spec: ParameterSpec, position: number, bounds: NumberRange | null): number {
+/**
+ * A track's native step grid starts at its low end, so it can miss the high
+ * end and the default: quarter octaves from 10 fps pass 57 and 67 and stop at
+ * 226, short of 60 and 240. The grid's last step lands on the high end, and a
+ * step within half a step of the default lands on the default.
+ */
+function landmarkAt(spec: ParameterSpec, position: number, bounds: NumberRange, landing: number | null): number | null {
+  const step = trackStep(spec, bounds);
+  if (!(step > 0)) return null;
+  const ends = trackBounds(spec, bounds);
+  const lastStep = ends.min + Math.floor((ends.max - ends.min) / step + 1e-9) * step;
+  if (lastStep < ends.max - 1e-9 && position >= lastStep - 1e-9) {
+    return trackPosition(spec, bounds.max) >= trackPosition(spec, bounds.min) ? bounds.max : bounds.min;
+  }
+  if (landing !== null && landing >= bounds.min && landing <= bounds.max && Math.abs(position - trackPosition(spec, landing)) < step / 2 - 1e-9) return landing;
+  return null;
+}
+
+export function valueAtTrackPosition(spec: ParameterSpec, position: number, bounds: NumberRange | null, landing: number | null = null): number {
+  const landmark = bounds ? landmarkAt(spec, position, bounds, landing) : null;
+  if (landmark !== null) return landmark;
   const raw = spec.track?.reversed ? -position : position;
   let value: number;
   if (spec.scale === "log2") {
     value = 2 ** raw;
-    const digits = value >= 100 ? 0 : value >= 10 ? 1 : value >= 1 ? 2 : 3;
-    value = Math.round(value * 10 ** digits) / 10 ** digits;
+    const faces = numberFaces(spec, bounds);
+    if (faces.compact) {
+      const digits = value >= 100 ? 0 : value >= 10 ? 1 : value >= 1 ? 2 : 3;
+      value = Math.round(value * 10 ** digits) / 10 ** digits;
+    } else value = faces.round(value);
   } else {
     const step = spec.step ?? (spec.unit === "count" ? 1 : 0);
     value = step > 0 ? Math.round(raw / step) * step : raw;
@@ -187,7 +211,7 @@ function withParameterActions(document: Document, settings: SettingsRegistry, sp
   status.className = "foss-earth-parameter__status";
   status.setAttribute("role", "status");
   status.hidden = true;
-  (header?.querySelector(".foss-earth-parameter__slider-line, .foss-earth-parameter__tail") ?? header ?? control.element).append(status, help);
+  (header?.querySelector(".foss-earth-parameter__tail") ?? header ?? control.element).append(status, help);
   control.element.append(explanation);
   const updateActions = (): void => {
     const state = settings.inspect(spec.id);
@@ -509,19 +533,6 @@ function fromField(spec: ParameterSpec, text: string): number | null {
   return spec.unit === "fraction" ? value / 100 : value;
 }
 
-/**
- * Label, field, named values and help stay one phrase, in the header's order;
- * the track follows and wraps when its length does not fit. Named values follow
- * the label, so "Value" sits beside its number: "Frame rate cap [Off | Value] 60 ?".
- */
-function placeSlider(header: HTMLElement, track: HTMLElement, named?: HTMLElement): void {
-  const line = header.ownerDocument.createElement("span");
-  line.className = "foss-earth-parameter__slider-line";
-  line.append(...Array.from(header.childNodes));
-  if (named) line.querySelector(".foss-earth-parameter__label")!.after(named);
-  header.append(line, track);
-}
-
 /** The label leads its control, as a phrase reads ("Resolution [1] ×", "Priorities [Auto | Custom]"), unless the spec asks for controlFirst. */
 function createHeader(document: Document, spec: ParameterSpec, labelFirst: boolean): { header: HTMLElement; readout: HTMLElement; reading: HTMLElement } {
   const header = document.createElement("div");
@@ -542,7 +553,10 @@ function createHeader(document: Document, spec: ParameterSpec, labelFirst: boole
 }
 
 function showReading(settings: SettingsRegistry, id: string, element: HTMLElement): void {
-  const text = settings.getReading(id);
+  showReadingText(settings.getReading(id), element);
+}
+
+function showReadingText(text: string | null, element: HTMLElement): void {
   element.hidden = text === null;
   if (text !== null && element.textContent !== text) element.textContent = text;
 }
@@ -590,31 +604,166 @@ function createNumberField(document: Document, settings: SettingsRegistry, spec:
   return { element, update, destroy() { field.removeEventListener("change", onChange); field.removeEventListener("input", onFieldInput); element.remove(); } };
 }
 
-/** A value track: one thumb, the default ticked, named values as one compact segmented track beside its label. */
-function createValueTrack(document: Document, settings: SettingsRegistry, spec: ParameterSpec): ParameterControlHandle {
-  const name = `foss-earth-parameter-${++controlCount}`;
-  const element = document.createElement("div");
-  element.className = "foss-earth-parameter foss-earth-parameter--slider";
-  element.dataset.parameter = spec.id;
-  const { header, readout, reading } = createHeader(document, spec, !spec.controlFirst);
-  const field = document.createElement("input");
-  field.type = "number";
-  field.className = "foss-earth-parameter__field";
-  field.setAttribute("aria-label", `${spec.label}${spec.unit === "fraction" ? " in percent" : ""}`);
+/** Where a number's or range's unit is written: after its value, in its label, or on its handles. */
+function unitPlacementOf(spec: ParameterSpec): "after" | "label" | "handle" {
+  return spec.unitPlacement ?? (spec.kind === "range" ? "label" : "after");
+}
+
+/** The text an editable value starts from: the sign only when negative, no padding. */
+function faceText(face: NumberFace): string {
+  return `${face.sign === "−" ? "−" : ""}${face.digits}`;
+}
+
+/** A value typed on a slider, in the parameter's own unit: a percentage back to a fraction. */
+function typedValue(spec: ParameterSpec, text: string): number | null {
+  const shown = parseShownNumber(text);
+  if (shown === null) return null;
+  return spec.unit === "fraction" ? shown / 100 : shown;
+}
+
+/**
+ * The next value an arrow key gives a typed field, as the track's arrow keys
+ * would: one track step at a time, until the value shows differently.
+ */
+function steppedValue(spec: ParameterSpec, value: number, direction: number, bounds: NumberRange | null, faces: NumberFaces, landing: number | null = null): number {
+  const step = trackStep(spec, bounds) * (spec.track?.reversed ? -1 : 1);
+  let position = trackPosition(spec, value);
+  let next = value;
+  for (let count = 0; count < 1000 && next === value; count += 1) {
+    position += direction * step;
+    next = faces.round(valueAtTrackPosition(spec, position, bounds, landing));
+    if (bounds && ((direction < 0 && next <= bounds.min) || (direction > 0 && next >= bounds.max))) break;
+  }
+  return next;
+}
+
+function createUnit(document: Document, spec: ParameterSpec): HTMLSpanElement {
   const unit = document.createElement("span");
   unit.className = "foss-earth-parameter__unit";
-  readout.append(field, unit);
+  unit.textContent = unitText(spec.unit);
+  return unit;
+}
+
+/** "Fixed depth range (m)": a unit written in the label instead of beside each value. */
+function addLabelUnit(document: Document, header: HTMLElement, spec: ParameterSpec): void {
+  const text = unitText(spec.unit);
+  if (!text) return;
+  const unit = document.createElement("span");
+  unit.className = "foss-earth-parameter__label-unit";
+  unit.textContent = `(${text})`;
+  header.querySelector(".foss-earth-parameter__label")!.append(unit);
+}
+
+interface FaceField {
+  element: HTMLElement;
+  field: HTMLInputElement;
+  /** Shows a value; a field being typed in keeps its text unless `force`. */
+  show(face: NumberFace, chars: number, force?: boolean): void;
+}
+
+/**
+ * The phrase's value: a text field of a constant width, with the leading
+ * zeros drawn faint over it while it is not being typed in, so "010 fps" and
+ * "240 fps" take the same room. Typing shows the number alone.
+ */
+function createFaceField(document: Document, label: string): FaceField {
+  const element = document.createElement("span");
+  element.className = "foss-earth-parameter__number";
+  const field = document.createElement("input");
+  field.type = "text";
+  field.inputMode = "decimal";
+  field.autocomplete = "off";
+  field.spellcheck = false;
+  field.className = "foss-earth-parameter__field";
+  field.setAttribute("aria-label", label);
+  const face = document.createElement("span");
+  face.className = "foss-earth-parameter__face";
+  face.setAttribute("aria-hidden", "true");
+  const sign = document.createElement("span");
+  const pad = document.createElement("span");
+  pad.className = "foss-earth-parameter__face-pad";
+  const digits = document.createElement("span");
+  face.append(sign, pad, digits);
+  element.append(field, face);
+  return {
+    element,
+    field,
+    show(shown, chars, force = false) {
+      if (field.size !== chars) field.size = chars;
+      if (field.style.getPropertyValue("--field-chars") !== String(chars)) field.style.setProperty("--field-chars", String(chars));
+      if (sign.textContent !== shown.sign) sign.textContent = shown.sign;
+      if (pad.textContent !== shown.pad) pad.textContent = shown.pad;
+      if (digits.textContent !== shown.digits) digits.textContent = shown.digits;
+      const text = faceText(shown);
+      if ((force || document.activeElement !== field) && field.value !== text) field.value = text;
+    },
+  };
+}
+
+/** Enter commits a typed field, Escape restores it, and the arrow keys step it as the track's would. */
+function onFieldKeys(field: HTMLInputElement, commit: () => void, step: (direction: number) => void, restore: () => void): (event: KeyboardEvent) => void {
+  return event => {
+    if (field.disabled || event.ctrlKey || event.metaKey || event.altKey) return;
+    const steps: Record<string, number> = { ArrowUp: 1, ArrowDown: -1, PageUp: 10, PageDown: -10 };
+    if (event.key in steps) { event.preventDefault(); step(steps[event.key]); }
+    else if (event.key === "Enter") { event.preventDefault(); commit(); }
+    else if (event.key === "Escape") restore();
+  };
+}
+
+/**
+ * A value track: one thumb, the default ticked, named values as one compact
+ * segmented track beside its label.
+ *
+ * On demand, the default, it reads "Frame rate cap [Off | Value] [060] fps ?"
+ * and its track shows in a popover under the value while the control is
+ * hovered or selected. Shown all the time (alwaysShowTrack), the track takes
+ * the value's place and its handle is the field: "Resolution [——1.00——] × ?".
+ * Either way ? is the control's last item, after the track.
+ */
+function createValueTrack(document: Document, settings: SettingsRegistry, spec: ParameterSpec): ParameterControlHandle {
+  const name = `foss-earth-parameter-${++controlCount}`;
+  const always = Boolean(spec.alwaysShowTrack);
+  const placement = unitPlacementOf(spec);
+  const element = document.createElement("div");
+  element.className = `foss-earth-parameter foss-earth-parameter--slider foss-earth-parameter--track-${always ? "shown" : "on-demand"}`;
+  element.dataset.parameter = spec.id;
+  const { header, readout, reading } = createHeader(document, spec, !spec.controlFirst);
+  if (placement === "label") addLabelUnit(document, header, spec);
+  const label = header.querySelector<HTMLElement>(".foss-earth-parameter__label")!;
+  const fieldLabel = `${spec.label}${spec.unit === "fraction" ? " in percent" : ""}`;
+  const number = always ? null : createFaceField(document, fieldLabel);
+  const unit = createUnit(document, spec);
+  const after = document.createElement("span");
+  after.className = "foss-earth-parameter__text-after";
+  after.textContent = spec.textAfter ?? "";
+  after.hidden = !spec.textAfter;
+  // The unit, any words after it, the reading, status and ? wrap as one, so ? never sits alone.
+  const tail = document.createElement("span");
+  tail.className = "foss-earth-parameter__tail";
   const start = parameterStartValue(settings, spec.id);
+  let faces = numberFaces(spec, settings.inspect(spec.id).bounds);
+  const note = createNote(document);
+  const commitText = (text: string): void => {
+    const value = typedValue(spec, text);
+    if (value === null) { update(); return; }
+    const result = settings.set(spec.id, faces.round(value));
+    // The field goes back to the value in use, and the explanation says why the typed one was refused.
+    update(true);
+    if (!result.ok) setNote(note, result.reason, true);
+  };
   const track: TrackHandle = createTrack({ document,
     ariaLabel: spec.label,
     ramp: spec.track?.ramp ?? "neutral",
+    faceUnit: placement === "handle" ? unitText(spec.unit) : undefined,
     onInput: (_id, position) => {
       const state = settings.inspect(spec.id);
-      const value = valueAtTrackPosition(spec, position, state.bounds);
+      const value = valueAtTrackPosition(spec, position, state.bounds, typeof state.defaultValue === "number" ? state.defaultValue : null);
       settings.set(spec.id, value);
       update();
     },
     onCommit: () => update(),
+    onEdit: (_id, text) => commitText(text),
   });
   const named = document.createElement("span");
   named.className = "foss-earth-parameter__pills foss-earth-parameter__named";
@@ -624,8 +773,35 @@ function createValueTrack(document: Document, settings: SettingsRegistry, spec: 
   const numberPill = spec.named?.length ? pill(document, "radio", name, "", "Value") : null;
   named.hidden = namedPills.length === 0;
   named.append(...namedPills.map(option => option.element), ...(numberPill ? [numberPill.element] : []));
-  const note = createNote(document);
-  placeSlider(header, track.element, namedPills.length ? named : undefined);
+  if (namedPills.length) label.after(named);
+  const popover = number ? createTrackPopover({
+    owner: element,
+    anchor: number.element,
+    content: track.element,
+    label: spec.label,
+    isAvailable: () => typeof settings.get(spec.id) === "number",
+  }) : null;
+  if (number) {
+    readout.append(number.element);
+    if (placement !== "label") readout.append(unit);
+    tail.append(after, reading);
+    // "[060] fps ?" stays together; the popover sits between them in the DOM, after the value and before ?.
+    const end = document.createElement("span");
+    end.className = "foss-earth-parameter__value-end";
+    readout.replaceWith(end);
+    end.append(readout, popover!.element, tail);
+  } else {
+    // "[——060——] fps" keeps one line, as an on-demand value keeps "[060] fps"; the
+    // words after, reading, status and ? wrap after it as one. Nothing in it
+    // changes width, so nothing that comes and goes after it moves the track.
+    const value = document.createElement("span");
+    value.className = "foss-earth-parameter__track-value";
+    value.append(track.element);
+    if (placement === "after") value.append(unit);
+    tail.append(after, reading);
+    readout.replaceWith(value);
+    value.after(tail);
+  }
   element.append(header, note);
 
   const onNamed = (event: Event): void => {
@@ -641,23 +817,21 @@ function createValueTrack(document: Document, settings: SettingsRegistry, spec: 
     update();
   };
   named.addEventListener("change", onNamed);
-  const onField = (): void => {
-    const value = fromField(spec, field.value);
-    if (value === null) { update(); return; }
-    const result = settings.set(spec.id, value);
-    if (!result.ok) setNote(note, result.reason, true);
-    else update();
-  };
-  // The field shares a line with the track, so it never shrinks: a field that
-  // narrowed as a drag changed its digits would move the track under the pointer.
-  let fieldChars = 1;
-  const onFieldInput = (): void => { fieldChars = fitNumberField(field, fieldChars); };
-  field.addEventListener("change", onField);
-  field.addEventListener("input", onFieldInput);
+  const field = number?.field ?? null;
+  const onField = (): void => { if (field) commitText(field.value); };
+  const onKeys = field ? onFieldKeys(field, onField, direction => {
+    const state = settings.inspect(spec.id);
+    if (typeof state.value !== "number") return;
+    settings.set(spec.id, steppedValue(spec, state.value, direction, state.bounds, faces, typeof state.defaultValue === "number" ? state.defaultValue : null));
+    update(true);
+  }, () => update(true)) : null;
+  field?.addEventListener("change", onField);
+  if (onKeys) field?.addEventListener("keydown", onKeys);
 
-  const update = (): void => {
+  const update = (forceField = false): void => {
     const state = settings.inspect(spec.id);
     const bounds = state.bounds ?? { min: 0, max: 1 };
+    faces = numberFaces(spec, state.bounds);
     const span = trackBounds(spec, bounds);
     const value = state.value;
     const isNamed = typeof value === "string";
@@ -665,86 +839,176 @@ function createValueTrack(document: Document, settings: SettingsRegistry, spec: 
     if (numberPill) numberPill.input.checked = !isNamed;
     const locked = Boolean(spec.readOnly) || state.provenance === "host";
     for (const option of [...namedPills, ...(numberPill ? [numberPill] : [])]) option.input.disabled = locked;
-    const number = typeof value === "number" ? value : null;
+    const current = typeof value === "number" ? value : null;
     const defaultNumber = typeof state.defaultValue === "number" ? state.defaultValue : null;
+    const measured = settings.inspectReading(spec.id);
+    // The value in use, where it differs from the one set: an I-beam on the track.
+    const inUse = current !== null && measured.inUse !== null && faces.round(measured.inUse) !== faces.round(current) ? measured.inUse : null;
+    const face = current === null ? null : faces.show(current);
     track.render({
       min: span.min,
       max: span.max,
       step: trackStep(spec, bounds),
       tick: defaultNumber === null ? null : trackPosition(spec, defaultNumber),
-      thumbs: number === null ? [] : [{
+      thumbs: current === null ? [] : [{
         id: "value",
         role: "value",
-        position: trackPosition(spec, number),
+        position: trackPosition(spec, current),
         ariaLabel: spec.label,
-        ariaValueText: formatValue(spec, number),
+        ariaValueText: `${formatValue(spec, current)}${inUse === null ? "" : `, ${formatValue(spec, inUse)} in use`}`,
+        face: face ?? undefined,
       }],
+      inUse: inUse === null ? null : { position: trackPosition(spec, inUse), label: `In use: ${formatValue(spec, inUse)}` },
+      faceChars: faces.chars,
       disabled: locked,
     });
     track.element.hidden = isNamed && namedPills.length > 0;
-    field.hidden = number === null;
-    field.disabled = locked;
-    if (document.activeElement !== field && number !== null) field.value = fieldNumber(spec, number);
-    if (number !== null && document.activeElement !== field) {
-      fieldChars = fitNumberField(field, Math.max(fieldChars, fieldNumber(spec, bounds.min).length, fieldNumber(spec, bounds.max).length));
+    if (number) {
+      number.element.hidden = current === null;
+      number.field.disabled = locked;
+      if (face) number.show(face, faces.chars, forceField);
     }
-    // A named value shows in its segment, so the readout does not repeat it: "Frame rate cap [Off | Value] ?".
-    unit.textContent = number === null ? (namedPills.length ? "" : formatValue(spec, value, state.choices)) : spec.unit === "fraction" ? "%" : formatQuantity(spec.unit, 1).replace(/^1\s?/, "");
-    showReading(settings, spec.id, reading);
+    popover?.update();
+    // A named value shows in its segment, so the phrase does not repeat it: "Frame rate cap [Off | Value] ?".
+    const unitWords = current === null && !namedPills.length ? formatValue(spec, value, state.choices) : unitText(spec.unit);
+    if (unit.textContent !== unitWords) unit.textContent = unitWords;
+    unit.hidden = unitWords === "" || (current === null && namedPills.length > 0);
+    // A shown track's line goes with its track, so Off leaves no empty gap.
+    if (!number) track.element.parentElement!.hidden = track.element.hidden;
+    showReadingText(measured.text, reading);
     setNote(note, noteFor(state, start));
   };
   update();
   return {
     element,
-    update,
+    update: () => update(),
     destroy() {
       named.removeEventListener("change", onNamed);
-      field.removeEventListener("change", onField);
-      field.removeEventListener("input", onFieldInput);
+      field?.removeEventListener("change", onField);
+      if (onKeys) field?.removeEventListener("keydown", onKeys);
+      popover?.destroy();
       track.destroy();
       element.remove();
     },
   };
 }
 
-/** A range track: one track, a thumb for each end; a thumb stops at the other rather than passing it. */
+/**
+ * A range track: one track, a thumb for each end; a thumb stops at the other
+ * rather than passing it. On demand it reads "Fixed depth range (m) [00.10] to
+ * [10.7M] ?", its track in a popover; shown all the time, the two handles are
+ * the fields.
+ */
 function createRangeTrack(document: Document, settings: SettingsRegistry, spec: ParameterSpec): ParameterControlHandle {
+  const always = Boolean(spec.alwaysShowTrack);
+  const placement = unitPlacementOf(spec);
   const element = document.createElement("div");
-  element.className = "foss-earth-parameter foss-earth-parameter--slider";
+  element.className = `foss-earth-parameter foss-earth-parameter--slider foss-earth-parameter--track-${always ? "shown" : "on-demand"}`;
   element.dataset.parameter = spec.id;
   const { header, readout, reading } = createHeader(document, spec, !spec.controlFirst);
+  if (placement === "label") addLabelUnit(document, header, spec);
   const note = createNote(document);
   const start = parameterStartValue(settings, spec.id);
   // Left and right thumbs; on a reversed track the left one is the range's max.
   const left = spec.track?.reversed ? "max" : "min";
+  const right = left === "min" ? "max" : "min";
+  const endOf = (id: string): "min" | "max" => (id === "left" ? left : right);
+  let faces = numberFaces(spec, settings.inspect(spec.id).bounds);
+  const setEnd = (end: "min" | "max", value: number): string | null => {
+    const state = settings.inspect(spec.id);
+    const next = { ...(state.value as NumberRange) };
+    next[end] = value;
+    const result = settings.set(spec.id, next);
+    return result.ok ? null : result.reason;
+  };
+  const commitText = (end: "min" | "max", text: string): void => {
+    const value = typedValue(spec, text);
+    const refused = value === null ? null : setEnd(end, faces.round(value));
+    update(true);
+    if (refused) setNote(note, refused, true);
+  };
   const track = createTrack({ document,
     ariaLabel: spec.label,
     ramp: spec.track?.ramp ?? "neutral",
+    faceUnit: placement === "handle" ? unitText(spec.unit) : undefined,
     onInput: (id, position) => {
       const state = settings.inspect(spec.id);
       const current = state.value as NumberRange;
       const leftPosition = trackPosition(spec, current[left]);
-      const rightPosition = trackPosition(spec, current[left === "min" ? "max" : "min"]);
+      const rightPosition = trackPosition(spec, current[right]);
       const clamped = id === "left" ? Math.min(position, rightPosition) : Math.max(position, leftPosition);
       const value = valueAtTrackPosition(spec, clamped, state.bounds);
       const next = { ...current };
-      const end = id === "left" ? left : left === "min" ? "max" : "min";
+      const end = endOf(id);
       next[end] = value;
       if (next.min > next.max) next[end] = end === "min" ? next.max : next.min;
       settings.set(spec.id, next);
       update();
     },
     onCommit: () => update(),
+    onEdit: (id, text) => commitText(endOf(id), text),
   });
-  placeSlider(header, track.element);
+  const unit = createUnit(document, spec);
+  const after = document.createElement("span");
+  after.className = "foss-earth-parameter__text-after";
+  after.textContent = spec.textAfter ?? "";
+  after.hidden = !spec.textAfter;
+  const tail = document.createElement("span");
+  tail.className = "foss-earth-parameter__tail";
+  const fields = always ? null : {
+    min: createFaceField(document, `${spec.label}: lower end${spec.unit === "fraction" ? " in percent" : ""}`),
+    max: createFaceField(document, `${spec.label}: upper end${spec.unit === "fraction" ? " in percent" : ""}`),
+  };
+  const popover = fields ? createTrackPopover({ owner: element, anchor: readout, content: track.element, label: spec.label }) : null;
+  if (fields) {
+    const to = document.createElement("span");
+    to.className = "foss-earth-parameter__to";
+    to.textContent = "to";
+    readout.append(fields.min.element, to, fields.max.element);
+    if (placement !== "label") readout.append(unit);
+    tail.append(after, reading);
+    const end = document.createElement("span");
+    end.className = "foss-earth-parameter__value-end";
+    readout.replaceWith(end);
+    end.append(readout, popover!.element, tail);
+  } else {
+    // "[——060——] fps" keeps one line, as an on-demand value keeps "[060] fps"; the
+    // words after, reading, status and ? wrap after it as one. Nothing in it
+    // changes width, so nothing that comes and goes after it moves the track.
+    const value = document.createElement("span");
+    value.className = "foss-earth-parameter__track-value";
+    value.append(track.element);
+    if (placement === "after") value.append(unit);
+    tail.append(after, reading);
+    readout.replaceWith(value);
+    value.after(tail);
+  }
   element.append(header, note);
-  const update = (): void => {
+  const listeners: Array<() => void> = [];
+  for (const end of ["min", "max"] as const) {
+    const field = fields?.[end].field;
+    if (!field) continue;
+    const onChange = (): void => commitText(end, field.value);
+    const onKeys = onFieldKeys(field, onChange, direction => {
+      const state = settings.inspect(spec.id);
+      if (!isNumberRange(state.value)) return;
+      const other = state.value[end === "min" ? "max" : "min"];
+      const stepped = steppedValue(spec, state.value[end], direction, state.bounds, faces);
+      setEnd(end, end === "min" ? Math.min(stepped, other) : Math.max(stepped, other));
+      update(true);
+    }, () => update(true));
+    field.addEventListener("change", onChange);
+    field.addEventListener("keydown", onKeys);
+    listeners.push(() => { field.removeEventListener("change", onChange); field.removeEventListener("keydown", onKeys); });
+  }
+  const update = (forceFields = false): void => {
     const state = settings.inspect(spec.id);
     const value = isNumberRange(state.value) ? state.value : { min: 0, max: 0 };
     const bounds = state.bounds ?? value;
+    faces = numberFaces(spec, state.bounds ?? value);
     const span = trackBounds(spec, bounds);
     const leftValue = value[left];
-    const rightValue = value[left === "min" ? "max" : "min"];
+    const rightValue = value[right];
     const locked = Boolean(spec.readOnly) || state.provenance === "host";
     track.render({
       min: span.min,
@@ -752,17 +1016,33 @@ function createRangeTrack(document: Document, settings: SettingsRegistry, spec: 
       step: trackStep(spec, bounds),
       range: { low: trackPosition(spec, leftValue), high: trackPosition(spec, rightValue) },
       thumbs: [
-        { id: "left", role: "end", position: trackPosition(spec, leftValue), ariaLabel: `${spec.label}: ${left === "min" ? "lower" : "upper"} end`, ariaValueText: formatValue(spec, leftValue) },
-        { id: "right", role: "end", position: trackPosition(spec, rightValue), ariaLabel: `${spec.label}: ${left === "min" ? "upper" : "lower"} end`, ariaValueText: formatValue(spec, rightValue) },
+        { id: "left", role: "end", position: trackPosition(spec, leftValue), ariaLabel: `${spec.label}: ${left === "min" ? "lower" : "upper"} end`, ariaValueText: formatValue(spec, leftValue), face: faces.show(leftValue) },
+        { id: "right", role: "end", position: trackPosition(spec, rightValue), ariaLabel: `${spec.label}: ${left === "min" ? "upper" : "lower"} end`, ariaValueText: formatValue(spec, rightValue), face: faces.show(rightValue) },
       ],
+      faceChars: faces.chars,
       disabled: locked,
     });
-    readout.textContent = formatValue(spec, value);
+    if (fields) {
+      for (const end of ["min", "max"] as const) {
+        fields[end].field.disabled = locked;
+        fields[end].show(faces.show(value[end]), faces.chars, forceFields);
+      }
+    }
+    popover?.update();
     showReading(settings, spec.id, reading);
     setNote(note, noteFor(state, start));
   };
   update();
-  return { element, update, destroy: () => { track.destroy(); element.remove(); } };
+  return {
+    element,
+    update: () => update(),
+    destroy: () => {
+      for (const remove of listeners) remove();
+      popover?.destroy();
+      track.destroy();
+      element.remove();
+    },
+  };
 }
 
 /** Size a text box to what it shows: its value, or its placeholder while empty. */

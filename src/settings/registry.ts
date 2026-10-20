@@ -62,6 +62,16 @@ interface SettingsRecord {
   userPresets?: SettingsPreset[];
 }
 
+/**
+ * A live reading: its words, and for a number the value actually in use where
+ * it differs from the one set, such as the frame rate reached under its cap.
+ * The control marks that value on its track with an I-beam.
+ */
+export interface ParameterReading {
+  text: string | null;
+  inUse?: number | null;
+}
+
 export interface SettingsRegistry {
   /** Adds parameters. Saved and URL values for them are validated now; invalid ones are dropped with a note. */
   register(specs: readonly ParameterSpec[]): void;
@@ -102,9 +112,11 @@ export interface SettingsRegistry {
    * beside its control while it is shown. Null removes it. Returns a function
    * that removes this source.
    */
-  setReadingSource(id: string, read: (() => string | null) | null): () => void;
+  setReadingSource(id: string, read: (() => string | ParameterReading | null) | null): () => void;
   /** The current reading, or null when there is no source or nothing to say. */
   getReading(id: string): string | null;
+  /** The current reading's words and the value in use, from one call of its source. */
+  inspectReading(id: string): { text: string | null; inUse: number | null };
   hasReading(id: string): boolean;
   setDeviceContext(context: Partial<DeviceContext>): void;
   getDeviceContext(): DeviceContext;
@@ -237,7 +249,15 @@ export function createSettingsRegistry(options: SettingsRegistryOptions = {}): S
   const hostDefaults = new Map<string, { value: ParameterValue; derivedFrom: string }>();
   const choices = new Map<string, readonly ParameterChoice[]>();
   const notes = new Map<string, string>();
-  const readings = new Map<string, () => string | null>();
+  const readings = new Map<string, () => string | ParameterReading | null>();
+  const inspectReading = (id: string): { text: string | null; inUse: number | null } => {
+    const read = readings.get(id);
+    let reading: string | ParameterReading | null = null;
+    try { reading = read ? read() : null; } catch { reading = null; }
+    if (reading === null || typeof reading === "string") return { text: reading, inUse: null };
+    const inUse = reading.inUse ?? null;
+    return { text: reading.text, inUse: inUse !== null && Number.isFinite(inUse) ? inUse : null };
+  };
   const droppedNotes = new Map<string, string>();
   const presets = new Map<string, SettingsPreset>();
   const sourceBases = new Map<string, string>(options.sourceBase ? [["", options.sourceBase]] : []);
@@ -744,11 +764,8 @@ export function createSettingsRegistry(options: SettingsRegistryOptions = {}): S
       if (read) readings.set(id, read); else readings.delete(id);
       return () => { if (readings.get(id) === read) readings.delete(id); };
     },
-    getReading(id) {
-      const read = readings.get(id);
-      if (!read) return null;
-      try { return read(); } catch { return null; }
-    },
+    getReading: (id) => inspectReading(id).text,
+    inspectReading,
     hasReading: (id) => readings.has(id),
     setDeviceContext(partial) {
       const next = { ...context, ...partial };

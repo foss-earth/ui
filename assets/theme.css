@@ -180,11 +180,17 @@
 [data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-track__thumb::-moz-range-thumb { border-color: var(--ui-surface); }
 [data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-track__thumb--default::-webkit-slider-thumb { border-color: var(--ui-text); }
 [data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-track__thumb--default::-moz-range-thumb { border-color: var(--ui-text); }
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-track__thumb--handle::-webkit-slider-thumb { border-color: var(--thumb-colour, var(--ui-accent)); background: var(--ui-surface); }
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-track__thumb--handle::-moz-range-thumb { border-color: var(--thumb-colour, var(--ui-accent)); background: var(--ui-surface); }
+[data-ui-theme]:not([data-ui-theme="earth"]) :is(.foss-earth-track__face, .foss-earth-track__editor) { color: var(--ui-text); }
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-track__editor { border-color: var(--ui-accent); background: var(--ui-surface); }
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-track__in-use { background: var(--ui-text); box-shadow: 0 0 0 1px var(--ui-surface); }
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-track-popover.is-open { border-color: var(--ui-border); background: var(--ui-surface); box-shadow: var(--ui-shadow); color: var(--ui-text); }
 
 [data-ui-theme]:not([data-ui-theme="earth"]) :is(.foss-earth-map-cache-section progress, .foss-earth-status-section progress, .foss-earth-mesh-inspector__selection input) { accent-color: var(--ui-accent); }
 [data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-mesh-inspector__selection:has(input:checked),
 [data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-mesh-inspector__selection:has(input:indeterminate) { border-color: var(--ui-accent); }
-[data-ui-theme]:not([data-ui-theme="earth"]) :is(.foss-earth-preset, .foss-earth-about__parts) { border-color: var(--ui-border); }
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-preset { border-color: var(--ui-border); }
 [data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-about__commit { background: var(--ui-surface-raised); }
 [data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-about__flag { color: var(--ui-warning); border-color: var(--ui-warning); }
 [data-ui-theme]:not([data-ui-theme="earth"]) :is(.foss-earth-report-only, .globe-shell) { background: var(--ui-page); color: var(--ui-text); }

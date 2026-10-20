@@ -138,6 +138,24 @@ export interface ParameterSpec<T extends ParameterValue = ParameterValue> {
   step?: number;
   /** number without named values: use a compact field instead of the default value track. */
   numberControl?: "field";
+  /**
+   * number and range: show the track all the time, its handle the value's
+   * field, for a setting people set by feel more than by typing, such as
+   * Resolution. Otherwise the phrase shows the value and the track shows on
+   * demand, in a popover while the control is hovered or selected.
+   */
+  alwaysShowTrack?: boolean;
+  /**
+   * number and range: where the unit is written. "after" the value as the
+   * next word of the phrase, the default for a number: "Frame rate cap [060]
+   * fps". "label": in brackets after the label, the default for a range:
+   * "Fixed depth range (m) [00.10] to [10.7M]". "handle": under the value on
+   * the track's handle, as the toolbar's FPS chip does; the phrase writes it
+   * after the value while the track is on demand.
+   */
+  unitPlacement?: "after" | "label" | "handle";
+  /** number and range: words after the value and unit, where the phrase needs them to read as a sentence. */
+  textAfter?: string;
   /** boolean: false selects Auto and true selects Custom in a two-position control. */
   booleanControl?: "auto-custom";
   /** number and range: how the control spaces values. */

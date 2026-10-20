@@ -142,7 +142,7 @@ export function unitId(unit: ParameterUnit): string {
 }
 
 export function unitSuffix(unit: ParameterUnit): string {
-  const text = typeof unit === "string" ? UNIT_TEXT[unit] : unit.text;
+  const text = unitText(unit);
   if (text === "") return "";
   return text === "°" || text === "×" || text === "%" ? text : ` ${text}`;
 }
@@ -166,4 +166,115 @@ export function formatValue(spec: ParameterSpec, value: ParameterValue, choices:
   if (spec.kind === "number") return spec.named?.find(named => named.id === value)?.label ?? value;
   if (spec.sensitive) return value ? "set" : "not set";
   return value === "" ? "empty" : value;
+}
+
+/** A unit's own text, "MiB", "°", "%" or "" for a count, as a phrase writes it beside a value or in a label. */
+export function unitText(unit: ParameterUnit): string {
+  return typeof unit === "string" ? UNIT_TEXT[unit] : unit.text;
+}
+
+/**
+ * A number as a slider writes it: always the same number of characters, so
+ * the box around it never changes width while a value moves. `pad` is the
+ * leading zeros drawn faint, then the sign (when the range has negatives)
+ * and the digits: "0" "10" for 10 fps on a 10 to 240 track.
+ */
+export interface NumberFace {
+  pad: string;
+  sign: string;
+  digits: string;
+}
+
+export interface NumberFaces {
+  /** Characters every value takes, padding included. */
+  chars: number;
+  /** True when large values are shortened to three figures and k, M or G: "10.7M". */
+  compact: boolean;
+  show(value: number): NumberFace;
+  /** The value rounded to what `show` writes, in the parameter's own unit; compact faces leave it as it is. */
+  round(value: number): number;
+}
+
+/** Values at or above this, in the unit shown, are written with k, M or G. */
+const COMPACT_FROM = 100_000;
+const COMPACT_SUFFIXES = ["", "k", "M", "G", "T"] as const;
+
+function decimalsOf(step: number): number {
+  if (!(step > 0) || !Number.isFinite(step)) return 0;
+  for (let decimals = 0; decimals <= 3; decimals += 1) {
+    if (Math.abs(Math.round(step * 10 ** decimals) - step * 10 ** decimals) < 1e-6) return decimals;
+  }
+  return 3;
+}
+
+/** Three significant figures, then k, M or G: "0.10", "15.0", "150", "1.50k", "10.7M". */
+function compactDigits(magnitude: number): string {
+  let tier = 0;
+  let mantissa = magnitude;
+  while (tier < COMPACT_SUFFIXES.length - 1 && Math.round(mantissa * 100) / 100 >= 1000) { mantissa /= 1000; tier += 1; }
+  const decimals = mantissa >= 99.95 ? 0 : mantissa >= 9.995 ? 1 : 2;
+  let text = mantissa.toFixed(decimals);
+  // 999.9 rounds up to the next tier: "1.00k", not "1000".
+  if (Number(text) >= 1000 && tier < COMPACT_SUFFIXES.length - 1) { tier += 1; text = (mantissa / 1000).toFixed(2); }
+  return `${text}${COMPACT_SUFFIXES[tier]}`;
+}
+
+/**
+ * How a number parameter's slider writes its values across its whole range:
+ * the step's decimals (or, on a log2 scale, enough that one step from the
+ * small end shows: 010 to 240 fps, 0.25 to 2.00 ×), leading zeros up to the
+ * widest value, a
+ * sign on every value when the range goes below zero, and three figures with
+ * k, M or G once values reach 100,000. A fraction is written as a percentage.
+ */
+export function numberFaces(spec: Pick<ParameterSpec, "unit" | "step" | "scale">, bounds: NumberRange | null): NumberFaces {
+  const factor = spec.unit === "fraction" ? 100 : 1;
+  const low = (bounds?.min ?? 0) * factor;
+  const high = (bounds?.max ?? 0) * factor;
+  const widest = Math.max(Math.abs(low), Math.abs(high));
+  const signed = low < 0;
+  const compact = widest >= COMPACT_FROM;
+  let decimals = 0;
+  if (compact || spec.unit === "count") decimals = 0;
+  else if (spec.scale === "log2") {
+    // Fine enough that one step from the small end shows as a new value, so keys never stick.
+    const smallest = Math.min(Math.abs(low), Math.abs(high)) || widest;
+    const smallestStep = smallest * (2 ** (spec.step ?? 0.05) - 1);
+    decimals = smallestStep > 0 ? Math.min(3, Math.max(0, Math.ceil(-Math.log10(smallestStep) - 1e-9))) : 0;
+  } else if (spec.step) decimals = decimalsOf(spec.step * factor);
+  else if (high > low) decimals = Math.min(3, Math.max(0, Math.ceil(-Math.log10((high - low) / 200))));
+  const integerDigits = compact ? 0 : Math.max(1, String(Math.floor(Number(widest.toFixed(decimals)))).length);
+  const width = compact ? 5 : integerDigits + (decimals > 0 ? decimals + 1 : 0);
+  const chars = width + (signed ? 1 : 0);
+  const round = (value: number): number => {
+    if (compact || !Number.isFinite(value)) return value;
+    const shown = Math.round(value * factor * 10 ** decimals) / 10 ** decimals / factor;
+    return Object.is(shown, -0) ? 0 : shown;
+  };
+  return {
+    chars,
+    compact,
+    round,
+    show(value) {
+      const shown = value * factor;
+      const magnitude = Math.abs(shown);
+      let digits = compact ? compactDigits(magnitude) : magnitude.toFixed(decimals);
+      // A value that rounds to zero carries no minus sign.
+      const zero = Number(digits.replace(/[kMGT]$/, "")) === 0;
+      const sign = !signed ? "" : zero ? "±" : shown < 0 ? "−" : "+";
+      if (!compact && digits.split(".")[0].length > integerDigits) digits = magnitude.toFixed(0);
+      const pad = "0".repeat(Math.max(0, width - digits.length));
+      return { pad, sign, digits };
+    },
+  };
+}
+
+/** A number typed into a slider's field: "1,024", "−5", "10.7M" and "1.5k" all read. */
+export function parseShownNumber(text: string): number | null {
+  const match = /^([+−-]?)\s*([\d,]*\.?\d*)\s*([kKmMgGtT]?)$/.exec(text.trim().replace(/^±/, ""));
+  if (!match || !/\d/.test(match[2])) return null;
+  const tier = ["", "k", "m", "g", "t"].indexOf(match[3].toLowerCase());
+  const value = Number(match[2].replace(/,/g, "")) * 1000 ** Math.max(0, tier);
+  if (!Number.isFinite(value)) return null;
+  return match[1] === "−" || match[1] === "-" ? -value : value;
 }

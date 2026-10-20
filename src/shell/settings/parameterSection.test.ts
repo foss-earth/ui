@@ -217,22 +217,24 @@ describe("parameter section", () => {
     field.value = "5000";
     field.dispatchEvent(new Event("change"));
     expect(settings.get("t.budget")).toBe(300);
-    const line = control("t.budget").querySelector(".foss-earth-parameter__slider-line")!;
-    const helpButton = line.querySelector(".foss-earth-parameter__help-button")!;
-    const track = control("t.budget").querySelector(".foss-earth-track")!;
-    expect(line.contains(control("t.budget").querySelector(".foss-earth-parameter__field"))).toBe(true);
-    // One phrase, label first and help last: "Budget [300] MiB ?".
-    expect([...line.children].map(child => child.classList[0])).toEqual([
-      "foss-earth-parameter__label", "foss-earth-parameter__readout", "foss-earth-parameter__reading", "foss-earth-parameter__status", "foss-earth-choice",
+    const header = control("t.budget").querySelector(".foss-earth-parameter__header")!;
+    const helpButton = header.querySelector(".foss-earth-parameter__help-button")!;
+    // One phrase, label first and help last: "Budget [0300] MiB ?", its track on demand between them.
+    expect([...header.children].map(child => child.classList[0])).toEqual(["foss-earth-parameter__label", "foss-earth-parameter__value-end"]);
+    const end = header.querySelector(".foss-earth-parameter__value-end")!;
+    expect([...end.children].map(child => child.classList[0])).toEqual(["foss-earth-parameter__readout", "foss-earth-track-popover", "foss-earth-parameter__tail"]);
+    expect([...end.querySelector(".foss-earth-parameter__readout")!.children].map(child => child.classList[0])).toEqual(["foss-earth-parameter__number", "foss-earth-parameter__unit"]);
+    expect([...end.querySelector(".foss-earth-parameter__tail")!.children].map(child => child.classList[0])).toEqual([
+      "foss-earth-parameter__text-after", "foss-earth-parameter__reading", "foss-earth-parameter__status", "foss-earth-choice",
     ]);
-    expect(helpButton.previousElementSibling).toBe(line.querySelector(".foss-earth-parameter__status"));
-    expect(track.previousElementSibling).toBe(line);
+    expect(helpButton.previousElementSibling).toBe(header.querySelector(".foss-earth-parameter__status"));
     const helpId = helpButton.getAttribute("aria-controls")!;
     expect(document.getElementById(helpId)!.querySelector(".foss-earth-parameter__note")!.textContent).toMatch(/outside 32 MiB to 1,024 MiB/);
 
-    // A named value hides the track; "Value" brings the number back.
+    // A named value hides the track and the number; "Value" brings them back.
     expect(input(control("t.cap"), 'input[value="off"]').checked).toBe(true);
     expect(control("t.cap").querySelector<HTMLElement>(".foss-earth-track")!.hidden).toBe(true);
+    expect(control("t.cap").querySelector<HTMLElement>(".foss-earth-parameter__number")!.hidden).toBe(true);
     input(control("t.cap"), 'input[value=""]').click();
     expect(typeof settings.get("t.cap")).toBe("number");
     drag(input(control("t.cap"), 'input[type="range"]'), 60);
@@ -247,7 +249,16 @@ describe("parameter section", () => {
     drag(high, 90);
     drag(low, 20);
     expect(settings.get("t.range")).toEqual({ min: 20, max: 90 });
-    expect(control("t.range").querySelector(".foss-earth-parameter__readout")!.textContent).toBe("20 to 90");
+    // "Range [020] to [090] ?": each end is a field of the range's width, its leading zero drawn faint.
+    const fields = [...control("t.range").querySelectorAll<HTMLInputElement>(".foss-earth-parameter__field")];
+    expect(fields.map(field => [field.value, field.size])).toEqual([["20", 3], ["90", 3]]);
+    expect(control("t.range").querySelector(".foss-earth-parameter__face")!.textContent).toBe("020");
+    fields[0].value = "30";
+    fields[0].dispatchEvent(new Event("change"));
+    expect(settings.get("t.range")).toEqual({ min: 30, max: 90 });
+    fields[1].value = "10";
+    fields[1].dispatchEvent(new Event("change"));
+    expect(settings.get("t.range")).toEqual({ min: 30, max: 90 });
   });
 
   it("never shows a secret, and forgets it on Clear", () => {
@@ -276,12 +287,13 @@ describe("parameter section", () => {
     const tail = key.querySelector(".foss-earth-parameter__tail")!;
     expect([...tail.querySelectorAll("button")].map(button => button.textContent)).toEqual(["Save", "Clear", "?"]);
     expect(tail.lastElementChild!.matches(".foss-earth-parameter__help-button")).toBe(true);
-    // A slider's field is as wide as the widest end of its range, 32 to 1024, and
-    // never narrows, so a drag that changes its digits does not move the track.
+    // A slider's field always holds its range's widest value, 32 to 1024, with
+    // leading zeros, so a drag that changes its digits never changes its width.
     const budget = input(control("t.budget"), ".foss-earth-parameter__field");
-    for (const value of [300, 1000, 32]) {
+    const face = control("t.budget").querySelector(".foss-earth-parameter__face")!;
+    for (const [value, shown] of [[300, "0300"], [1000, "1000"], [32, "0032"]] as const) {
       settings.set("t.budget", value);
-      expect([budget.value, budget.size, budget.style.getPropertyValue("--field-chars")]).toEqual([String(value), 4, "4"]);
+      expect([budget.value, face.textContent, budget.size, budget.style.getPropertyValue("--field-chars")]).toEqual([String(value), shown, 4, "4"]);
     }
   });
 
@@ -397,15 +409,15 @@ describe("parameter section", () => {
   it("keeps named values in one segmented track on the label's line, with accessible radios", () => {
     const { control } = setup();
     const cap = control("t.cap");
-    const line = cap.querySelector(".foss-earth-parameter__slider-line")!;
+    const line = cap.querySelector(".foss-earth-parameter__header")!;
     const named = line.querySelector<HTMLElement>(".foss-earth-parameter__pills.foss-earth-parameter__named")!;
     expect(named.getAttribute("role")).toBe("radiogroup");
     expect(named.previousElementSibling).toBe(line.querySelector(".foss-earth-parameter__label"));
     expect([...named.querySelectorAll("label")].map(label => label.textContent)).toEqual(["Off", "Value"]);
     expect([...named.querySelectorAll<HTMLInputElement>("input[type=radio]")].every(radio => !radio.hidden && radio.getAttribute("aria-hidden") === null)).toBe(true);
-    expect(line.lastElementChild!.classList.contains("foss-earth-parameter__help-button")).toBe(true);
-    // Off shows in its segment only, not again in the readout: "Cap [Off | Value] ?".
-    expect(cap.querySelector(".foss-earth-parameter__readout")!.textContent).toBe("");
+    expect(line.querySelector(".foss-earth-parameter__tail")!.lastElementChild!.classList.contains("foss-earth-parameter__help-button")).toBe(true);
+    // Off shows in its segment only, not again in the phrase: "Cap [Off | Value] ?".
+    expect([...cap.querySelectorAll<HTMLElement>(".foss-earth-parameter__number, .foss-earth-parameter__unit")].every(element => element.hidden)).toBe(true);
     // A number without named values has no empty track.
     expect(control("t.budget").querySelector(".foss-earth-parameter__named")).toBeNull();
   });

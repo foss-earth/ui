@@ -238,7 +238,15 @@
 }
 
 /* ─── Tracks: value, range and detail ────────────────────────────────── */
-/* Thumbs are native range inputs stacked on one track; only their thumbs take the pointer. */
+/* Thumbs are native range inputs stacked on one track; only their thumbs take the pointer.
+   --thumb is registered so a handle's width in ch resolves once, on the track, and its
+   native thumb, face, editor and ticks all use the same length. */
+@property --thumb {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 16px;
+}
+
 .foss-earth-track {
   --thumb: 16px;
   position: relative;
@@ -454,6 +462,195 @@
   margin-bottom: 12px;
 }
 
+/* Value handles: the value is written on the thumb, in a width that never changes
+   (--face-chars from controls.ts), and the thumb is the value's field. */
+.foss-earth-track--handles {
+  --handle-height: 18px;
+  --thumb: calc(var(--face-chars, 3) * 1ch + 10px);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.foss-earth-track--unit-on-handle {
+  --handle-height: 26px;
+  height: 32px;
+}
+
+.foss-earth-track--unit-on-handle .foss-earth-track__colours,
+.foss-earth-track--unit-on-handle .foss-earth-track__shade,
+.foss-earth-track--unit-on-handle .foss-earth-track__stripe {
+  top: 13px;
+}
+
+.foss-earth-track--unit-on-handle .foss-earth-track__thumb {
+  height: 32px;
+}
+
+.foss-earth-track--unit-on-handle .foss-earth-track__thumb::-webkit-slider-runnable-track {
+  height: 32px;
+}
+
+.foss-earth-track--unit-on-handle .foss-earth-track__thumb::-moz-range-track {
+  height: 32px;
+}
+
+.foss-earth-track__thumb--handle::-webkit-slider-thumb {
+  box-sizing: border-box;
+  width: var(--thumb);
+  height: var(--handle-height);
+  margin-top: calc((28px - var(--handle-height)) / 2);
+  border: 1.5px solid var(--thumb-colour, #cad3d5);
+  border-radius: 6px;
+  background: #101518;
+  cursor: grab;
+}
+
+.foss-earth-track--unit-on-handle .foss-earth-track__thumb--handle::-webkit-slider-thumb {
+  margin-top: calc((32px - var(--handle-height)) / 2);
+}
+
+.foss-earth-track__thumb--handle::-moz-range-thumb {
+  box-sizing: border-box;
+  width: var(--thumb);
+  height: var(--handle-height);
+  border: 1.5px solid var(--thumb-colour, #cad3d5);
+  border-radius: 6px;
+  background: #101518;
+  cursor: grab;
+}
+
+.foss-earth-track__face,
+.foss-earth-track__editor {
+  position: absolute;
+  top: calc((28px - var(--handle-height)) / 2);
+  box-sizing: border-box;
+  width: var(--thumb);
+  height: var(--handle-height);
+  transform: translateX(-50%);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  line-height: var(--handle-height);
+  text-align: center;
+  white-space: pre;
+}
+
+.foss-earth-track--unit-on-handle :is(.foss-earth-track__face, .foss-earth-track__editor) {
+  top: calc((32px - var(--handle-height)) / 2);
+}
+
+.foss-earth-track__face {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #e8eef0;
+  pointer-events: none;
+}
+
+.foss-earth-track__face-number {
+  line-height: 1;
+}
+
+.foss-earth-track__face-unit {
+  font-size: 9px;
+  line-height: 1;
+  opacity: 0.7;
+}
+
+.foss-earth-track__face.is-editing {
+  visibility: hidden;
+}
+
+/* Leading zeros are drawn faint, like unlit digits, so the count stays constant. */
+.foss-earth-track__face-pad,
+.foss-earth-parameter__face-pad {
+  opacity: 0.32;
+}
+
+.foss-earth-track__editor {
+  margin: 0;
+  padding: 0 4px;
+  border: 1.5px solid var(--globe-accent, #60a5fa);
+  border-radius: 6px;
+  background: #101518;
+  color: #e8eef0;
+  outline: none;
+}
+
+/* The value in use where it differs from the one set: an I-beam, as on the map's detail rail. */
+.foss-earth-track__in-use {
+  position: absolute;
+  z-index: 1;
+  top: 5px;
+  width: 2px;
+  height: 18px;
+  background: #e8eef0;
+  box-shadow: 0 0 0 1px rgba(10, 14, 22, 0.75);
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.foss-earth-track__in-use::before,
+.foss-earth-track__in-use::after {
+  position: absolute;
+  left: 50%;
+  width: 8px;
+  height: 2px;
+  background: inherit;
+  box-shadow: inherit;
+  transform: translateX(-50%);
+  content: "";
+}
+
+.foss-earth-track__in-use::before {
+  top: 0;
+}
+
+.foss-earth-track__in-use::after {
+  bottom: 0;
+}
+
+/* A track shown on demand: a popover under the value. Closed, it is clipped to nothing
+   rather than hidden, so Tab still reaches its thumbs and focusing one opens it. */
+.foss-earth-track-popover {
+  --foss-earth-popover-track-length: 220px;
+  position: absolute;
+  inset: auto;
+  box-sizing: border-box;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.foss-earth-track-popover:not(:popover-open):not(.is-open) {
+  display: block;
+}
+
+.foss-earth-track-popover.is-open {
+  position: fixed;
+  z-index: 1000;
+  width: calc(var(--foss-earth-popover-track-length) + 18px);
+  height: auto;
+  margin: 0;
+  padding: 6px 9px;
+  overflow: visible;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 10px;
+  clip-path: none;
+  background: #17222c;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  color: inherit;
+}
+
+.foss-earth-track-popover > .foss-earth-track {
+  width: 100%;
+}
+
 /* ─── Parameter sections ─────────────────────────────────────────────── */
 /* A tab whose content is an element draws its sections itself: no second padding. */
 .foss-earth-panel-sections--inline {
@@ -515,8 +712,9 @@
   max-width: 100%;
 }
 
-/* The phrase wraps at its words rather than squeezing them: "Frame rate cap [60] fps [Off | Value] ?". */
-.foss-earth-parameter__slider-line {
+/* "[060] fps ?": an on-demand value, its unit and ? wrap as one; its popover overlays. */
+.foss-earth-parameter__value-end {
+  position: relative;
   display: inline-flex;
   flex: 0 1 auto;
   flex-wrap: wrap;
@@ -526,11 +724,67 @@
   max-width: 100%;
 }
 
-.foss-earth-parameter--slider .foss-earth-track {
-  flex: 0 0 var(--foss-earth-slider-length);
+/* A track shown all the time takes the value's place in the phrase: "Resolution [——1.00——] × ?". */
+.foss-earth-parameter--track-shown {
+  --foss-earth-slider-length: 140px;
+}
+
+/* "[——060——] fps": a shown track and its unit keep one line. */
+.foss-earth-parameter__track-value {
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* A fixed length, so nothing after the track, such as a status that comes and goes, resizes or moves it under a drag. */
+.foss-earth-parameter__track-value > .foss-earth-track {
+  flex: 0 1 var(--foss-earth-slider-length);
   width: var(--foss-earth-slider-length);
   min-width: min(var(--foss-earth-slider-length), 100%);
   max-width: 100%;
+}
+
+/* The phrase's value: a constant-width field, its leading zeros drawn faint over it until it is typed in. */
+.foss-earth-parameter__number {
+  position: relative;
+  display: inline-flex;
+}
+
+.foss-earth-parameter__number[hidden] {
+  display: none;
+}
+
+.foss-earth-parameter__face {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  padding: 3px 5px;
+  font-variant-numeric: tabular-nums;
+  line-height: normal;
+  text-align: right;
+  white-space: pre;
+  pointer-events: none;
+}
+
+.foss-earth-parameter__number:not(:focus-within) > .foss-earth-parameter__field {
+  color: transparent;
+}
+
+.foss-earth-parameter__number:focus-within > .foss-earth-parameter__face {
+  visibility: hidden;
+}
+
+.foss-earth-parameter__label-unit {
+  font-weight: 400;
+  opacity: 0.85;
+}
+
+.foss-earth-parameter__to,
+.foss-earth-parameter__text-after {
+  opacity: 0.85;
 }
 
 .foss-earth-parameter__named[hidden] {
@@ -971,8 +1225,10 @@
 }
 
 /* A number box is as wide as the digits it shows (controls.ts sets --field-chars), not a
-   fixed width. The arrow keys still step it; the spin buttons would only widen it. */
+   fixed width. The arrow keys still step it; the spin buttons would only widen it. A
+   slider's field holds its range's widest value, so its width never changes. */
 .foss-earth-parameter__field {
+  box-sizing: border-box;
   width: calc(var(--field-chars, 2) * 1ch + 12px);
   min-width: calc(1ch + 12px);
   max-width: 100%;
@@ -981,6 +1237,11 @@
   text-align: center;
   appearance: textfield;
   -moz-appearance: textfield;
+}
+
+.foss-earth-parameter__number > .foss-earth-parameter__field {
+  padding: 2px 5px;
+  text-align: right;
 }
 
 .foss-earth-parameter__field::-webkit-inner-spin-button,
@@ -1246,6 +1507,34 @@
 :root[data-theme="light"] .foss-earth-track__shade,
 :root[data-theme="light"] .foss-earth-track__stripe {
   opacity: 0.75;
+}
+
+:root[data-theme="light"] .foss-earth-track__thumb--handle::-webkit-slider-thumb {
+  background: #fff;
+}
+
+:root[data-theme="light"] .foss-earth-track__thumb--handle::-moz-range-thumb {
+  background: #fff;
+}
+
+:root[data-theme="light"] :is(.foss-earth-track__face, .foss-earth-track__editor) {
+  color: #1e293b;
+}
+
+:root[data-theme="light"] .foss-earth-track__editor {
+  background: #fff;
+}
+
+:root[data-theme="light"] .foss-earth-track__in-use {
+  background: #1e293b;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.85);
+}
+
+:root[data-theme="light"] .foss-earth-track-popover.is-open {
+  border-color: rgba(71, 85, 105, 0.3);
+  background: #f8fafc;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
+  color: #1e293b;
 }
 
 :root[data-theme="light"] .foss-earth-choice {
