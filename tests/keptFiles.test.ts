@@ -95,7 +95,7 @@ it("carries keeping and isolation in the worker's address, and keeps the worker 
   const register = vi.fn(async (url: string) => {
     registration.active = worker(url).value as unknown as ServiceWorker; return registration as unknown as ServiceWorkerRegistration;
   });
-  const remove = vi.fn(async () => true), postMessage = vi.fn();
+  const remove = vi.fn(async () => true);
   const env: KeptFilesEnvironment = { worker: { url: plain }, scope: "/app/",
     container: { register, getRegistration: async () => registration as unknown as ServiceWorkerRegistration, controller: null, ready: new Promise(() => {}) },
     caches: { open: vi.fn(), has: vi.fn(async () => false), delete: remove },
@@ -105,13 +105,13 @@ it("carries keeping and isolation in the worker's address, and keeps the worker 
     policy: { enabled: () => keep, isolate: () => isolate, subscribe(listener) { change = listener; return () => {}; } } });
   loaded(); await keeper.whenSettled();
   expect(register).toHaveBeenLastCalledWith(`${plain}?keep=1&isolate=1`, { scope: "/app/", updateViaCache: "none" });
-  expect((registration.active as unknown as { postMessage: typeof postMessage }).postMessage).toHaveBeenCalledOnce();
+  expect((registration.active as unknown as { postMessage: ReturnType<typeof vi.fn> }).postMessage).toHaveBeenCalledOnce();
   // The worker of another policy is still this deployment's.
   expect(await keeper.status()).toMatchObject({ installed: true });
   // Keeping off, isolation on: the worker stays, keeps nothing more, and what it kept goes.
   keep = false; change(); await keeper.whenSettled();
   expect(register).toHaveBeenLastCalledWith(`${plain}?keep=0&isolate=1`, { scope: "/app/", updateViaCache: "none" });
-  expect((registration.active as unknown as { postMessage: typeof postMessage }).postMessage).not.toHaveBeenCalled();
+  expect((registration.active as unknown as { postMessage: ReturnType<typeof vi.fn> }).postMessage).not.toHaveBeenCalled();
   expect(registration.unregister).not.toHaveBeenCalled();
   expect(remove).toHaveBeenCalledWith("host-files /app/foss-earth-sw.js");
   // Its status keeps nothing, and does not read the store, which opening it would make again after the deletion.
