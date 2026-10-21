@@ -136,7 +136,7 @@ A page that is older than the published one reloads itself, or says so
 FOSS Earth, 0sfs, gamepad-tools and any other checkout an app is built from name their
 versions alike, from the commit, by the rule in
 [CONTRIBUTING](https://github.com/foss-earth/.github/blob/main/CONTRIBUTING.md#versions):
-`26.10.07.#3` is the third commit of 7 October 2026, UTC. About computes it, and nothing else
+`26.10.07#3` is the third commit of 7 October 2026, UTC. About computes it, and nothing else
 does: it is read from the history when an app is built (`commitVersion` in `about`'s
 `src/vite/builtFrom.ts`), so nothing is kept in step by hand, and two builds of one commit are
 one version. A deploy records the commit of each checkout the app is built from in the app's
