@@ -2,7 +2,9 @@
 import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { ChoiceTrack, HelpTip, IconButton } from "./reactControls.js";
+import { createSettingsRegistry } from "../settings/registry.js";
+import type { ParameterSpec } from "../settings/types.js";
+import { ChoiceTrack, HelpTip, IconButton, ParameterSettings, Resettable } from "./reactControls.js";
 
 let host: HTMLDivElement;
 let root: Root;
@@ -64,4 +66,88 @@ it("draws an icon action with its full name, and a ? with React content", () => 
   const help = host.querySelector<HTMLButtonElement>("[aria-label='Explain the trace']")!;
   expect(help).not.toBeNull();
   expect(host.querySelector(".foss-earth-parameter__help code")!.textContent).toBe("window.trace");
+});
+
+const resettable: ParameterSpec[] = [
+  { id: "t.volume", label: "Volume", description: "A level.", unit: "count", kind: "number", bounds: () => ({ min: 0, max: 8 }), step: 0.05, default: 2,
+    appliesLive: true, source: "src/test.ts", defaultReason: "Chosen for tests.", home: { tab: "sound", section: "levels", level: "main" } },
+  { id: "t.view", label: "View", description: "A choice.", unit: "none", kind: "choice", choices: [{ id: "first", label: "Cockpit" }, { id: "third", label: "Chase" }], default: "third",
+    appliesLive: true, source: "src/test.ts", defaultReason: "Chosen for tests.", home: { tab: "sound", section: "levels", level: "main" } },
+];
+
+function registry() {
+  const data = new Map<string, string>();
+  const settings = createSettingsRegistry({ storage: { getItem: key => data.get(key) ?? null, setItem: (key, value) => { data.set(key, value); } } });
+  settings.register(resettable);
+  return settings;
+}
+
+it("puts a reset on a hand-drawn widget of a registry parameter, in a span around it, that follows the registry", () => {
+  const settings = registry();
+  act(() => root.render(<ParameterSettings.Provider value={settings}>
+    <label><span>Master volume</span><Resettable parameter="t.volume" name="Master volume"><input type="range" aria-label="Master volume" /></Resettable></label>
+  </ParameterSettings.Provider>));
+  const range = host.querySelector("input")!;
+  const anchor = range.parentElement!;
+  expect(anchor.className).toBe("foss-earth-parameter__widget foss-earth-parameter__reset-anchor");
+  const badge = anchor.querySelector<HTMLButtonElement>(".foss-earth-parameter__reset")!;
+  expect(badge.hidden).toBe(true);
+  act(() => { settings.set("t.volume", 3); });
+  expect(badge.hidden).toBe(false);
+  expect(badge.getAttribute("aria-label")).toBe("Reset Master volume to the default: 2");
+  act(() => badge.click());
+  expect(settings.get("t.volume")).toBe(2);
+  expect(badge.hidden).toBe(true);
+});
+
+it("draws no reset for a parameter without a registry, and one for a value the host keeps, from its props", () => {
+  const resets: number[] = [];
+  function Wind() {
+    const [speed, setSpeed] = useState(0);
+    return <>
+      <Resettable parameter="t.volume"><input type="range" aria-label="Volume" /></Resettable>
+      <Resettable changed={speed !== 0} label={`Reset Wind speed to the default: 0 kt`} onReset={() => { resets.push(speed); setSpeed(0); }}>
+        <input type="range" aria-label="Wind speed" value={speed} onChange={event => setSpeed(Number(event.target.value))} />
+      </Resettable>
+      <button type="button" onClick={() => setSpeed(12)}>Gust</button>
+    </>;
+  }
+  act(() => root.render(<Wind />));
+  const badges = () => [...host.querySelectorAll<HTMLButtonElement>(".foss-earth-parameter__reset")];
+  expect(badges()).toHaveLength(1);
+  expect(badges()[0].hidden).toBe(true);
+  act(() => host.querySelector<HTMLButtonElement>("button[type=button]:not(.foss-earth-parameter__reset)")!.click());
+  expect(badges()[0].hidden).toBe(false);
+  expect(badges()[0].title).toBe("Reset Wind speed to the default: 0 kt");
+  act(() => badges()[0].click());
+  expect(resets).toEqual([12]);
+  expect(host.querySelector<HTMLInputElement>('[aria-label="Wind speed"]')!.value).toBe("0");
+  expect(badges()[0].hidden).toBe(true);
+});
+
+it("puts a ChoiceTrack's reset on its segments, against the registry or a default the host gives", () => {
+  const settings = registry();
+  function Tracks() {
+    const [mode, setMode] = useState("on");
+    return <ParameterSettings.Provider value={settings}>
+      <ChoiceTrack heading="View" parameter="t.view" value={String(settings.get("t.view"))} onChange={id => settings.set("t.view", id)}
+        choices={[{ id: "first", label: "Cockpit" }, { id: "third", label: "Chase" }]} />
+      <ChoiceTrack heading="Spin" defaultValue="off" value={mode} onChange={setMode}
+        choices={[{ id: "off", label: "Off" }, { id: "on", label: "On" }]} />
+    </ParameterSettings.Provider>;
+  }
+  act(() => root.render(<Tracks />));
+  const [view, spin] = [...host.querySelectorAll<HTMLElement>(".foss-earth-parameter__pills")];
+  const badge = (pills: HTMLElement) => pills.querySelector<HTMLButtonElement>(":scope > .foss-earth-parameter__reset")!;
+  expect(badge(view).hidden).toBe(true);
+  act(() => { settings.set("t.view", "first"); });
+  expect(badge(view).hidden).toBe(false);
+  expect(badge(view).title).toBe("Reset View to the default: Chase");
+  act(() => badge(view).click());
+  expect(settings.get("t.view")).toBe("third");
+  expect(badge(spin).hidden).toBe(false);
+  expect(badge(spin).title).toBe("Reset Spin to the default: Off");
+  act(() => badge(spin).click());
+  expect(spin.querySelector<HTMLInputElement>("input[value=off]")!.checked).toBe(true);
+  expect(badge(spin).hidden).toBe(true);
 });

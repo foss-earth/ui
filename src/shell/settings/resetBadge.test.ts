@@ -4,7 +4,7 @@ import { createSettingsRegistry, type SettingsStorage } from "../../settings/reg
 import type { ParameterSpec } from "../../settings/types.js";
 import { createParameterControl } from "./controls.js";
 import { createParameterSection } from "./parameterSection.js";
-import { createResetBadge } from "./resetBadge.js";
+import { attachParameterReset, createResetBadge, createResetButton, parameterResetLabel } from "./resetBadge.js";
 
 import { testReadingRefresh } from "../../../tests/fixtures/readingRefresh.js";
 const readingRefresh = testReadingRefresh();
@@ -211,5 +211,47 @@ describe("reset badge", () => {
     badge.destroy();
     settings.set("t.mode", "b");
     expect(widget.childElementCount).toBe(0);
+  });
+
+  it("puts a hand-built field's reset in a span around it, named as the widget names it", () => {
+    const settings = createSettingsRegistry({ storage: memoryStorage() });
+    settings.register(specs);
+    const label = document.createElement("label");
+    const select = document.createElement("select");
+    label.append("Mode ", select);
+    document.body.append(label);
+    const badge = attachParameterReset(settings, document, select, "t.mode", { name: "Sound mode" });
+    const anchor = badge.element.parentElement!;
+    expect(anchor.className).toBe("foss-earth-parameter__widget foss-earth-parameter__reset-anchor");
+    expect([anchor.parentElement, anchor.firstElementChild]).toEqual([label, select]);
+    expect(badge.element.hidden).toBe(true);
+    settings.set("t.mode", "b");
+    expect(badge.element.hidden).toBe(false);
+    expect(badge.element.getAttribute("aria-label")).toBe("Reset Sound mode to the default: A");
+    badge.element.click();
+    expect(settings.get("t.mode")).toBe("a");
+    expect(badge.element.hidden).toBe(true);
+    badge.destroy();
+    expect(anchor.childElementCount).toBe(1);
+  });
+
+  it("names a range's end, and keeps a sensitive default out of its name", () => {
+    const settings = createSettingsRegistry({ storage: memoryStorage() });
+    settings.register([...specs, { ...base, id: "t.key", label: "Key", description: "Secret.", unit: "none", kind: "text", default: "abc", sensitive: true, home }]);
+    expect(parameterResetLabel(settings, "t.range", { end: "max" })).toBe("Reset the upper end of Range to the default: 60");
+    expect(parameterResetLabel(settings, "t.key")).toBe("Reset Key to the default");
+    expect(parameterResetLabel(settings, "t.missing")).toBe("Reset to the default");
+  });
+
+  it("leaves a value kept outside the registry to its host, which says when it shows and what it does", () => {
+    let value = 0;
+    const badge = createResetButton(document, { label: () => `Reset Wind to the default: 0 kt (now ${value})`, shown: () => value !== 0, reset: () => { value = 0; } });
+    expect(badge.element.hidden).toBe(true);
+    value = 12;
+    badge.update();
+    expect(badge.element.hidden).toBe(false);
+    expect(badge.element.title).toBe("Reset Wind to the default: 0 kt (now 12)");
+    badge.element.click();
+    expect([value, badge.element.hidden]).toEqual([0, true]);
   });
 });

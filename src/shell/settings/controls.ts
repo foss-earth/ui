@@ -5,7 +5,7 @@ import { createTrack, type TrackHandle } from "./track.js";
 import { createTrackPopover } from "./trackPopover.js";
 import { createTwoPositionSlider } from "./twoPositionSlider.js";
 import { createHelpTooltip } from "../helpTooltip.js";
-import { createResetBadge, isParameterResettable, type ResetBadgeHandle } from "./resetBadge.js";
+import { createResetBadge, describeParameterValue, isParameterResettable, parameterResetLabel, resetAnchor, type ResetBadgeHandle } from "./resetBadge.js";
 
 export interface ParameterControlHandle {
   /** The control, with help last and the source link in that explanation. */
@@ -182,11 +182,6 @@ function setNote(note: HTMLElement, text: string, reveal = false): void {
   }
 }
 
-/** A value in the words its control shows: an Auto/Custom switch says Auto or Custom, not off or on. */
-function describeParameterValue(spec: ParameterSpec, value: ParameterValue, choices: ParameterState["choices"]): string {
-  return spec.booleanControl === "auto-custom" ? (value === true ? "Custom" : "Auto") : formatValue(spec, value, choices);
-}
-
 /** The part of a value a widget shows, as its data-reset names it: all of it, a named value or a number, or a range's end. */
 type ResetPart = "value" | "named" | "number" | "min" | "max";
 
@@ -210,23 +205,11 @@ function resetRangeEnd(settings: SettingsRegistry, id: string, end: "min" | "max
  */
 function attachReset(document: Document, settings: SettingsRegistry, spec: ParameterSpec, widget: HTMLElement): ResetBadgeHandle {
   const part = (widget.dataset.reset ?? "value") as ResetPart;
-  let anchor = widget;
-  if (widget.tagName === "LABEL" || widget.tagName === "INPUT") {
-    anchor = document.createElement("span");
-    anchor.className = "foss-earth-parameter__widget";
-    widget.replaceWith(anchor);
-    anchor.append(widget);
-  }
-  anchor.classList.add("foss-earth-parameter__reset-anchor");
+  const anchor = resetAnchor(document, widget);
   const end = part === "min" || part === "max" ? part : null;
   const badge = createResetBadge(settings, document, {
     ids: () => [spec.id],
-    label: () => {
-      const state = settings.inspect(spec.id);
-      if (end && isNumberRange(state.defaultValue)) return `Reset the ${end === "min" ? "lower" : "upper"} end of ${spec.label} to the default: ${formatValue(spec, state.defaultValue[end])}`;
-      if (spec.sensitive) return `Reset ${spec.label} to the default`;
-      return `Reset ${spec.label} to the default: ${describeParameterValue(spec, state.defaultValue, state.choices)}`;
-    },
+    label: () => parameterResetLabel(settings, spec.id, end ? { end } : {}),
     shown: () => {
       if (!isParameterResettable(settings, spec.id)) return false;
       const { value, defaultValue } = settings.inspect(spec.id);
