@@ -134,6 +134,20 @@
   background: var(--ui-accent-contrast);
 }
 
+/* The reset on a changed control's corner; as specific as the base light rules, and later. */
+:root[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-parameter__reset,
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-parameter__reset {
+  border-color: var(--ui-accent);
+  background: var(--ui-surface);
+  color: var(--ui-accent);
+}
+
+:root[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-parameter__reset:hover,
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-parameter__reset:hover {
+  background: var(--ui-accent);
+  color: var(--ui-accent-contrast);
+}
+
 [data-ui-theme]:not([data-ui-theme="earth"]) :is(.foss-earth-choice__credit, .foss-earth-parameter-row__source, .foss-earth-about__link, .foss-earth-about__above, .foss-earth-location-panel a, .map-source-hud__credit, .scene-credit-chip .foss-earth-external-link-icon) {
   color: var(--ui-accent);
 }

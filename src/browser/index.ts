@@ -4,6 +4,7 @@ export * from "./isolation.js";
 export * from "./publishedVersionWatch.js";
 export * from "./workspace.js";
 export * from "../shell/settings/controls.js";
+export * from "../shell/settings/resetBadge.js";
 export * from "../shell/settings/parameterSection.js";
 export * from "../shell/settings/parameterList.js";
 export * from "../shell/settings/presetsSection.js";

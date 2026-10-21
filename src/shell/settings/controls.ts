@@ -5,6 +5,7 @@ import { createTrack, type TrackHandle } from "./track.js";
 import { createTrackPopover } from "./trackPopover.js";
 import { createTwoPositionSlider } from "./twoPositionSlider.js";
 import { createHelpTooltip } from "../helpTooltip.js";
+import { createResetBadge, isParameterResettable, type ResetBadgeHandle } from "./resetBadge.js";
 
 export interface ParameterControlHandle {
   /** The control, with help last and the source link in that explanation. */
@@ -181,6 +182,65 @@ function setNote(note: HTMLElement, text: string, reveal = false): void {
   }
 }
 
+/** A value in the words its control shows: an Auto/Custom switch says Auto or Custom, not off or on. */
+function describeParameterValue(spec: ParameterSpec, value: ParameterValue, choices: ParameterState["choices"]): string {
+  return spec.booleanControl === "auto-custom" ? (value === true ? "Custom" : "Auto") : formatValue(spec, value, choices);
+}
+
+/** The part of a value a widget shows, as its data-reset names it: all of it, a named value or a number, or a range's end. */
+type ResetPart = "value" | "named" | "number" | "min" | "max";
+
+/** Which named value a value is, or "" for a number. */
+function segmentOf(value: ParameterValue): string {
+  return typeof value === "string" ? value : "";
+}
+
+/** A range's end back to its default, the other end kept; both when that one alone would not fit. */
+function resetRangeEnd(settings: SettingsRegistry, id: string, end: "min" | "max"): void {
+  const { value, defaultValue } = settings.inspect(id);
+  const next = isNumberRange(value) && isNumberRange(defaultValue) ? { ...value, [end]: defaultValue[end] } : null;
+  if (!next || sameValue(next, defaultValue) || next.min > next.max || !settings.set(id, next).ok) settings.reset(id);
+}
+
+/**
+ * A reset on a widget's top-right corner, shown while the part of the value
+ * that widget shows differs from its default: "Frame rate cap [Off | Value]
+ * [060] fps" has one on its segments, for Off, and one on its field, for 90.
+ * A label or a field cannot hold a button, so it moves into a span that can.
+ */
+function attachReset(document: Document, settings: SettingsRegistry, spec: ParameterSpec, widget: HTMLElement): ResetBadgeHandle {
+  const part = (widget.dataset.reset ?? "value") as ResetPart;
+  let anchor = widget;
+  if (widget.tagName === "LABEL" || widget.tagName === "INPUT") {
+    anchor = document.createElement("span");
+    anchor.className = "foss-earth-parameter__widget";
+    widget.replaceWith(anchor);
+    anchor.append(widget);
+  }
+  anchor.classList.add("foss-earth-parameter__reset-anchor");
+  const end = part === "min" || part === "max" ? part : null;
+  const badge = createResetBadge(settings, document, {
+    ids: () => [spec.id],
+    label: () => {
+      const state = settings.inspect(spec.id);
+      if (end && isNumberRange(state.defaultValue)) return `Reset the ${end === "min" ? "lower" : "upper"} end of ${spec.label} to the default: ${formatValue(spec, state.defaultValue[end])}`;
+      if (spec.sensitive) return `Reset ${spec.label} to the default`;
+      return `Reset ${spec.label} to the default: ${describeParameterValue(spec, state.defaultValue, state.choices)}`;
+    },
+    shown: () => {
+      if (!isParameterResettable(settings, spec.id)) return false;
+      const { value, defaultValue } = settings.inspect(spec.id);
+      if (part === "named") return segmentOf(value) !== segmentOf(defaultValue);
+      if (part === "number") return typeof value === "number" && typeof defaultValue === "number";
+      if (end) return isNumberRange(value) && isNumberRange(defaultValue) && !sameValue(value[end], defaultValue[end]);
+      return true;
+    },
+    ...(end ? { reset: () => resetRangeEnd(settings, spec.id, end) } : {}),
+  });
+  anchor.append(badge.element);
+  return badge;
+}
+
 /** One compact accessory row; explanations stay closed until requested. */
 function withParameterActions(document: Document, settings: SettingsRegistry, spec: ParameterSpec, control: ParameterControlHandle): ParameterControlHandle {
   const explanation = document.createElement("div");
@@ -232,7 +292,7 @@ function withParameterActions(document: Document, settings: SettingsRegistry, sp
     status.hidden = text === "";
     if (status.textContent !== text) status.textContent = text;
     control.element.classList.toggle("is-pending", text === "Pending");
-    const describe = (value: ParameterValue): string => spec.booleanControl === "auto-custom" ? (value === true ? "Custom" : "Auto") : formatValue(spec, value, state.choices);
+    const describe = (value: ParameterValue): string => describeParameterValue(spec, value, state.choices);
     const value = spec.sensitive ? (state.value ? "set" : "not set") : describe(state.value);
     const defaultValue = spec.sensitive ? (state.defaultValue ? "set" : "none") : describe(state.defaultValue);
     meta.textContent = `Now ${value} (${describeProvenance(state)}). ${sentence(`Default ${defaultValue}: ${state.defaultDerivedFrom}`)}${spec.appliesLive ? "" : " Applies on the next start."}`;
@@ -382,6 +442,7 @@ function createSwitch(document: Document, settings: SettingsRegistry, spec: Para
   element.dataset.parameter = spec.id;
   const toggle = pill(document, "checkbox", `foss-earth-parameter-${++controlCount}`, "on", "");
   toggle.element.classList.add("foss-earth-switch");
+  toggle.element.dataset.reset = "value";
   toggle.text.className = "foss-earth-switch__knob";
   toggle.text.setAttribute("aria-hidden", "true");
   toggle.element.title = describeTitle(spec);
@@ -420,6 +481,7 @@ function createAutoCustomSlider(document: Document, settings: SettingsRegistry, 
     options: [{ label: "Auto" }, { label: "Custom" }],
     onInput: index => { settings.set(spec.id, index === 1); update(); },
   });
+  slider.element.dataset.reset = "value";
   readout.append(slider.element);
   const note = createNote(document);
   element.append(header, note);
@@ -461,6 +523,7 @@ function createChoiceSlider(document: Document, settings: SettingsRegistry, spec
     ],
     onInput: index => { settings.set(spec.id, ends[index].id); update(); },
   });
+  slider.element.dataset.reset = "value";
   readout.append(slider.element);
   const note = createNote(document);
   element.append(header, note);
@@ -498,6 +561,7 @@ function createChoicePills(document: Document, settings: SettingsRegistry, spec:
   header.append(heading);
   const pills = document.createElement("span");
   pills.className = "foss-earth-parameter__pills";
+  pills.dataset.reset = "value";
   const note = createNote(document);
   element.classList.add("foss-earth-parameter--compact-choice");
   if (spec.controlFirst) header.prepend(pills); else header.append(pills);
@@ -515,7 +579,9 @@ function createChoicePills(document: Document, settings: SettingsRegistry, spec:
     const state = settings.inspect(spec.id);
     if (state.choices !== shownChoices) {
       shownChoices = state.choices;
-      pills.replaceChildren(...state.choices.map(choice => choicePill(document, name, choice).element));
+      // New choices keep the pills' reset.
+      const reset = [...pills.children].filter(child => child.classList.contains("foss-earth-parameter__reset"));
+      pills.replaceChildren(...state.choices.map(choice => choicePill(document, name, choice).element), ...reset);
     }
     for (const input of pills.querySelectorAll<HTMLInputElement>("input")) {
       input.checked = input.value === state.value;
@@ -583,6 +649,7 @@ function createNumberField(document: Document, settings: SettingsRegistry, spec:
   const field = document.createElement("input");
   field.type = "number";
   field.className = "foss-earth-parameter__field";
+  field.dataset.reset = "value";
   field.setAttribute("aria-label", `${spec.label}${spec.unit === "fraction" ? " in percent" : ""}`);
   const step = spec.step ?? (spec.unit === "count" ? 1 : "any");
   field.step = typeof step === "number" && spec.unit === "fraction" ? String(step * 100) : String(step);
@@ -780,6 +847,9 @@ function createValueTrack(document: Document, settings: SettingsRegistry, spec: 
   });
   const named = document.createElement("span");
   named.className = "foss-earth-parameter__pills foss-earth-parameter__named";
+  // Off or Value resets on the segments, a number on its field or track.
+  named.dataset.reset = "named";
+  (number?.element ?? track.element).dataset.reset = "number";
   named.setAttribute("role", "radiogroup");
   named.setAttribute("aria-label", spec.label);
   const namedPills = (spec.named ?? []).map(option => choicePill(document, name, option));
@@ -973,6 +1043,9 @@ function createRangeTrack(document: Document, settings: SettingsRegistry, spec: 
     max: createFaceField(document, `${spec.label}: upper end${spec.unit === "fraction" ? " in percent" : ""}`),
   };
   const popover = fields ? createTrackPopover({ owner: element, anchor: readout, content: track.element, label: spec.label }) : null;
+  // Each end resets on its own field; a shown track, both together.
+  if (fields) for (const end of ["min", "max"] as const) fields[end].element.dataset.reset = end;
+  else track.element.dataset.reset = "value";
   if (fields) {
     const to = document.createElement("span");
     to.className = "foss-earth-parameter__to";
@@ -1077,6 +1150,7 @@ function createTextField(document: Document, settings: SettingsRegistry, spec: P
   input.autocomplete = "off";
   input.spellcheck = false;
   input.className = "foss-earth-parameter__text";
+  input.dataset.reset = "value";
   input.setAttribute("aria-label", spec.label);
   const actions = document.createElement("span");
   actions.className = "foss-earth-parameter__named";
@@ -1155,13 +1229,16 @@ export function createParameterControl(settings: SettingsRegistry, id: string, d
     case "text": control = createTextField(document, settings, spec); break;
   }
   const decorated = withParameterActions(document, settings, spec, control);
-  const inline = new Map<string, { control: ParameterControlHandle; detail: HTMLElement; meta: HTMLElement }>();
+  // A reset on each widget, never on the row around them.
+  const resets = [...decorated.element.querySelectorAll<HTMLElement>("[data-reset]")].map(widget => attachReset(document, settings, spec, widget));
+  const inline = new Map<string, { control: ParameterControlHandle; reset: ResetBadgeHandle; detail: HTMLElement; meta: HTMLElement }>();
   const pairedSpecs = (): ParameterSpec[] => settings.list({ tab: spec.home.tab, section: spec.home.section }).filter(candidate => candidate.inlineWith === id);
   const update = (): void => {
     decorated.update();
     const shown = pairedSpecs().filter(candidate => isParameterControlVisible(settings, candidate));
     for (const [childId, child] of inline) {
       if (!shown.some(candidate => candidate.id === childId)) {
+        child.reset.destroy();
         child.control.destroy();
         child.detail.remove();
         inline.delete(childId);
@@ -1178,6 +1255,7 @@ export function createParameterControl(settings: SettingsRegistry, id: string, d
         const note = fieldControl.element.querySelector<HTMLElement>(".foss-earth-parameter__note")!;
         fieldControl.element.className = "foss-earth-parameter__inline-field";
         fieldControl.element.replaceChildren(field);
+        const reset = attachReset(document, settings, candidate, field);
         const detail = document.createElement("div");
         const description = document.createElement("p");
         description.textContent = candidate.description;
@@ -1190,7 +1268,7 @@ export function createParameterControl(settings: SettingsRegistry, id: string, d
           const help = decorated.element.querySelector<HTMLButtonElement>(".foss-earth-parameter__help-button")!;
           if (help.getAttribute("aria-expanded") !== "true") help.click();
         });
-        child = { control: fieldControl, detail, meta };
+        child = { control: fieldControl, reset, detail, meta };
         inline.set(candidate.id, child);
       }
       child.control.update();
@@ -1198,6 +1276,7 @@ export function createParameterControl(settings: SettingsRegistry, id: string, d
       child.meta.textContent = `${candidate.label}: ${formatValue(candidate, state.value)} (${describeProvenance(state)}). Default ${formatValue(candidate, state.defaultValue)}: ${state.defaultDerivedFrom}`;
       header.prepend(child.control.element);
     }
+    for (const reset of resets) reset.update();
   };
   update();
   const stopWatching = settings.subscribe(changed => {
@@ -1208,8 +1287,9 @@ export function createParameterControl(settings: SettingsRegistry, id: string, d
     update,
     destroy() {
       stopWatching();
-      for (const child of inline.values()) { child.control.destroy(); child.detail.remove(); }
+      for (const child of inline.values()) { child.reset.destroy(); child.control.destroy(); child.detail.remove(); }
       inline.clear();
+      for (const reset of resets) reset.destroy();
       decorated.destroy();
     },
   };

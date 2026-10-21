@@ -60,8 +60,10 @@ describe("parameter section", () => {
     const { settings, control } = setup();
     const flag = control("t.flag");
     const header = flag.querySelector(".foss-earth-parameter__header")!;
-    expect([...header.children].map(item => item.tagName)).toEqual(["LABEL", "LABEL", "SPAN", "BUTTON"]);
+    expect([...header.children].map(item => item.tagName)).toEqual(["LABEL", "SPAN", "SPAN", "BUTTON"]);
     expect(header.firstElementChild!.classList.contains("foss-earth-parameter__label")).toBe(true);
+    // The switch sits in a span that can hold its reset.
+    expect([...header.children[1]!.children].map(item => item.className)).toEqual(["foss-earth-choice foss-earth-switch", "foss-earth-parameter__reset"]);
     // The native checkbox stays focusable inside the switch, never hidden.
     const toggle = header.querySelector<HTMLInputElement>(".foss-earth-switch input[type=checkbox]")!;
     expect(toggle.hidden).toBe(false);
@@ -98,7 +100,7 @@ describe("parameter section", () => {
     // Label first by default: "Visibility [On / A / Off] ?".
     expect([...header.children].map(child => child.className)).toEqual([
       "foss-earth-choices__heading",
-      "foss-earth-parameter__pills",
+      "foss-earth-parameter__pills foss-earth-parameter__reset-anchor",
       "foss-earth-parameter__status",
       "foss-earth-choice foss-earth-parameter__action foss-earth-parameter__icon-action foss-earth-parameter__help-button",
     ]);
@@ -388,9 +390,11 @@ describe("parameter section", () => {
     expect(hidden.querySelector(".foss-earth-parameter-row__meta")!.textContent).toBe("Now 2 ms (default). Default 2 ms: Chosen for tests.");
     const link = hidden.querySelector<HTMLAnchorElement>(".foss-earth-parameter-row__source")!;
     expect(link.href).toBe("https://example.test/blob/main/src/test.ts");
-    expect(hidden.querySelector(".foss-earth-parameter__reset")).toBeNull();
+    const reset = hidden.querySelector<HTMLButtonElement>(".foss-earth-parameter__reset")!;
+    expect(reset.hidden).toBe(true);
     settings.set("t.hidden", 5);
     expect(hidden.querySelector(".foss-earth-parameter-row__meta")!.textContent).toMatch(/^Now 5 ms \(set by you\)\./);
+    expect(reset.hidden).toBe(false);
     toggle.click();
     expect(section.element.querySelector(".foss-earth-parameter-row")).toBeNull();
   });

@@ -769,11 +769,11 @@
   pointer-events: none;
 }
 
-.foss-earth-parameter__number:not(:focus-within) > .foss-earth-parameter__field {
+.foss-earth-parameter__number > .foss-earth-parameter__field:not(:focus) {
   color: transparent;
 }
 
-.foss-earth-parameter__number:focus-within > .foss-earth-parameter__face {
+.foss-earth-parameter__number:has(> .foss-earth-parameter__field:focus) > .foss-earth-parameter__face {
   visibility: hidden;
 }
 
@@ -940,7 +940,7 @@
   cursor: default;
 }
 
-.foss-earth-parameter--inline > .foss-earth-parameter__header > .foss-earth-choice.foss-earth-switch {
+.foss-earth-parameter--inline > .foss-earth-parameter__header .foss-earth-choice.foss-earth-switch {
   min-width: 30px;
   padding: 0;
 }
@@ -1138,7 +1138,7 @@
   cursor: pointer;
 }
 
-.foss-earth-two-position-slider:focus-within {
+.foss-earth-two-position-slider:has(> .foss-earth-two-position-slider__input:focus) {
   outline: 2px solid #38bdf8;
   outline-offset: 2px;
 }
@@ -1166,6 +1166,69 @@
 .foss-earth-parameter__icon-action > svg {
   width: 16px;
   height: 16px;
+}
+
+/* A value changed from its default: a tiny circular reset on the top-right corner of the widget that shows it, over its edge so nothing moves when it comes and goes. */
+.foss-earth-parameter__reset-anchor {
+  position: relative;
+}
+
+/* A switch or field cannot hold the reset, so it sits in this span, the widget's own size. */
+.foss-earth-parameter__widget {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.foss-earth-parameter__widget:has(> .foss-earth-switch) {
+  flex: none;
+}
+
+.foss-earth-parameter__reset {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--globe-accent, #60a5fa);
+  border-radius: 50%;
+  background: #17222c;
+  color: var(--globe-accent, #60a5fa);
+  cursor: pointer;
+}
+
+/* Segments draw their own border, so the reset sits on it as it does on a field's. */
+.foss-earth-parameter__pills > .foss-earth-parameter__reset {
+  top: -7px;
+  right: -7px;
+}
+
+.foss-earth-parameter__reset[hidden] {
+  display: none;
+}
+
+.foss-earth-parameter__reset > svg {
+  width: 9px;
+  height: 9px;
+  stroke-width: 3;
+}
+
+.foss-earth-parameter__reset:hover {
+  background: var(--globe-accent, #60a5fa);
+  color: #0f172a;
+}
+
+.foss-earth-parameter__reset:focus-visible {
+  outline: 2px solid var(--globe-accent, #60a5fa);
+  outline-offset: 1px;
 }
 
 .foss-earth-help-tooltip {
@@ -1577,6 +1640,17 @@
 :root[data-theme="light"] .foss-earth-choice.foss-earth-switch:has(input:checked) {
   border-color: #1d4ed8;
   background: #1d4ed8;
+}
+
+:root[data-theme="light"] .foss-earth-parameter__reset {
+  border-color: #1d4ed8;
+  background: #fff;
+  color: #1d4ed8;
+}
+
+:root[data-theme="light"] .foss-earth-parameter__reset:hover {
+  background: #1d4ed8;
+  color: #fff;
 }
 
 :root[data-theme="light"] .foss-earth-parameter.is-pending .foss-earth-parameter__status {
