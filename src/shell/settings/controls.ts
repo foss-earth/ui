@@ -123,6 +123,19 @@ export function parameterStartValue(settings: SettingsRegistry, id: string): Par
   return values.get(id)!;
 }
 
+/**
+ * Record values a host has consumed by restarting their subsystem in place.
+ * Other pending parameters keep their original baseline. Existing controls
+ * reflect the new baseline on their next host refresh.
+ */
+export function markParametersApplied(settings: SettingsRegistry, ids: readonly string[]): void {
+  if (ids.length === 0) return;
+  // Initialize the rest of the catalogue before replacing just these values.
+  parameterStartValue(settings, ids[0]);
+  const values = startValues.get(settings)!;
+  for (const id of ids) values.set(id, settings.get(id));
+}
+
 /** True when a value that applies on the next start differs from the one the page started with. */
 export function isParameterPending(settings: SettingsRegistry, id: string): boolean {
   const spec = settings.spec(id);

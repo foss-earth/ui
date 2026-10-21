@@ -4,6 +4,7 @@ import { createSettingsRegistry, type SettingsStorage } from "../../settings/reg
 import type { ParameterSpec } from "../../settings/types.js";
 import { appendHostSections as appendInjectedHostSections, createParameterSection as createInjectedParameterSection, createSectionsElement, type ParameterSectionOptions, type SectionsElementHandle } from "./parameterSection.js";
 import { createSavedSettingsSection } from "./savedSettings.js";
+import { isParameterPending, markParametersApplied, parameterStartValue } from "./controls.js";
 
 import { testReadingRefresh } from "../../../tests/fixtures/readingRefresh.js";
 const readingRefresh = testReadingRefresh();
@@ -460,6 +461,25 @@ describe("parameter section", () => {
     expect(bar.hidden).toBe(true);
     expect(status("t.backend").textContent).toBe("");
     section.destroy();
+  });
+
+  it("marks only the parameters consumed by an in-place subsystem restart as applied", () => {
+    const settings = createSettingsRegistry({ storage: memoryStorage() });
+    settings.register(["speed", "workers"].map(name => ({
+      ...base, appliesLive: false, id: `t.${name}`, label: name, description: name,
+      unit: "count", kind: "number", default: 2,
+      home: { tab: "test", section: "start", level: "main" },
+    })));
+    parameterStartValue(settings, "t.speed");
+    settings.setMany({ "t.speed": 4, "t.workers": 8 });
+    expect(isParameterPending(settings, "t.speed")).toBe(true);
+    expect(isParameterPending(settings, "t.workers")).toBe(true);
+    markParametersApplied(settings, ["t.speed"]);
+    expect(isParameterPending(settings, "t.speed")).toBe(false);
+    expect(isParameterPending(settings, "t.workers")).toBe(true);
+    settings.set("t.speed", 6);
+    expect(isParameterPending(settings, "t.speed")).toBe(true);
+    expect(parameterStartValue(settings, "t.speed")).toBe(4);
   });
 
   it("draws a mark before a compact choice label and skips Show all when nothing is extra", () => {

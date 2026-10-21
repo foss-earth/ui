@@ -49,6 +49,13 @@ export interface SettingsRegistryOptions {
   deviceContext?: Partial<DeviceContext>;
   /** Where source paths are browsable, such as a repository's blob URL ending in "/". */
   sourceBase?: string;
+  /**
+   * Namespaces this registry may clean when dropping unregistered saved ids,
+   * including during reload. A prefix includes itself and its dotted children.
+   * Omitted owns all ids. A shared catalogue supplies its own prefixes so a
+   * host's saved parameters survive until that host registers them.
+   */
+  ownedPrefixes?: readonly string[];
 }
 
 interface SettingsRecord {
@@ -526,9 +533,10 @@ export function createSettingsRegistry(options: SettingsRegistryOptions = {}): S
    * key or a sibling branch is left where it is.
    */
   function staleIds(ids: readonly string[]): string[] {
-    const stale = ids.filter(id => !specs.has(id));
+    const stale = ids.filter(id => !specs.has(id)
+      && (options.ownedPrefixes === undefined || options.ownedPrefixes.some(prefix => under(id, prefix))));
     const roots = stale.filter(id => !stale.some(other => other !== id && id.startsWith(`${other}.`)));
-    return ids.filter(id => !specs.has(id) && roots.some(root => under(id, root)));
+    return stale.filter(id => roots.some(root => under(id, root)));
   }
 
   /** Removes stale saved values and the same ids inside saved presets. Reports whether the record changed. */

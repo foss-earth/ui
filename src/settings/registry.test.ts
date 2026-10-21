@@ -248,6 +248,27 @@ describe("settings registry", () => {
     expect(record(storage).userPresets[0].values).toEqual({ "test.budget": 256, "test.key": "secret" });
   });
 
+  it("cleans only owned namespaces before another catalogue registers, including on reload", () => {
+    const storage = memoryStorage({
+      [SETTINGS_STORAGE_KEY]: JSON.stringify({
+        version: 1,
+        values: { "test.budget": 256, "test.removed": true, "host.late": "b", "testing.kept": 9 },
+        presets: { "test.removed": "retired", "host.late": "host-choice" },
+        userPresets: [{ id: "user:mine", name: "Mine", description: "Both catalogues.",
+          values: { "test.removed": true, "host.late": "b" } }],
+      }),
+    });
+    const settings = registry(storage, { ownedPrefixes: ["test"] });
+    settings.dropStale();
+    settings.reload();
+    expect(record(storage).values).toEqual({ "test.budget": 256, "host.late": "b", "testing.kept": 9 });
+    expect(record(storage).presets).toEqual({ "host.late": "host-choice" });
+    expect(record(storage).userPresets[0].values).toEqual({ "host.late": "b" });
+
+    settings.register([{ ...mode, id: "host.late" }]);
+    expect(settings.get("host.late")).toBe("b");
+  });
+
   it("drops an invalid saved value with a note, and keeps the valid ones", () => {
     const storage = memoryStorage({
       [SETTINGS_STORAGE_KEY]: JSON.stringify({ version: 1, values: { "test.mode": "zzz", "test.range": { min: 2, max: 8 } } }),
