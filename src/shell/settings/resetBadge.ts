@@ -128,6 +128,14 @@ export function resetAnchor(document: Document, widget: HTMLElement): HTMLElemen
   return anchor;
 }
 
+/** For a hand-built widget whose value the host keeps: a reset on its top-right corner, which shows and acts as the host says. */
+export function attachResetButton(document: Document, widget: HTMLElement, options: ResetButtonOptions): ResetBadgeHandle {
+  const anchor = resetAnchor(document, widget);
+  const badge = createResetButton(document, options);
+  anchor.append(badge.element);
+  return badge;
+}
+
 /** For a hand-built widget that edits one parameter: a reset on its top-right corner, following the registry. `name` replaces the parameter's label in the reset's name where the widget shows another. */
 export function attachParameterReset(settings: SettingsRegistry, document: Document, widget: HTMLElement, id: string, options: { name?: string } = {}): ResetBadgeHandle {
   const anchor = resetAnchor(document, widget);

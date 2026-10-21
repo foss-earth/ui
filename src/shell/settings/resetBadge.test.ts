@@ -4,7 +4,7 @@ import { createSettingsRegistry, type SettingsStorage } from "../../settings/reg
 import type { ParameterSpec } from "../../settings/types.js";
 import { createParameterControl } from "./controls.js";
 import { createParameterSection } from "./parameterSection.js";
-import { attachParameterReset, createResetBadge, createResetButton, parameterResetLabel } from "./resetBadge.js";
+import { attachParameterReset, attachResetButton, createResetBadge, createResetButton, parameterResetLabel } from "./resetBadge.js";
 
 import { testReadingRefresh } from "../../../tests/fixtures/readingRefresh.js";
 const readingRefresh = testReadingRefresh();
@@ -253,5 +253,20 @@ describe("reset badge", () => {
     expect(badge.element.title).toBe("Reset Wind to the default: 0 kt (now 12)");
     badge.element.click();
     expect([value, badge.element.hidden]).toEqual([0, true]);
+  });
+
+  it("puts a host's reset on a hand-built select, in a span around it", () => {
+    const select = document.createElement("select");
+    const label = document.createElement("label");
+    label.append("Controller", select);
+    document.body.append(label);
+    let reset = 0;
+    const badge = attachResetButton(document, select, { label: () => "Reset Controller to the default: Automatic selection", shown: () => true, reset: () => { reset += 1; } });
+    const anchor = badge.element.parentElement!;
+    expect(anchor.className).toBe("foss-earth-parameter__widget foss-earth-parameter__reset-anchor");
+    expect([anchor.parentElement, anchor.firstElementChild, badge.element.hidden]).toEqual([label, select, false]);
+    expect(badge.element.getAttribute("aria-label")).toBe("Reset Controller to the default: Automatic selection");
+    badge.element.click();
+    expect(reset).toBe(1);
   });
 });
