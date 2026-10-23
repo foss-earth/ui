@@ -236,7 +236,7 @@ describe("browser data review", () => {
     install();
     reportBrowserAppFailure(document, "The tour could not start.");
     install();
-    reportBrowserAppFailure(document, "TypeError: boom at https://example.org/app/?key=private-key\n  with apiKey=private-key");
+    reportBrowserAppFailure(document, "TypeError: boom at https://example.org/app/?key=private-key&gkey=private-gkey\n  with apiKey=private-key");
     const offer = document.querySelector(".foss-earth-browser-recovery-offer")!;
     expect([...offer.querySelectorAll("a")].map(link => link.textContent)).toEqual(["Download crash log", "Clear browser data"]);
     expect(offer.textContent).toContain("Download the crash log");
@@ -248,8 +248,9 @@ describe("browser data review", () => {
     expect(log).toMatch(/^Crash log of foss-earth, \S+Z\n/);
     expect(log).toMatch(/^Page: \S+\/app\/$/m);
     expect(log).toContain("Failed or stalled starts of this page in a row: 2");
-    expect(log).toMatch(/^The last, at \S+Z: TypeError: boom at https:\/\/example\.org\/app\/\?key=… with apiKey=…$/m);
+    expect(log).toMatch(/^The last, at \S+Z: TypeError: boom at https:\/\/example\.org\/app\/\?key=…&gkey=… with apiKey=…$/m);
     expect(log).not.toContain("private-key");
+    expect(log).not.toContain("private-gkey");
     expect(log).toContain("Visit opened 2026-10-14T12:00:00.000Z, neither closed nor hidden: it stopped while shown, or is still open.");
     expect(log).toContain("  App: App built 2026-10-14 from abc1234.");
     expect(log).toContain("  It was at: scene umn-twin-cities, inside the 360 image northrop-mall");

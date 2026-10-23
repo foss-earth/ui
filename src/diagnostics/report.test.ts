@@ -19,6 +19,17 @@ const parts = (over: Partial<ReportParts> = {}): ReportParts => ({
 });
 
 describe("the report", () => {
+  it("redacts gkey in the page address and error stack", () => {
+    const report = buildReport(parts({
+      page: reportPage("https://example.org/?gkey=page-private&renderer=webgpu"),
+      errors: [{ kind: "error", message: "Tile error", stack: "Error: Tile error\n    at load (https://example.org/app.js?gkey=stack-private:1:2)", count: 1 }],
+    }));
+    expect(report).toContain("Page: https://example.org/?gkey=…&renderer=webgpu");
+    expect(report).toContain("https://example.org/app.js?gkey=…)");
+    expect(report).not.toContain("page-private");
+    expect(report).not.toContain("stack-private");
+  });
+
   it("names FOSS Earth's commit beside the app's own, in an app built on it from another repository", () => {
     expect(buildReport(parts({ fossEarth: "35ad0e3f1c2a" })).split("\n")[2]).toBe("Build: 2026-10-04T15:00:00.000Z · source 1a2b3c4d5e6f · FOSS Earth 35ad0e3f1c2a · bundle twinCities-C9TYTT-e.js");
     expect(buildReport(parts({ fossEarth: "" })).split("\n")[2]).toBe("Build: 2026-10-04T15:00:00.000Z · source 1a2b3c4d5e6f · bundle twinCities-C9TYTT-e.js");

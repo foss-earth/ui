@@ -57,7 +57,7 @@ export function redactIssueReport(text: string, secrets: readonly string[] = [])
     // A location setting's default is also a coordinate; omit that value too.
     .replace(/^([ \t]*(?:[a-z\d_.-]*[._-])?(?:latitude|longitude|latDeg|lonDeg|lat_deg|lon_deg|lat|lon)\s*=\s*)[^\r\n]*/gim, "$1[redacted]")
     .replace(/(["']?\b(?:latitude|longitude|latDeg|lonDeg|lat_deg|lon_deg|lat|lon)\b["']?\s*[:=]\s*)(?:\[redacted\]|"(?:\\.|[^"\\\r\n])*"|'(?:\\.|[^'\\\r\n])*'|[-+]?\d+(?:\.\d*)?(?:e[-+]?\d+)?)/gi, "$1[redacted]")
-    .replace(/(["']?\b(?:[a-z\d_.-]*[._-])?(?:key|api[_ .-]?key|access[_ .-]?token|refresh[_ .-]?token|id[_ .-]?token|(?:client[_ .-]?)?secret|password|passwd|pwd|token|authorization|credentials?|pair(?:ing)?(?:[_ .-]?(?:code|secret|token))?|pin|cookies?|session[_ .-]?(?:id|token))\b["']?\s*[:=]\s*)(?:\[redacted\]|"(?:\\.|[^"\\\r\n])*"|'(?:\\.|[^'\\\r\n])*'|[^\s,;)\]}]+)/gi, "$1[redacted]")
+    .replace(/(["']?\b(?:[a-z\d_.-]*[._-])?(?:gkey|key|api[_ .-]?key|access[_ .-]?token|refresh[_ .-]?token|id[_ .-]?token|(?:client[_ .-]?)?secret|password|passwd|pwd|token|authorization|credentials?|pair(?:ing)?(?:[_ .-]?(?:code|secret|token))?|pin|cookies?|session[_ .-]?(?:id|token))\b["']?\s*[:=]\s*)(?:\[redacted\]|"(?:\\.|[^"\\\r\n])*"|'(?:\\.|[^'\\\r\n])*'|[^\s,;)\]}]+)/gi, "$1[redacted]")
     .replace(/\b[a-z\d.!#$%&'*+/=?^_`{|}~-]+@[a-z\d](?:[a-z\d.-]*[a-z\d])?\.[a-z]{2,}\b/gi, REDACTED);
   return result;
 }

@@ -68,6 +68,12 @@ describe("public issue report redaction", () => {
     expect(report).toBe('Failed with [redacted]\nEncoded: [redacted]\nForm encoded: [redacted]\nJSON: "[redacted]"');
   });
 
+  it("removes gkey values from URLs, settings and JSON without known secrets", () => {
+    const report = redactIssueReport('Page: https://example.org/?gkey=url-private\ngkey=setting-private\n{"gkey":"JSON private value"}\nmap.gkey: nested-private');
+    for (const value of ["url-private", "setting-private", "JSON private value", "nested-private"]) expect(report).not.toContain(value);
+    expect(report).toContain('gkey=[redacted]\n{"gkey":[redacted]}\nmap.gkey: [redacted]');
+  });
+
   it("redacts coordinates in console payloads and settings without removing GPU or vector details", () => {
     const report = redactIssueReport([
       'Warning: physics state {"position":{"latDeg":44.975123,"lonDeg":-93.234567},"vector":{"x":2,"y":3,"z":4},"maxTextureSize":16384}',

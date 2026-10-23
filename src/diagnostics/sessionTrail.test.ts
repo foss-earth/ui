@@ -92,8 +92,8 @@ describe("a visit's trail", () => {
     expect(recordOf(browser, "a")).toMatchObject({ state: "scene tour, revision r1, inside the 360 image northrop-mall", steps: [{ text: "another" }] });
   });
 
-  it("makes a step one line without a key from an address", () => {
-    expect(tidyStep("Google 3D tiles\n could not be loaded: https://tile.googleapis.com/v1/root.json?key=AIzaSecret&session=1 ")).toBe("Google 3D tiles could not be loaded: https://tile.googleapis.com/v1/root.json?key=…&session=1");
+  it.each(["key", "gkey", "GKEY"])("makes a step one line without %s from an address", parameter => {
+    expect(tidyStep(`Google 3D tiles\n could not be loaded: https://tile.googleapis.com/v1/root.json?${parameter}=AIzaSecret&session=1 `)).toBe(`Google 3D tiles could not be loaded: https://tile.googleapis.com/v1/root.json?${parameter}=…&session=1`);
     expect(tidyStep("x".repeat(400))).toHaveLength(300);
   });
 

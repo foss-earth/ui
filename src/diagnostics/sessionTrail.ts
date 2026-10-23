@@ -106,7 +106,7 @@ export const stepKind = (text: string): string => text.replace(/https?:\/\/[^\s)
 
 /** One line, without a secret: a key in a URL's query is left out. */
 export function tidyStep(text: string): string {
-  const line = text.replace(/\s+/g, " ").trim().replace(/([?&](?:key|token|access_token)=)[^&\s"')]+/gi, "$1…");
+  const line = text.replace(/\s+/g, " ").trim().replace(/([?&](?:gkey|key|token|access_token)=)[^&\s"')]+/gi, "$1…");
   return line.length > STEP_CHARS ? `${line.slice(0, STEP_CHARS - 1)}…` : line;
 }
 
