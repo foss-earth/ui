@@ -386,12 +386,56 @@ html[data-world-edges="flush"] .foss-earth-workspace-slot-launcher-right {
   background: rgba(56, 189, 248, 0.2);
 }
 
+.foss-earth-window-menu-picker {
+  border-top: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 0 0 4px 4px;
+}
+
 /* The rest of the panel, however tall the tab strip is: taller while its scrollbar shows. Below
    the panel's edge, the body's own scrollbars would be clipped. */
 .foss-earth-dock-panel-body {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
+}
+
+.foss-earth-new-tab {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+}
+
+.foss-earth-new-tab-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+}
+
+.foss-earth-new-tab-choice {
+  flex: 0 0 auto;
+  max-width: 100%;
+  min-height: 32px;
+  padding: 6px 8px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 6px;
+  background: rgba(148, 163, 184, 0.12);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.foss-earth-new-tab-choice:hover,
+.foss-earth-new-tab-choice:focus-visible {
+  background: rgba(56, 189, 248, 0.22);
+}
+
+.foss-earth-new-tab-choice:focus-visible {
+  outline: 2px solid rgba(56, 189, 248, 0.8);
+  outline-offset: 1px;
 }
 
 /* A surface tab's body is drawn by the host through the panel, so the panel neither paints nor blurs behind it; its tab strip keeps the panel's backing. */

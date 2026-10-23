@@ -14,6 +14,7 @@ import { hideWorkspaceTabs, restoreWorkspaceTabs, type HiddenTab } from "../wind
 import { createWorkspaceSnapshotStore, workspaceSnapshotFields } from "../windowing/core/workspaceSnapshot.js";
 import { JoinedSurface } from "./JoinedSurface.js";
 import { TabIcon } from "./TabIcon.js";
+import { useSecondaryTouchClick } from "../windowing/react/useSecondaryTouchClick.js";
 import type { OverlayContextPolicy, WindowOverlayHandle, WindowOverlayGeometry, WindowOverlayLogSize, WindowOverlayLayoutPort } from "../windowing/core/overlayPorts.js";
 export type { OverlayContextPolicy, WindowOverlayHandle, WindowOverlayGeometry, WindowOverlayLogSize, WindowOverlayLayoutPort } from "../windowing/core/overlayPorts.js";
 /** What a host draws when two surface tabs share one body. */
@@ -65,6 +66,9 @@ export interface WindowOverlayProps<TabId extends string> {
   };
   /** Joins two selected surface tabs of one group into one body. Without it each surface keeps its own window. */
   surfaces?: WindowOverlaySurfaces<TabId>;
+  /** The + button opens a New tab picker by default; Dropdown is an explicit preference. */
+  tabPicker?: "tab" | "dropdown";
+  onTabPickerChange?(mode: "tab" | "dropdown"): void;
 }
 /** Where the tabs a context hid are, so each comes back where it was when its context returns. */
 interface OverlayContextMemory<TabId extends string> {
@@ -92,7 +96,8 @@ function baseWorkspace<TabId extends string>(
   return { state: panelBack ? setWorkspaceSlotCollapsed(restored, opened.slotId, opened.collapsed) : restored, hidden: hidden.hidden };
 }
 
-export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTabs, renderTabContent, context, restorableTabs, storage, geometry, logSize, layoutPort, onTabVisibility, overlayApiRef, onBeforeCloseTab, focus, presentation, surfaces }: WindowOverlayProps<TabId>) {
+export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTabs, renderTabContent, context, restorableTabs, storage, geometry, logSize, layoutPort, onTabVisibility, overlayApiRef, onBeforeCloseTab, focus, presentation, surfaces, tabPicker = "tab", onTabPickerChange }: WindowOverlayProps<TabId>) {
+  const secondaryTouchClick = useSecondaryTouchClick();
   // Effects that change the workspace mark it, so the snapshot waits for the state they lead to.
   const stateScheduled = useRef(false);
   useLayoutEffect(() => { stateScheduled.current = false; });
@@ -163,6 +168,7 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
   }), [logSize]);
   const [primaryAddOpen, setPrimaryAddOpen] = useState(false);
   const [secondaryAddOpen, setSecondaryAddOpen] = useState(false);
+  const pickerActive = (slotId: WindowSlotId): boolean => tabPicker === "tab" && (slotId === "primary" ? primaryAddOpen : secondaryAddOpen);
   const [availableWidth, setAvailableWidth] = useState(0);
   // A window keeps the same component and captured grip when its anchor changes.
   const [slotOrder, setSlotOrder] = useState<readonly WindowSlotId[]>(["primary", "secondary"]);
@@ -202,7 +208,7 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
     compactSide: compactFocus === null ? undefined : compactFocus === "primary" ? "left" as const : "right" as const,
     presentation: presentation?.choice,
     edges: presentation?.edges,
-    open: { left: logical.primary.tabs.length > 0, right: logical.secondary.tabs.length > 0 },
+    open: { left: logical.primary.tabs.length > 0 || pickerActive("primary"), right: logical.secondary.tabs.length > 0 || pickerActive("secondary") },
   };
   // What the sizes alone choose. A join only keeps the log a tab, so ending it returns to this.
   const sized = resolveDockLayout(layoutInput);
@@ -223,7 +229,7 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
     tabId === null ? undefined : tabDefinitions.find(tab => tab.id === tabId)?.surface?.joinGroup
   );
   const expandedTab = (slotId: WindowSlotId): TabId | null => (
-    presented === "both" && !display[slotId].collapsed ? display[slotId].activeTab : null
+    presented === "both" && !display[slotId].collapsed && !pickerActive(slotId) ? display[slotId].activeTab : null
   );
   const leftTab = expandedTab("primary");
   const rightTab = expandedTab("secondary");
@@ -231,8 +237,8 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
   const joined = joinGroup !== undefined && joinGroup === joinGroupOf(rightTab) ? { left: leftTab!, right: rightTab! } : null;
   // The log stays a tab while a join lasts, and afterwards while that tab is what a window shows.
   const logTab = surfaces?.logTab;
-  const logTabShown = logTab !== undefined && (presented === "both" ? [display.primary, display.secondary] : [display[presented]])
-    .some(slot => !slot.collapsed && slot.activeTab === logTab);
+  const logTabShown = logTab !== undefined && (presented === "both" ? ["primary", "secondary"] as const : [presented])
+    .some(slotId => !display[slotId].collapsed && !pickerActive(slotId) && display[slotId].activeTab === logTab);
   const [logHeld, setLogHeld] = useState(false);
   const holdLog = joined !== null || (logHeld && logTabShown);
   if (holdLog !== logHeld) setLogHeld(holdLog);
@@ -241,8 +247,9 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
   if (!joined && joinedHeight !== null) setJoinedHeight(null);
   const preferredSlot: WindowSlotId = presented === "both" ? "primary" : presented;
   const visibleTabs = new Set<TabId>();
-  for (const slot of presented === "both" ? [display.primary, display.secondary] : [display[presented]]) {
-    if (!slot.collapsed && slot.activeTab !== null) visibleTabs.add(slot.activeTab);
+  for (const slotId of presented === "both" ? ["primary", "secondary"] as const : [presented]) {
+    const slot = display[slotId];
+    if (!pickerActive(slotId) && !slot.collapsed && slot.activeTab !== null) visibleTabs.add(slot.activeTab);
   }
   const previouslyVisible = useRef<ReadonlySet<TabId>>(new Set());
   const visibilityCallback = useRef(onTabVisibility);
@@ -341,7 +348,7 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
       view?.removeEventListener("foss-earth-panel-resize-end", onResizeEnd);
       view?.removeEventListener("foss-earth-world-draw-commit", onResizeEnd);
     };
-  }, [geometry, availableWidth, layout.presentation, layout.edges, presentation?.worldResize, primarySlot.collapsed, primarySlot.activeTab, primarySlot.tabs.length, secondarySlot.collapsed, secondarySlot.activeTab, secondarySlot.tabs.length, joined !== null, joinedHeight !== null]);
+  }, [geometry, availableWidth, layout.presentation, layout.edges, presentation?.worldResize, primarySlot.collapsed, primarySlot.activeTab, primarySlot.tabs.length, secondarySlot.collapsed, secondarySlot.activeTab, secondarySlot.tabs.length, pickerActive("primary"), pickerActive("secondary"), joined !== null, joinedHeight !== null]);
 
   useLayoutEffect(() => { layoutPort.publish(layout); }, [layoutPort, layout.mode, layout.presentation, layout.edges, layout.logVisible, layout.side, layout.primaryWidth, layout.secondaryWidth, layout.logLeft, layout.logTop, layout.logCenter, layout.logWidth, layout.maxWindowWidth]);
   useLayoutEffect(() => {
@@ -374,6 +381,8 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
     }
     pendingOpens.current.delete(tabId);
     if (!tabDefinitions.some(tab => tab.id === tabId && tab.available !== false)) return;
+    setPrimaryAddOpen(false);
+    setSecondaryAddOpen(false);
     const memory = compactMemory.current;
     const existing = slotIdForOpenTab(canonicalWorkspace(), tabId);
     if (memory) {
@@ -519,6 +528,8 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
     if (!overlayApiRef) return;
     const openOrSelectTab = (tabId: TabId): void => {
       if (!tabDefinitions.some(tab => tab.id === tabId && tab.available !== false)) return;
+      setPrimaryAddOpen(false);
+      setSecondaryAddOpen(false);
       workspace.setState((current) => openOrSelectTabInWorkspace(
         current,
         tabId,
@@ -541,7 +552,8 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
       toggleTab(tabId) {
         const { state } = workspace;
         const slotId = slotIdForOpenTab(state, tabId);
-        if (!slotId || state[slotId].activeTab !== tabId || state[slotId].collapsed) {
+        // A New tab page covers its window's tab, so the tab is not showing yet.
+        if (!slotId || state[slotId].activeTab !== tabId || state[slotId].collapsed || pickerActive(slotId)) {
           openOrSelectTab(tabId);
           return;
         }
@@ -639,7 +651,7 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
   };
 
   return (
-    <div ref={setOverlay} className="foss-earth-window-overlay" data-image-compact={imageCompact ? "true" : undefined}>
+    <div {...secondaryTouchClick} ref={setOverlay} className="foss-earth-window-overlay" data-image-compact={imageCompact ? "true" : undefined}>
       {slotOrder.map((slotId, identity) => {
         const primary = slotId === "primary";
         const side = primary ? "left" : "right";
@@ -657,6 +669,8 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
           getTabLabel={(tabId) => tabDefinitions.find((tab) => tab.id === tabId)?.label ?? tabId}
           renderTabIcon={tabIcon}
           renderTabContent={renderTabContent}
+          tabPicker={tabPicker}
+          onTabPickerChange={onTabPickerChange}
           restoreOnTabSelect
           width={imageCompact ? compactWidth : primary ? layout.primaryWidth : layout.secondaryWidth}
           maxWidth={layout.maxWindowWidth}

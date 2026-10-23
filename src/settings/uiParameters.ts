@@ -3,6 +3,8 @@ import { TRAIL_STEPS_DEFAULT } from "../diagnostics/sessionTrail.js";
 import { GAME_LOG_LINE_MS, GAME_LOG_MAX_LINES } from "../log/gameLogDefaults.js";
 const SETTINGS_TAB = "settings"; const INTERFACE_TAB = "interface";
 export const WINDOWS_PRESENTATION_ID = "interface.windows.presentation";
+export const TAB_PICKER_ID = "interface.windows.tabPicker";
+export const TAB_PICKER_CHOICES = [{ id: "tab", label: "Tab" }, { id: "dropdown", label: "Dropdown" }] as const;
 /** @deprecated The toolbar always stays at the bottom of the screen. */
 export const TABS_BEHIND_TOOLBAR_ID = "interface.windows.tabsBehindToolbar";
 /** @deprecated The toolbar always stays at the bottom of the screen. */
@@ -11,6 +13,20 @@ export const WORLD_RESIZE_ID = "interface.windows.worldResize";
 export const WORLD_EDGES_ID = "interface.windows.flushEdges";
 /** Register explicitly in the host's registry; no owner feature catalogue is imported. */
 export const UI_PARAMETERS: readonly ParameterSpec[] = [
+{
+    id: TAB_PICKER_ID,
+    label: "Tab picker",
+    description: "The + button opens a New tab with wrapping choices by default. Choose Dropdown to use the popup menu instead. Its Use New tab action restores the tab picker.",
+    unit: "none",
+    kind: "choice",
+    choiceControl: "two-position",
+    choices: TAB_PICKER_CHOICES,
+    default: "tab",
+    defaultReason: "Tab choices belong in the window and wrap at their natural widths. The popup dropdown is an explicit preference.",
+    home: { tab: "new-tab", section: "main", level: "main" },
+    appliesLive: true,
+    source: "@foss-earth/ui/src/windowing/react/WorkspaceDockSlot.tsx",
+  },
 {
     id: "diagnostics.trail",
     label: "Remember how a visit ended",

@@ -202,7 +202,7 @@ it("owns responsive launchers, cross-side tab moves, minimize/restore, and injec
   };
   const open = async (side: string, label: string) => {
     await click(`[aria-label="Open ${side} panel"]`);
-    const item = Array.from(host.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')).find(button => button.textContent === label)!;
+    const item = Array.from(host.querySelectorAll<HTMLButtonElement>(".foss-earth-new-tab-choice")).find(button => button.textContent === label)!;
     await act(async () => item.click());
   };
   await act(async () => root.render(<WindowOverlay
@@ -418,7 +418,7 @@ it("adds Map and Renderer tabs showing the elements a host hands over", async ()
   />));
   try {
     await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Open right panel"]')!.click());
-    expect(Array.from(host.querySelectorAll('[role="menuitem"]'), (item) => item.textContent))
+    expect(Array.from(host.querySelectorAll(".foss-earth-new-tab-choice"), (item) => item.textContent))
       .toEqual(expect.arrayContaining(["Map", "Renderer"]));
     await act(async () => overlayApiRef.current!.toggleTab("map"));
     expect(host.contains(mapTab)).toBe(true);
@@ -463,8 +463,8 @@ it("offers an About tab under +, on the globe and in a sphere", async () => {
   const menu = async () => {
     const plus = () => host.querySelector<HTMLButtonElement>('[aria-label="Open right panel"], [data-side="right"] [aria-label="Open new tab"]')!;
     await act(async () => plus().click());
-    const items = Array.from(host.querySelectorAll('[role="menuitem"]'), (item) => item.textContent);
-    await act(async () => plus().click());
+    const items = Array.from(host.querySelectorAll(".foss-earth-new-tab-choice"), (item) => item.textContent);
+    await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Close New tab tab"]')!.click());
     return items;
   };
   try {
@@ -545,8 +545,8 @@ it("opens a sphere's tab on entering, hides the map's tabs meanwhile, and leaves
   const selected = (name: "left" | "right") => host.querySelector(`[data-side="${name}"] .foss-earth-tab-shell-selected .foss-earth-tab-button`)?.textContent;
   const menu = async (name: "left" | "right") => {
     await act(async () => host.querySelector<HTMLButtonElement>(`[data-side="${name}"] [aria-label="Open new tab"]`)!.click());
-    const items = Array.from(host.querySelectorAll('[role="menuitem"]'), (item) => item.textContent);
-    await act(async () => host.querySelector<HTMLButtonElement>(`[data-side="${name}"] [aria-label="Open new tab"]`)!.click());
+    const items = Array.from(host.querySelectorAll(`[data-side="${name}"] .foss-earth-new-tab-choice`), (item) => item.textContent);
+    await act(async () => host.querySelector<HTMLButtonElement>(`[data-side="${name}"] [aria-label="Close New tab tab"]`)!.click());
     return items;
   };
   try {
@@ -683,7 +683,7 @@ it("comes back after a reload with the same tabs in the same windows, dropping t
     await act(async () => first.api.current!.openOrSelectTab("location"));
     await act(async () => first.api.current!.openOrSelectTab("debug"));
     await act(async () => first.host.querySelector<HTMLButtonElement>('[aria-label="Open right panel"]')!.click());
-    const aircraft = Array.from(first.host.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')).find((item) => item.textContent === "Aircraft")!;
+    const aircraft = Array.from(first.host.querySelectorAll<HTMLButtonElement>(".foss-earth-new-tab-choice")).find((item) => item.textContent === "Aircraft")!;
     await act(async () => aircraft.click());
     await act(async () => first.host.querySelector<HTMLButtonElement>('[data-side="right"] .foss-earth-tab-shell-selected .foss-earth-tab-button')!.click());
     expect(side(first.host, "left")).toEqual(["Location", "Debug"]);

@@ -25,6 +25,8 @@ export interface PanelLauncherProps<TabId extends string> {
   side?: "left" | "right";
   availableTabs: readonly TabId[];
   onOpenChange: (open: boolean) => void;
+  /** Returns from the opt-in dropdown to the New tab page. */
+  onUseNewTab?: () => void;
   onOpenTab: (tabId: TabId) => void;
   onMoveTab?: (tabId: TabId) => void;
   dropWidth?: number;
@@ -48,6 +50,7 @@ export function PanelLauncher<TabId extends string>(props: PanelLauncherProps<Ta
     side = "left",
     availableTabs,
     onOpenChange,
+    onUseNewTab,
     onOpenTab,
     onMoveTab,
     dropWidth,
@@ -201,6 +204,16 @@ export function PanelLauncher<TabId extends string>(props: PanelLauncherProps<Ta
               </button>
             ))
           )}
+          {onUseNewTab ? (
+            <button
+              type="button"
+              role="menuitem"
+              className={cx("foss-earth-window-menu-item", "foss-earth-window-menu-picker", classNames?.menuItem)}
+              onClick={(event) => { event.stopPropagation(); onUseNewTab(); }}
+            >
+              Use New tab
+            </button>
+          ) : null}
         </div>
       ) : null}
     </div>

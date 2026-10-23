@@ -27,6 +27,7 @@ import {
   TabStrip,
   type TabStripClassNames,
 } from "./TabStrip.js";
+import { NewTabPicker } from "./NewTabPicker.js";
 
 function cx(...parts: Array<string | null | undefined | false>): string {
   return parts.filter(Boolean).join(" ");
@@ -59,6 +60,7 @@ export interface WorkspaceDockSlotStrings {
   openPanelTabTitle?: string;
   openNewTabAriaLabel?: string;
   openNewTabTitle?: string;
+  newTabLabel?: string;
   closeTabAriaLabel?: (tabLabel: string) => string;
 }
 
@@ -76,6 +78,10 @@ export interface WorkspaceDockSlotProps<TabId extends string> {
   maxWidth: number;
   addMenuOpen: boolean;
   onAddMenuOpenChange: (open: boolean) => void;
+  /** Opens a New tab page by default. The floating dropdown is opt-in. */
+  tabPicker?: "tab" | "dropdown";
+  /** Offers the picker preference in the New tab page. */
+  onTabPickerChange?: (mode: "tab" | "dropdown") => void;
   visible?: boolean;
   showLauncherWhenEmpty?: boolean;
   /** Reveals an empty side as a drop target when a tab drag began before it mounted. */
@@ -131,6 +137,8 @@ export function WorkspaceDockSlot<TabId extends string>(props: WorkspaceDockSlot
     maxWidth,
     addMenuOpen,
     onAddMenuOpenChange,
+    tabPicker = "tab",
+    onTabPickerChange,
     visible = true,
     showLauncherWhenEmpty = true,
     emptyDropActive = false,
@@ -159,6 +167,29 @@ export function WorkspaceDockSlot<TabId extends string>(props: WorkspaceDockSlot
   const openTabs = slotState.tabs;
   const activeTab = slotState.activeTab ?? slotState.tabs[slotState.tabs.length - 1] ?? null;
   const availableTabs = availableTabsFromWorkspace(workspaceState, tabDefinitions);
+  const pickerSelected = tabPicker === "tab" && addMenuOpen;
+
+  const handleOpenNewTab = () => {
+    if (slotState.collapsed) {
+      onWorkspaceStateChange(setWorkspaceSlotCollapsed(workspaceState, slotId, false));
+    }
+    onAddMenuOpenChange(true);
+    onActivate?.(null);
+  };
+
+  // The selected New tab minimizes and restores its window, as any other selected tab does.
+  const handleSelectNewTab = () => {
+    if (restoreOnTabSelect && pickerSelected && !slotState.collapsed) {
+      onWorkspaceStateChange(setWorkspaceSlotCollapsed(workspaceState, slotId, true));
+      return;
+    }
+    handleOpenNewTab();
+  };
+
+  const handleUseNewTab = onTabPickerChange ? () => {
+    onTabPickerChange("tab");
+    handleOpenNewTab();
+  } : undefined;
 
   const handleOpenTab = (tabId: TabId) => {
     const next = restoreOnTabOpen
@@ -170,10 +201,13 @@ export function WorkspaceDockSlot<TabId extends string>(props: WorkspaceDockSlot
   };
 
   const handleSelectTab = (tabId: TabId) => {
-    const next = restoreOnTabSelect
+    const next = pickerSelected
+      ? setWorkspaceSlotCollapsed(selectTabInWorkspace(workspaceState, slotId, tabId), slotId, false)
+      : restoreOnTabSelect
       ? selectTabAndToggleWorkspaceSlot(workspaceState, slotId, tabId)
       : selectTabInWorkspace(workspaceState, slotId, tabId);
     onWorkspaceStateChange(next);
+    onAddMenuOpenChange(false);
     onActivate?.(tabId);
   };
 
@@ -184,6 +218,7 @@ export function WorkspaceDockSlot<TabId extends string>(props: WorkspaceDockSlot
 
   const handleMoveTab = (tabId: TabId) => {
     onWorkspaceStateChange(openTabAndExpandWorkspaceSlot(workspaceState, slotId, tabId, tabDefinitions));
+    onAddMenuOpenChange(false);
     onActivate?.(tabId);
   };
 
@@ -217,16 +252,17 @@ export function WorkspaceDockSlot<TabId extends string>(props: WorkspaceDockSlot
     ),
   };
 
-  if (openTabs.length === 0) {
+  if (openTabs.length === 0 && !pickerSelected) {
     if (!showLauncherWhenEmpty) return null;
 
     const launcher = (
       <PanelLauncher<TabId>
         dropActive={emptyDropActive}
-        open={addMenuOpen}
+        open={tabPicker === "dropdown" && addMenuOpen}
         side={side}
         availableTabs={availableTabs}
-        onOpenChange={onAddMenuOpenChange}
+        onOpenChange={tabPicker === "tab" ? (open) => { if (open) handleOpenNewTab(); } : onAddMenuOpenChange}
+        onUseNewTab={tabPicker === "dropdown" ? handleUseNewTab : undefined}
         onOpenTab={handleOpenTab}
         onMoveTab={handleMoveTab}
         dropWidth={width}
@@ -252,8 +288,8 @@ export function WorkspaceDockSlot<TabId extends string>(props: WorkspaceDockSlot
     );
   }
 
-  if (!activeTab) return null;
-  const surface = tabDefinitions.some(tab => tab.id === activeTab && tab.surface !== undefined);
+  if (!activeTab && !pickerSelected) return null;
+  const surface = !pickerSelected && tabDefinitions.some(tab => tab.id === activeTab && tab.surface !== undefined);
 
   return (
     <DockPanel
@@ -268,7 +304,7 @@ export function WorkspaceDockSlot<TabId extends string>(props: WorkspaceDockSlot
       onCollapsedChange={(collapsed) => {
         onWorkspaceStateChange(setWorkspaceSlotCollapsed(workspaceState, slotId, collapsed));
       }}
-      addMenuOpen={addMenuOpen}
+      addMenuOpen={tabPicker === "dropdown" && addMenuOpen}
       onDragOver={handleTabDragOver}
       onDrop={handleTabDrop}
       classNames={classNames?.dockPanel}
@@ -277,8 +313,8 @@ export function WorkspaceDockSlot<TabId extends string>(props: WorkspaceDockSlot
           {rowLabel ? <span className="foss-earth-compact-row-label">{rowLabel}</span> : null}
           <TabStrip<TabId>
             openTabs={openTabs}
-            activeTab={activeTab}
-            addMenuOpen={addMenuOpen}
+            activeTab={pickerSelected ? null : activeTab}
+            addMenuOpen={tabPicker === "dropdown" && addMenuOpen}
             availableTabs={availableTabs}
             side={side}
             compact={compactWhenCollapsed && slotState.collapsed}
@@ -287,6 +323,13 @@ export function WorkspaceDockSlot<TabId extends string>(props: WorkspaceDockSlot
             onOpenTab={handleOpenTab}
             onMoveTab={handleMoveTab}
             onAddMenuOpenChange={onAddMenuOpenChange}
+            onAddTab={tabPicker === "tab" ? handleOpenNewTab : undefined}
+            onUseNewTab={tabPicker === "dropdown" ? handleUseNewTab : undefined}
+            newTab={pickerSelected ? {
+              label: strings?.newTabLabel,
+              onSelect: handleSelectNewTab,
+              onClose: () => onAddMenuOpenChange(false),
+            } : undefined}
             getLabel={getTabLabel}
             classNames={classNames?.tabStrip}
             strings={{
@@ -305,12 +348,21 @@ export function WorkspaceDockSlot<TabId extends string>(props: WorkspaceDockSlot
         </div>
       )}
       {...dockPanelProps}
+      contentFit={pickerSelected ? undefined : dockPanelProps?.contentFit}
       onHoldPresentation={onHoldPresentation}
       surface={surface}
-      bodyless={joined}
-      onActivate={onActivate ? () => onActivate(activeTab) : undefined}
+      bodyless={joined && !pickerSelected}
+      onActivate={onActivate ? () => onActivate(pickerSelected ? null : activeTab) : undefined}
     >
-      {joined ? null : renderTabContent(activeTab)}
+      {pickerSelected ? (
+        <NewTabPicker
+          availableTabs={availableTabs}
+          getLabel={getTabLabel}
+          onOpenTab={handleOpenTab}
+          allTabsOpenText={strings?.allTabsOpenText}
+          onTabPickerChange={onTabPickerChange}
+        />
+      ) : joined || !activeTab ? null : renderTabContent(activeTab)}
     </DockPanel>
   );
 }

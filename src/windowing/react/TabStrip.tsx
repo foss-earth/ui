@@ -48,6 +48,16 @@ export interface TabStripProps<TabId extends string> {
   onOpenTab: (tabId: TabId) => void;
   onMoveTab?: (tabId: TabId) => void;
   onAddMenuOpenChange: (open: boolean) => void;
+  /** Opens the tab picker in the window body instead of toggling the dropdown. */
+  onAddTab?: () => void;
+  /** Returns from the opt-in dropdown to the New tab page. */
+  onUseNewTab?: () => void;
+  /** A temporary picker tab, kept separate from the host's persisted tab IDs. */
+  newTab?: {
+    label?: string;
+    onSelect: () => void;
+    onClose: () => void;
+  };
   getLabel: (tabId: TabId) => string;
   classNames?: TabStripClassNames;
   strings?: TabStripStrings;
@@ -83,6 +93,9 @@ export function TabStrip<TabId extends string>(props: TabStripProps<TabId>) {
     onOpenTab,
     onMoveTab,
     onAddMenuOpenChange,
+    onAddTab,
+    onUseNewTab,
+    newTab,
     getLabel,
     classNames,
     strings,
@@ -279,6 +292,36 @@ export function TabStrip<TabId extends string>(props: TabStripProps<TabId>) {
               </div>
             );
           })}
+          {newTab ? (
+            <div
+              className={cx(
+                "foss-earth-tab-shell", "foss-earth-tab-shell-selected",
+                classNames?.tabShell, classNames?.tabShellSelected,
+              )}
+              data-new-tab="true"
+              onPointerDown={(event) => {
+                if (event.button !== 0 || (event.target as Element).closest(".foss-earth-tab-close")) return;
+                hold.arm(event.clientX, event.clientY);
+              }}
+              onContextMenu={onHoldPresentation ? (event) => event.preventDefault() : undefined}
+            >
+              <button
+                type="button"
+                onClick={() => { if (!hold.take()) newTab.onSelect(); }}
+                className={cx("foss-earth-tab-button", classNames?.tabButton, compact && classNames?.tabButtonCompact)}
+              >
+                {newTab.label ?? "New tab"}
+              </button>
+              <button
+                type="button"
+                onClick={newTab.onClose}
+                className={cx("foss-earth-tab-close", classNames?.closeButton)}
+                aria-label={closeAriaLabel(newTab.label ?? "New tab")}
+              >
+                x
+              </button>
+            </div>
+          ) : null}
         </div>
 
         {overflowing ? (
@@ -311,7 +354,7 @@ export function TabStrip<TabId extends string>(props: TabStripProps<TabId>) {
         <button
           ref={addRef}
           type="button"
-          onClick={() => onAddMenuOpenChange(!addMenuOpen)}
+          onClick={() => onAddTab ? onAddTab() : onAddMenuOpenChange(!addMenuOpen)}
           className={cx("foss-earth-tab-add", classNames?.addButton)}
           aria-label={strings?.addButtonAriaLabel ?? "Open new tab"}
           title={strings?.addButtonTitle ?? "Open new tab"}
@@ -351,6 +394,16 @@ export function TabStrip<TabId extends string>(props: TabStripProps<TabId>) {
                 </button>
               ))
             )}
+            {onUseNewTab ? (
+              <button
+                type="button"
+                role="menuitem"
+                className={cx("foss-earth-window-menu-item", "foss-earth-window-menu-picker", classNames?.addMenuItem)}
+                onClick={(event) => { event.stopPropagation(); onUseNewTab(); }}
+              >
+                Use New tab
+              </button>
+            ) : null}
           </div>,
           menuContainer ?? document.body,
         ) : null}
