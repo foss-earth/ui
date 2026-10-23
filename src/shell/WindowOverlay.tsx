@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { openOrSelectTabInWorkspace, closeTabInWorkspace, placeTabInWorkspace, setWorkspaceSlotCollapsed, setWorkspaceSlotSize, slotIdForOpenTab } from "../windowing/core/workspaceState.js";
 import { WorkspaceDockSlot } from "../windowing/react/WorkspaceDockSlot.js";
 import { useWindowWorkspace } from "../windowing/react/useWindowWorkspace.js";
@@ -15,6 +15,7 @@ import { createWorkspaceSnapshotStore, workspaceSnapshotFields } from "../window
 import { JoinedSurface } from "./JoinedSurface.js";
 import { TabIcon } from "./TabIcon.js";
 import { useSecondaryTouchClick } from "../windowing/react/useSecondaryTouchClick.js";
+import { useSecondaryTouchScroll } from "../windowing/react/useSecondaryTouchScroll.js";
 import type { OverlayContextPolicy, WindowOverlayHandle, WindowOverlayGeometry, WindowOverlayLogSize, WindowOverlayLayoutPort } from "../windowing/core/overlayPorts.js";
 export type { OverlayContextPolicy, WindowOverlayHandle, WindowOverlayGeometry, WindowOverlayLogSize, WindowOverlayLayoutPort } from "../windowing/core/overlayPorts.js";
 /** What a host draws when two surface tabs share one body. */
@@ -97,7 +98,16 @@ function baseWorkspace<TabId extends string>(
 }
 
 export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTabs, renderTabContent, context, restorableTabs, storage, geometry, logSize, layoutPort, onTabVisibility, overlayApiRef, onBeforeCloseTab, focus, presentation, surfaces, tabPicker = "tab", onTabPickerChange }: WindowOverlayProps<TabId>) {
+  // A second finger taps and scrolls the windows while the first holds a flight control.
   const secondaryTouchClick = useSecondaryTouchClick();
+  const secondaryTouchScroll = useSecondaryTouchScroll();
+  const secondaryTouch = useMemo(() => ({
+    ...secondaryTouchClick,
+    onPointerDownCapture(event: ReactPointerEvent<HTMLElement>) {
+      secondaryTouchClick.onPointerDownCapture?.(event);
+      secondaryTouchScroll.onPointerDownCapture?.(event);
+    },
+  }), [secondaryTouchClick, secondaryTouchScroll]);
   // Effects that change the workspace mark it, so the snapshot waits for the state they lead to.
   const stateScheduled = useRef(false);
   useLayoutEffect(() => { stateScheduled.current = false; });
@@ -651,7 +661,7 @@ export function WindowOverlay<TabId extends string>({ tabDefinitions: suppliedTa
   };
 
   return (
-    <div {...secondaryTouchClick} ref={setOverlay} className="foss-earth-window-overlay" data-image-compact={imageCompact ? "true" : undefined}>
+    <div {...secondaryTouch} ref={setOverlay} className="foss-earth-window-overlay" data-image-compact={imageCompact ? "true" : undefined}>
       {slotOrder.map((slotId, identity) => {
         const primary = slotId === "primary";
         const side = primary ? "left" : "right";

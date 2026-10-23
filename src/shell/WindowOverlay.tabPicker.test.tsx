@@ -171,3 +171,35 @@ it("opens New tab from a second finger's still tap on + while the first finger h
     expect(panel(host, "right")!.querySelector('[data-content="b"]')).not.toBeNull();
   } finally { await unmount(); }
 });
+
+it("scrolls a window under a second finger's drag while the first holds a control outside the windows, without choosing what the drag crossed", async () => {
+  save(["a"], ["c"]);
+  const { host, unmount } = await mount();
+  const touch = (target: EventTarget, type: string, pointerId: number, isPrimary: boolean, clientY = 150) => {
+    const event = new MouseEvent(type, { bubbles: true, cancelable: true, clientX: 10, clientY, button: 0 });
+    Object.defineProperties(event, { pointerId: { value: pointerId }, pointerType: { value: "touch" }, isPrimary: { value: isPrimary } });
+    target.dispatchEvent(event);
+  };
+  try {
+    const joystick = document.body.appendChild(document.createElement("div"));
+    touch(joystick, "pointerdown", 1, true);
+    await press(host.querySelector('[data-side="right"] [aria-label="Open new tab"]'));
+    const body = panel(host, "right")!.querySelector<HTMLElement>(".foss-earth-dock-panel-body")!;
+    // jsdom has no layout: the window's stylesheet and sizes, as a phone draws a long tab.
+    body.style.overflowY = "auto";
+    Object.defineProperties(body, { clientHeight: { value: 200 }, scrollHeight: { value: 900 } });
+    const bravo = choice(host, "Bravo") as HTMLButtonElement;
+    vi.spyOn(bravo, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 140, 64, 32));
+    await act(async () => {
+      touch(bravo, "pointerdown", 2, false, 150);
+      for (const y of [130, 110, 90]) touch(bravo, "pointermove", 2, false, y);
+      touch(bravo, "pointerup", 2, false, 90);
+    });
+    expect(body.scrollTop).toBe(60);
+    expect(host.querySelector(".foss-earth-new-tab")).not.toBeNull();
+    expect(savedTabs().secondary).toEqual(["c"]);
+    // A still tap after the scroll still chooses.
+    await act(async () => { touch(bravo, "pointerdown", 3, false); touch(bravo, "pointerup", 3, false); });
+    expect(savedTabs().secondary).toEqual(["c", "b"]);
+  } finally { await unmount(); }
+});
