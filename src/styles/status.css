@@ -1,4 +1,12 @@
 /* Generic report, review and status layouts; hosts own feature data. */
+.foss-earth-test-feedback { display: flex; flex-direction: column; align-items: stretch; gap: 6px; min-width: 0; max-width: 100%; font-size: 12px; }
+.foss-earth-test-feedback [hidden] { display: none; }
+.foss-earth-test-feedback h3, .foss-earth-test-feedback p { margin: 0; flex-basis: auto; overflow-wrap: anywhere; }
+.foss-earth-test-feedback__step { min-width: 0; border: 1px solid var(--border, #80808060); border-radius: 8px; padding: 5px; }
+.foss-earth-test-feedback__step .foss-earth-choice-group { margin-bottom: 4px; }
+.foss-earth-test-feedback .foss-earth-choices__heading { flex: 0 1 auto; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.foss-earth-test-feedback textarea { box-sizing: border-box; min-width: 0; }
+.foss-earth-test-feedback > button { align-self: flex-start; }
 .foss-earth-bug-report__field {
   display: inline-flex;
   flex-wrap: wrap;

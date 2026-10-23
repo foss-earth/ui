@@ -1,5 +1,11 @@
 # @foss-earth/ui
 
+Custom test links use `createTestLink` / `createTestFeedbackSession` from
+`@foss-earth/ui/diagnostics` and `createTestFeedbackPanel` from
+`@foss-earth/ui/browser`. The Test tab collects checklist results, notes and
+selected host diagnostics into a reviewed local JSON download. See the
+[cross-organization workflow](https://github.com/foss-earth/docs/blob/main/docs/test-feedback.md).
+
 Settings, window state, feature contributions, diagnostics and generic UI pieces
 for FOSS Earth hosts. The package is host-driven: a host injects its settings
 registry, storage, DOM document, timers and ports. UI contains no Earth or flight
