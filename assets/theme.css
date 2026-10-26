@@ -118,6 +118,12 @@
   color: var(--ui-text);
 }
 
+/* A number's field hides its own text under the face that draws its digits, until it is
+   typed in. More specific than the color above, which would otherwise draw the digits twice. */
+[data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-parameter__number > .foss-earth-parameter__field:not(:focus) {
+  color: transparent;
+}
+
 [data-ui-theme]:not([data-ui-theme="earth"]) .foss-earth-choice:has(input:checked) {
   border-color: var(--ui-accent);
   background: var(--ui-accent-soft);

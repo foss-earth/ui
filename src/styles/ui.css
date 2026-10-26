@@ -1529,32 +1529,19 @@
   background: rgba(15, 23, 42, 0.03);
 }
 
-/* Log numbers: yellow in light, dark maroon in dark. */
-[data-settings-section="interface/log"] .foss-earth-parameter__field {
+/* Log numbers in the UMN palette: yellow in light, dark maroon in dark. Earth's look like
+   its other fields. The palette is on the root, so the light rule names both there. */
+:root[data-ui-theme="umn"] [data-settings-section="interface/log"] .foss-earth-parameter__field {
   border: 1px solid #7a0019;
   outline: 1px solid #7a0019;
   outline-offset: 1px;
   background: rgba(122, 0, 25, 0.35);
 }
 
-:root[data-theme="light"] [data-settings-section="interface/log"] .foss-earth-parameter__field {
+:root[data-theme="light"][data-ui-theme="umn"] [data-settings-section="interface/log"] .foss-earth-parameter__field {
   border-color: #e6b325;
   outline-color: #e6b325;
   background: rgba(255, 204, 51, 0.45);
-}
-
-[data-ui-theme]:not([data-ui-theme="earth"]) [data-settings-section="interface/log"] .foss-earth-parameter__field {
-  border-color: #7a0019;
-  outline: 1px solid #7a0019;
-  background: rgba(122, 0, 25, 0.35);
-  color: inherit;
-}
-
-:root[data-theme="light"] [data-ui-theme]:not([data-ui-theme="earth"]) [data-settings-section="interface/log"] .foss-earth-parameter__field {
-  border-color: #e6b325;
-  outline-color: #e6b325;
-  background: rgba(255, 204, 51, 0.45);
-  color: inherit;
 }
 
 :root[data-theme="light"] .foss-earth-parameter__help {
