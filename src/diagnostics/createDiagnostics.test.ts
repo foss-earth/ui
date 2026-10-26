@@ -5,7 +5,7 @@ import { UI_PARAMETERS } from "../settings/uiParameters.js";
 import type { GameLog, GameLogEntry } from "../log/createGameLog.js";
 import { fakeBrowser } from "../../tests/fixtures/trailEnvironment.js";
 
-function fixture(trailIdentity?: () => string) {
+function fixture(trailIdentity?: () => string, console?: Pick<Console, "warn" | "error">) {
   const settings = createSettingsRegistry({ storage: null }); settings.register(UI_PARAMETERS);
   const printed: GameLogEntry[] = [];
   const updated: GameLogEntry[] = [];
@@ -16,7 +16,7 @@ function fixture(trailIdentity?: () => string) {
     setBusy() {}, setOpen() {}, isOpen: () => false, minimize() {}, isMinimized: () => false, destroy: hostDestroy,
   };
   const browser = fakeBrowser();
-  const diagnostics = createDiagnostics({ settings, log: hostLog, trailEnvironment: browser.page("a"), trailIdentity, parts: () => ({
+  const diagnostics = createDiagnostics({ settings, log: hostLog, trailEnvironment: browser.page("a"), trailIdentity, console, parts: () => ({
     appName: "Host globe", at: new Date(0), page: "https://host.test/", build: "host-build", source: "host-source", bundle: "host.js",
     userAgent: "Host browser", screen: { width: 800, height: 600, devicePixelRatio: 1, touch: false },
     device: { cores: null, memoryGiB: null }, renderer: { asked: "auto", mode: "webgl2", driver: null, maxTextureSize: null, fallbackReason: null, lost: 0 },
@@ -26,6 +26,26 @@ function fixture(trailIdentity?: () => string) {
 }
 
 describe("injected diagnostics", () => {
+  it("preserves full console validation messages beyond the short activity line and bounds repeated output", async () => {
+    const console = { warn: vi.fn(), error: vi.fn() };
+    const original = console.warn;
+    const { diagnostics } = fixture(undefined, console);
+    try {
+      const cause = "Validation Error Caused by: ".repeat(30) + "exhaust buffer destroyed";
+      console.warn(cause); console.warn(cause);
+      const report = await diagnostics.report();
+      expect(report).toContain(cause);
+      expect(report).toContain('"count":2');
+      expect(diagnostics.trail.steps().at(-1)?.text.length).toBeLessThanOrEqual(300);
+      for (let i = 0; i < 20; i++) console.error(`different ${i} ` + "x".repeat(20_000));
+      const bounded = await diagnostics.report();
+      expect(bounded).toContain(cause);
+      expect(bounded).toContain('"droppedMessages":13');
+      expect(bounded).toContain('"shortened":true');
+      expect(bounded.length).toBeLessThan(140_000);
+    } finally { diagnostics.destroy(); }
+    expect(console.warn).toBe(original);
+  });
   it("records the injected host identity and refreshes it without owning the host", () => {
     let identity = "Tour with Earth source a; renderer not started.";
     const { diagnostics, browser } = fixture(() => identity);

@@ -78,6 +78,8 @@ export function createDiagnostics(options: DiagnosticsOptions) {
     },
   };
   const errors = new Map<string, { error: CapturedError; count: number; line: GameLogLine }>();
+  const consoleMessages: Array<{ level: string; text: string; shortened: boolean; count: number; firstMs: number; lastMs: number }> = [];
+  let consoleCount = 0, droppedConsoleMessages = 0;
   if (options.page) stops.push(captureErrors(options.page, error => {
     if (disposed) return;
     const key = `${error.message} ${error.where ?? ""}`;
@@ -87,7 +89,18 @@ export function createDiagnostics(options: DiagnosticsOptions) {
     if (!seen) errors.set(key, { error, count: 1, line: options.log.print({ text: errorText(1), tone: "error" }) });
     else { seen.count++; if ((seen.count & (seen.count - 1)) === 0) seen.line.update({ text: errorText(seen.count), tone: "error" }); }
   }));
-  if (options.console) stops.push(tapConsole(options.console, (level, text) => { if (!disposed) trail.trouble(`console.${level}: ${text}`); }));
+  if (options.console) stops.push(tapConsole(options.console, (level, text) => {
+    if (disposed) return;
+    trail.trouble(`console.${level}: ${text}`);
+    consoleCount++;
+    const now = options.trailEnvironment.elapsed();
+    const bounded = text.slice(0, 16_384);
+    const seen = consoleMessages.find(entry => entry.level === level && entry.text === bounded);
+    if (seen) { seen.count++; seen.lastMs = now; return; }
+    // Keep the first warning and the latest distinct messages, at most 131,072 characters.
+    if (consoleMessages.length === 8) { consoleMessages.splice(1, 1); droppedConsoleMessages++; }
+    consoleMessages.push({ level, text: bounded, shortened: bounded.length < text.length, count: 1, firstMs: now, lastMs: now });
+  }));
   const previous = trail.previous();
   void previous.then(visit => {
     if (!disposed && visit?.ended === "unexpected") log.print({ text: `${describePreviousVisit(visit)}. Settings → Diagnostics has a report to copy.`, tone: "warning" });
@@ -111,6 +124,7 @@ export function createDiagnostics(options: DiagnosticsOptions) {
     async report(request: { allSettings?: boolean } = {}): Promise<string> {
       if (disposed) throw new Error("Diagnostics is disposed.");
       const parts = options.parts(); const state = [...parts.state];
+      if (consoleCount) state.push(`Console diagnostics: ${JSON.stringify({ count: consoleCount, droppedMessages: droppedConsoleMessages, messages: consoleMessages })}`);
       for (const read of stateReaders) {
         const value = await Promise.resolve().then(read).catch(() => null);
         if (disposed) throw new Error("Diagnostics is disposed.");
