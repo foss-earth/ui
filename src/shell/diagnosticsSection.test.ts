@@ -1,55 +1,46 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PreviousVisit } from "../diagnostics/sessionTrail.js";
-import { createDiagnosticsSection as createInjectedDiagnosticsSection, describeLastVisit, type DiagnosticsSectionHandle } from "./diagnosticsSection.js";
+import { createDiagnosticsSection, describeLastVisit, type DiagnosticsSectionHandle } from "./diagnosticsSection.js";
 
 const visit = (ended: PreviousVisit["ended"]): PreviousVisit => ({
   ended,
   record: { version: 1, id: "a", startedAt: 0, app: "", state: "", steps: [{ ms: 42_000, text: "Inside the 360 image northrop-mall" }], closed: ended === "closed", hidden: ended === "hidden" },
 });
-const settle = async (): Promise<void> => { for (let turn = 0; turn < 6; turn++) await Promise.resolve(); };
-
+const settle = async (): Promise<void> => { for (let turn = 0; turn < 8; turn++) await Promise.resolve(); };
+const report = "FOSS Earth report, 2026-10-28T00:00:00.000Z\nRenderer: webgpu\nSettings: all at their defaults.\nErrors nothing handled: none.\nThis visit, oldest first:\nThe visit before: no trail of one on this device.\n";
 let section: DiagnosticsSectionHandle | null = null;
 afterEach(() => { section?.destroy(); section = null; });
+function action(name: string): HTMLButtonElement { return [...section!.element.querySelectorAll("button")].find(button => button.textContent === name)!; }
 
-describe("Settings → Diagnostics", () => {
+describe("Settings → Diagnostics shared report caller", () => {
   it("says how the last visit ended", async () => {
     expect(describeLastVisit(null)).toBe("No trail of an earlier visit on this device.");
     section = createDiagnosticsSection({ report: async () => "", previous: async () => visit("unexpected") });
-    document.body.append(section.element);
     await settle();
     expect(section.element.querySelector("p")?.textContent).toBe("The last visit stopped without being closed, 42 s after it opened or later; its last step: Inside the 360 image northrop-mall.");
   });
-
-  it("copies the report and shows what it copied", async () => {
-    const copied: string[] = [];
-    section = createDiagnosticsSection({ report: async () => "FOSS Earth report\nRenderer: webgpu\n", previous: async () => null, copy: async text => { copied.push(text); } });
-    document.body.append(section.element);
-    const text = section.element.querySelector("textarea")!;
-    const status = section.element.querySelector("[role=status]") as HTMLElement;
-    expect(text.hidden).toBe(true);
-    expect(status.hidden).toBe(true);
-    section.element.querySelector("button")!.click();
-    await settle();
-    expect(copied).toEqual(["FOSS Earth report\nRenderer: webgpu\n"]);
-    expect(text.hidden).toBe(false);
-    expect(text.readOnly).toBe(true);
-    expect(text.value).toBe("FOSS Earth report\nRenderer: webgpu\n");
-    expect(status.textContent).toMatch(/^Copied, 0\.0 KB: paste it where you are reporting the fault\./);
+  it("opens shared file tabs without requiring a clipboard", async () => {
+    const read = vi.fn(async () => report);
+    section = createDiagnosticsSection({ report: read, previous: async () => null });
+    expect(read).not.toHaveBeenCalled();
+    action("View report").click(); await settle();
+    expect(section.element.querySelector('[role=tablist][aria-label="Error report files"]')).not.toBeNull();
+    expect(section.element.querySelector("textarea")).toBeNull();
+    expect(section.element.querySelector("pre")?.textContent).toContain("index.json");
   });
-
-  it("leaves the report to be selected where the browser gives no clipboard", async () => {
-    section = createDiagnosticsSection({ report: async () => "FOSS Earth report\n", previous: async () => null, copy: () => Promise.reject(new Error("NotAllowedError")) });
-    document.body.append(section.element);
-    section.element.querySelector("button")!.click();
-    await settle();
-    const text = section.element.querySelector("textarea")!;
-    expect(text.value).toBe("FOSS Earth report\n");
-    expect(document.activeElement).toBe(text);
-    expect(section.element.querySelector("[role=status]")?.textContent).toMatch(/^The browser did not let the page copy it\. Select the text below/);
+  it("copies the same redacted report that the shared viewer downloads", async () => {
+    const copied: string[] = [];
+    section = createDiagnosticsSection({ report: async () => report + "opaque-settings-key\n", previous: async () => null, reportSecrets: () => ["opaque-settings-key"], copy: async text => { copied.push(text); } });
+    action("Copy report").click(); await settle();
+    expect(copied).toEqual([report + "[redacted]\n"]);
+    expect(section.element.querySelector('[role=tablist]')).not.toBeNull();
+    expect(section.element.querySelector('[role=status]')?.textContent).toMatch(/^Copied,/);
+  });
+  it("offers the shared downloads if the clipboard is unavailable", async () => {
+    section = createDiagnosticsSection({ report: async () => report, previous: async () => null, copy: () => Promise.reject(new Error("Denied")) });
+    action("Copy report").click(); await settle();
+    expect(section.element.querySelector('[role=status]')?.textContent).toContain("Download the report files below");
+    expect([...section.element.querySelectorAll("a")].some(link => link.textContent === "Download all")).toBe(true);
   });
 });
-
-function createDiagnosticsSection(source: Parameters<typeof createInjectedDiagnosticsSection>[0]) {
-  return createInjectedDiagnosticsSection({ ...source, copy: source.copy ?? (text => navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject(new Error("No clipboard"))) });
-}

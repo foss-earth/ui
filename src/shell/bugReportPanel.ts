@@ -1,4 +1,5 @@
 import { createIssueDraft, issueReportAttachment, issueReportFilename, redactIssueReport, validateIssueReporterConfig, type IssueReporterConfig } from "../diagnostics/issueReport.js";
+import { createIssueReportView } from "../diagnostics/issueReportView.js";
 import type { DiagnosticsSource } from "./diagnosticsSection.js";
 import { createExternalLinkIcon } from "./externalLinkIcon.js";
 import { createHelpTooltip } from "./helpTooltip.js";
@@ -24,8 +25,6 @@ function paragraph(document: Document, text: string): HTMLParagraphElement {
   element.textContent = text;
   return element;
 }
-
-const size = (text: string): string => `${(new Blob([text]).size / 1024).toFixed(1)} KB`;
 
 /** A dedicated Bug report tab: local review and download, then a short GitHub draft. */
 export function createBugReportPanel(source: DiagnosticsSource, options: BugReportPanelOptions): BugReportPanelHandle {
@@ -65,23 +64,16 @@ export function createBugReportPanel(source: DiagnosticsSource, options: BugRepo
   description.placeholder = "What you did, what you expected, and what went wrong";
   descriptionLabel.append(description);
   // What someone must see before continuing stays visible; the rest is behind ?.
-  const review = paragraph(document, "Remove personal details from the report before continuing. GitHub attachments become public when uploaded. ");
+  const review = paragraph(document, "Review the report before sharing it. GitHub attachments become public when uploaded. ");
   const reviewHelp = document.createElement("div");
   const reviewText = document.createElement("p");
-  reviewText.textContent = "Known keys, recognized secrets, email addresses, coordinates and URL queries are removed automatically. Download the report, then open the GitHub issue and attach that file. Submit publishes the issue. The draft contains a short summary; the file keeps the full report.";
+  reviewText.textContent = "Known keys, recognized secrets, email addresses, coordinates and URL queries are removed automatically. Review the files, then download all as a zip and attach it to the GitHub issue. Submit publishes the issue. The draft contains a short summary; the zip keeps the full report.";
   reviewHelp.append(reviewText);
   const reviewTooltip = createHelpTooltip({ label: "Explain the bug report", content: reviewHelp });
   review.append(reviewTooltip.element);
-  const reportText = document.createElement("textarea");
-  reportText.className = "foss-earth-settings-transfer__text";
-  reportText.name = "report";
-  reportText.rows = 12;
-  reportText.spellcheck = false;
-  reportText.setAttribute("aria-label", "Activity report to attach");
+  const reportHost = document.createElement("div");
   const result = paragraph(document, "");
   result.setAttribute("role", "status");
-  const download = createIconButton(document, { icon: "download", label: "Download report", tag: "a" });
-  download.setAttribute("aria-disabled", "true");
   const open = document.createElement("a");
   open.className = "foss-earth-choice foss-earth-parameter__action";
   open.append("GitHub issue ", createExternalLinkIcon(document));
@@ -91,78 +83,52 @@ export function createBugReportPanel(source: DiagnosticsSource, options: BugRepo
   open.rel = "noopener noreferrer";
   open.setAttribute("aria-disabled", "true");
   const copyReviewed = createIconButton(document, { icon: "copy", label: "Copy reviewed report" });
-  copyReviewed.hidden = true;
+  copyReviewed.disabled = true;
   const refresh = createIconButton(document, { icon: "refresh", label: "Refresh report" });
-  panel.append(titleLabel, descriptionLabel, review, reportText, result, download, open, copyReviewed, refresh);
+  panel.append(titleLabel, descriptionLabel, review, reportHost, result, open, copyReviewed, refresh);
 
   let generation = 0;
   let ready = false;
   let filename = "";
+  let report = "";
   let attachment = "";
-  let objectUrl: string | null = null;
+  let viewer: ReturnType<typeof createIssueReportView> | null = null;
   let downloadedAttachment: string | null = null;
   let copiedAttachment: string | null = null;
-  const disableLink = (link: HTMLAnchorElement): void => {
-    link.removeAttribute("href");
-    link.setAttribute("aria-disabled", "true");
-  };
-  const releaseDownload = (): void => {
-    if (objectUrl) options.downloads?.revoke(objectUrl);
-    objectUrl = null;
-    attachment = "";
-    disableLink(download);
-    disableLink(open);
+  const disableOpen = (): void => {
+    open.removeAttribute("href");
+    open.setAttribute("aria-disabled", "true");
   };
   const updateLinks = (): boolean => {
     if (disposed || !ready) return false;
     const secrets = source.reportSecrets?.();
-    const redactedTitle = redactIssueReport(title.value, secrets);
-    const redactedDescription = redactIssueReport(description.value, secrets);
-    if (redactedTitle !== title.value) title.value = redactedTitle;
-    if (redactedDescription !== description.value) description.value = redactedDescription;
-    if (!title.value.trim() || !description.value.trim()) {
-      releaseDownload();
-      copyReviewed.hidden = true;
-      result.textContent = "Add an issue title and describe what happened, then download the reviewed report.";
-      return false;
-    }
-    const redacted = redactIssueReport(reportText.value, secrets);
-    if (redacted !== reportText.value) reportText.value = redacted;
-    const snapshot = { title: title.value, description: description.value, report: reportText.value, filename };
+    title.value = redactIssueReport(title.value, secrets);
+    description.value = redactIssueReport(description.value, secrets);
+    const snapshot = { title: title.value, description: description.value, report, filename };
     const nextAttachment = issueReportAttachment(config, snapshot);
     if (nextAttachment !== attachment) {
-      releaseDownload();
       attachment = nextAttachment;
-      try {
-        if (!options.downloads) throw new Error("File download unavailable");
-        objectUrl = options.downloads.create(new Blob([attachment], { type: "text/plain;charset=utf-8" }));
-      } catch {
-        copyReviewed.hidden = false;
-      }
+      viewer?.setReport(attachment);
     }
-    if (objectUrl) {
-      download.href = objectUrl;
-      download.download = filename;
-      download.setAttribute("aria-disabled", "false");
-      copyReviewed.hidden = true;
+    copyReviewed.disabled = !title.value.trim() || !description.value.trim();
+    if (copyReviewed.disabled) {
+      disableOpen();
+      result.textContent = "Add an issue title and describe what happened, then download all report files.";
+      return false;
     }
     const transferred = downloadedAttachment === attachment || copiedAttachment === attachment;
     if (transferred && config) {
       open.href = createIssueDraft(config, snapshot).url;
       open.setAttribute("aria-disabled", "false");
-    } else disableLink(open);
-    if (!objectUrl) {
-      result.textContent = config
-        ? "File downloads are unavailable in this browser. Use Copy reviewed report and paste it into the GitHub issue, or use a browser that can download files."
-        : "File downloads are unavailable in this browser. Use Copy reviewed report and send it to the app maintainer, or use a browser that can download files.";
-    } else if (!config) {
+    } else disableOpen();
+    if (!config) {
       result.textContent = `${configurationNote} Download ${filename} and send it to the app maintainer.`;
     } else if (transferred) {
       result.textContent = `Open GitHub issue, then attach ${filename}. GitHub attachments become public when uploaded.`;
     } else if (downloadedAttachment !== null || copiedAttachment !== null) {
-      result.textContent = "The report changed. Download the updated report before opening the GitHub issue.";
+      result.textContent = "The report changed. Download all updated files before opening the GitHub issue.";
     } else {
-      result.textContent = `Ready, ${size(attachment)}. Download ${filename}, then open the GitHub issue and attach it. Nothing has been sent.`;
+      result.textContent = `Download all files as ${filename}, then open the GitHub issue and attach it. Nothing has been sent.`;
     }
     return true;
   };
@@ -170,27 +136,38 @@ export function createBugReportPanel(source: DiagnosticsSource, options: BugRepo
     if (disposed || refresh.disabled) return;
     const current = ++generation;
     ready = false;
-    releaseDownload();
+    viewer?.destroy();
+    viewer = null;
+    reportHost.replaceChildren();
+    disableOpen();
     downloadedAttachment = null;
     copiedAttachment = null;
-    reportText.value = "";
-    reportText.disabled = true;
-    copyReviewed.hidden = true;
-    copyReviewed.disabled = false;
+    report = "";
+    attachment = "";
+    copyReviewed.disabled = true;
     result.textContent = "Preparing the activity report on this device…";
     refresh.disabled = true;
-    void Promise.resolve().then(() => disposed ? "" : source.report()).then(report => {
+    void Promise.resolve().then(() => disposed ? "" : source.report()).then(raw => {
       if (disposed || current !== generation) return;
-      reportText.value = redactIssueReport(report, source.reportSecrets?.());
+      report = redactIssueReport(raw, source.reportSecrets?.());
       filename = issueReportFilename(config, options.now());
       ready = true;
-      reportText.disabled = false;
-      setIconButtonLabel(refresh, "Refresh report");
       updateLinks();
+      viewer = createIssueReportView(attachment, {
+        document, downloads: options.downloads, zipFilename: filename, copy,
+        onDownload(name) {
+          if (disposed || name !== filename) return;
+          downloadedAttachment = attachment;
+          updateLinks();
+        },
+      });
+      reportHost.append(viewer.element);
+      setIconButtonLabel(refresh, "Refresh report");
     }).catch(() => {
       if (disposed || current !== generation) return;
+      ready = false;
       setIconButtonLabel(refresh, "Try report again");
-      result.textContent = "The activity report could not be prepared. Try again with ↻, or use Copy report in Settings → Diagnostics.";
+      result.textContent = "The activity report could not be prepared. Try again with ↻, or use View report in Settings → Diagnostics.";
     }).finally(() => {
       if (disposed || current !== generation) return;
       refresh.disabled = false;
@@ -199,24 +176,21 @@ export function createBugReportPanel(source: DiagnosticsSource, options: BugRepo
   const clear = (): void => {
     generation++;
     ready = false;
-    releaseDownload();
+    viewer?.destroy();
+    viewer = null;
+    reportHost.replaceChildren();
+    disableOpen();
     downloadedAttachment = null;
     copiedAttachment = null;
     title.value = "";
     description.value = "";
-    reportText.value = "";
+    report = "";
+    attachment = "";
     filename = "";
     result.textContent = "";
     refresh.disabled = false;
-    copyReviewed.hidden = true;
-    copyReviewed.disabled = false;
+    copyReviewed.disabled = true;
     setIconButtonLabel(refresh, "Refresh report");
-  };
-  const onDownload = (event: MouseEvent): void => {
-    if (!updateLinks() || !objectUrl) { event.preventDefault(); return; }
-    // Leave this object URL alive: the browser may still be saving the file.
-    downloadedAttachment = attachment;
-    updateLinks();
   };
   const onOpen = (event: MouseEvent): void => {
     if (!config) { event.preventDefault(); return; }
@@ -241,19 +215,17 @@ export function createBugReportPanel(source: DiagnosticsSource, options: BugRepo
       if (disposed || current !== generation) return;
       copiedAttachment = null;
       updateLinks();
-      result.textContent = "The browser did not allow copying. Select and copy the activity report below, or use a browser that can download the report.";
-      reportText.focus();
-      reportText.select();
-    }).finally(() => { if (!disposed && current === generation) copyReviewed.disabled = false; });
+      result.textContent = "The browser did not allow copying. Download all files, or download index.txt and the files it names.";
+    }).finally(() => {
+      if (!disposed && current === generation) copyReviewed.disabled = !ready || !title.value.trim() || !description.value.trim();
+    });
   };
   const onEdit = (): void => { updateLinks(); };
   refresh.addEventListener("click", prepare);
-  download.addEventListener("click", onDownload);
   open.addEventListener("click", onOpen);
   copyReviewed.addEventListener("click", onCopyReviewed);
   title.addEventListener("input", onEdit);
   description.addEventListener("input", onEdit);
-  reportText.addEventListener("input", onEdit);
   return {
     element: panel,
     show() { if (!disposed && !ready) prepare(); },
@@ -262,12 +234,10 @@ export function createBugReportPanel(source: DiagnosticsSource, options: BugRepo
       disposed = true;
       clear();
       refresh.removeEventListener("click", prepare);
-      download.removeEventListener("click", onDownload);
       open.removeEventListener("click", onOpen);
       copyReviewed.removeEventListener("click", onCopyReviewed);
       title.removeEventListener("input", onEdit);
       description.removeEventListener("input", onEdit);
-      reportText.removeEventListener("input", onEdit);
       reviewTooltip.destroy();
       panel.remove();
     },

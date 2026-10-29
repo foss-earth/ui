@@ -3,6 +3,7 @@ import { createDiagnostics, type DiagnosticsRuntime } from "./createDiagnostics.
 import { createSettingsRegistry } from "../settings/registry.js";
 import { UI_PARAMETERS } from "../settings/uiParameters.js";
 import type { GameLog, GameLogEntry } from "../log/createGameLog.js";
+import { splitIssueReport } from "./issueReport.js";
 import { fakeBrowser } from "../../tests/fixtures/trailEnvironment.js";
 
 function fixture(trailIdentity?: () => string, console?: Pick<Console, "warn" | "error">) {
@@ -36,6 +37,9 @@ describe("injected diagnostics", () => {
       const report = await diagnostics.report();
       expect(report).toContain(cause);
       expect(report).toContain('"count":2');
+      const consoleFile = splitIssueReport(report).files.find(file => file.name === "console.txt")!;
+      expect(consoleFile.text.split("\n")).toHaveLength(1);
+      expect(JSON.parse(consoleFile.text.slice("Console diagnostics: ".length))).toMatchObject({ count: 2, messages: [{ text: cause, count: 2 }] });
       expect(diagnostics.trail.steps().at(-1)?.text.length).toBeLessThanOrEqual(300);
       for (let i = 0; i < 20; i++) console.error(`different ${i} ` + "x".repeat(20_000));
       const bounded = await diagnostics.report();

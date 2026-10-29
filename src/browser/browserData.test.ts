@@ -352,6 +352,7 @@ describe("browser data review", () => {
       values: { "map.source.googleKey": SECRET, "map.source.cartoKey": "carto-secret", "interface.theme": "dark" },
     }));
     window.localStorage.setItem("foss-earth.theme", "dark");
+    window.localStorage.setItem("foss-earth.auth", "{\"accessToken\":\"session\"}");
     window.sessionStorage.setItem("visit", "1");
     const doubles = storageDoubles();
     const { timers, replace } = install();
@@ -363,6 +364,7 @@ describe("browser data review", () => {
 
     await confirmClear();
     expect(window.localStorage.getItem("foss-earth.theme")).toBeNull();
+    expect(window.localStorage.getItem("foss-earth.auth")).toBeNull();
     expect(window.sessionStorage.getItem("visit")).toBeNull();
     expect(JSON.parse(window.localStorage.getItem(SETTINGS_STORAGE_KEY)!)).toEqual({
       version: 1,

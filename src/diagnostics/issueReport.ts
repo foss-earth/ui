@@ -100,7 +100,7 @@ function fitEncoded(value: string, budget: number): string {
 /** The full report is a local file, never an issue URL or a remote upload. */
 export function issueReportFilename(config: IssueReporterConfig | undefined, at: Date): string {
   const name = config ? validateIssueReporterConfig(config).repository.split("/")[1] : "app";
-  return `${name}-bug-report-${at.toISOString().replace(/[:.]/g, "-")}.txt`;
+  return `${name}-bug-report-${at.toISOString().replace(/[:.]/g, "-")}.zip`;
 }
 
 export function issueReportAttachment(config: IssueReporterConfig | undefined, input: IssueReportDraftInput): string {
@@ -116,7 +116,7 @@ export function issueReportAttachment(config: IssueReporterConfig | undefined, i
  */
 export function createIssueDraft(config: IssueReporterConfig, input: IssueReportDraftInput): IssueReportDraft {
   const { repository } = validateIssueReporterConfig(config);
-  if (!/^[a-z\d._-]{1,200}\.txt$/i.test(input.filename)) throw new Error("The report filename must be a short .txt filename.");
+  if (!/^[a-z\d._-]{1,200}\.(?:txt|zip)$/i.test(input.filename)) throw new Error("The report filename must be a short .zip or .txt filename.");
   const base = `https://github.com/${repository}/issues/new`;
   const title = fitEncoded(redactIssueReport(input.title.trim()), 240);
   const description = redactIssueReport(input.description.trim());
@@ -137,4 +137,286 @@ export function createIssueDraft(config: IssueReporterConfig, input: IssueReport
   url.searchParams.set("title", title);
   url.searchParams.set("body", body);
   return { url: url.href, body, shortened: title !== input.title.trim() || shortDescription !== description || shortDetails.some((detail, index) => detail !== details[index]) };
+}
+
+export interface IssueNeedle {
+  file: string;
+  /** 1-based line inside `file`. */
+  line: number;
+  why: string;
+  text: string;
+}
+
+export interface IssueFile {
+  name: string;
+  text: string;
+}
+
+export interface IssueBundle {
+  /** `index.txt` first, then `index.json`, then the report pieces. */
+  files: readonly IssueFile[];
+  needles: readonly IssueNeedle[];
+}
+
+const STATE_LINES: readonly { prefix: string; name: string }[] = [
+  { prefix: "Loading diagnostics:", name: "loading.txt" },
+  { prefix: "Component execution:", name: "component-execution.txt" },
+  { prefix: "Compute scheduling:", name: "compute-scheduling.txt" },
+  { prefix: "Console diagnostics:", name: "console.txt" },
+  { prefix: "Isolation:", name: "isolation.txt" },
+  { prefix: "Flight progress:", name: "flight-progress.txt" },
+  { prefix: "Aircraft:", name: "aircraft.txt" },
+  { prefix: "Flight:", name: "flight.txt" },
+  { prefix: "JSBSim:", name: "jsbsim.txt" },
+  { prefix: "Renderer:", name: "renderer.txt" },
+  { prefix: "GPU:", name: "gpu.txt" },
+  { prefix: "Scene:", name: "scene.txt" },
+  { prefix: "Build components:", name: "build-components.txt" },
+  { prefix: "Render health:", name: "render-health.txt" },
+  { prefix: "App files:", name: "app-files.txt" },
+  { prefix: "Published:", name: "published.txt" },
+];
+
+function sectionOf(line: string): "settings" | "errors" | "visit" | "previous" | null {
+  if (
+    line === "Settings (all effective values):"
+    || line === "Settings not at their defaults:"
+    || line === "Settings: all at their defaults."
+  ) return "settings";
+  if (line.startsWith("Errors nothing handled:")) return "errors";
+  if (line === "This visit, oldest first:") return "visit";
+  if (line.startsWith("The visit before")) return "previous";
+  return null;
+}
+
+function sectionRank(section: "environment" | "settings" | "errors" | "visit" | "previous"): number {
+  if (section === "settings") return 1;
+  if (section === "errors") return 2;
+  if (section === "visit") return 3;
+  if (section === "previous") return 4;
+  return 0;
+}
+
+function stateHeading(line: string, generic: boolean): { prefix: string; name: string } | undefined {
+  if (line.startsWith("Graphics capability ")) return undefined;
+  const known = STATE_LINES.find(state => line.startsWith(state.prefix));
+  if (known) return known;
+  const heading = generic ? /^([A-Z][A-Za-z0-9 -]*):/.exec(line)?.[1] : undefined;
+  return heading ? { prefix: `${heading}:`, name: `${heading.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.txt` } : undefined;
+}
+
+function takeState(lines: readonly string[], index: number, generic: boolean): { name: string; lines: string[]; next: number } | null {
+  const line = lines[index] ?? "";
+  const state = stateHeading(line, generic);
+  if (!state) return null;
+  let end = index + 1;
+  // State readers can return multiline text or JSON. Only a new top-level
+  // heading ends a blob; braces and headings inside JSON strings are data.
+  while (end < lines.length) {
+    const next = lines[end] ?? "";
+    if (sectionOf(next) || stateHeading(next, generic) || next.startsWith("Graphics capability ")) break;
+    if (state.name === "renderer.txt" || state.name === "gpu.txt") break;
+    end++;
+  }
+  return { name: state.name, lines: lines.slice(index, end), next: end };
+}
+
+function addFile(files: IssueFile[], name: string, body: readonly string[]): void {
+  const text = body.join("\n").replace(/\n+$/, "");
+  if (!text) return;
+  const stem = name.replace(/\.txt$/, "");
+  let unique = name;
+  for (let n = 2; files.some(file => file.name === unique); n++) unique = `${stem}-${n}.txt`;
+  files.push({ name: unique, text });
+}
+
+function contentFiles(raw: string): IssueFile[] {
+  const lines = raw.replace(/\r\n/g, "\n").replace(/\n+$/, "").split("\n");
+  const reportAt = lines.findIndex(line => / report, /.test(line));
+  const files: IssueFile[] = [];
+  const failure = reportAt < 0 ? lines : lines.slice(0, reportAt);
+  if (failure.some(line => line.trim())) addFile(files, "failure.txt", failure);
+  if (reportAt < 0) return files;
+
+  const rest = lines.slice(reportAt);
+  const gpuAt = rest.findIndex(line => line.startsWith("GPU:"));
+  let mode: "environment" | "settings" | "errors" | "visit" | "previous" = "environment";
+  let bucket: string[] = [];
+  const states: IssueFile[] = [];
+  const flush = () => {
+    const name = mode === "environment" ? "environment.txt"
+      : mode === "settings" ? "settings.txt"
+        : mode === "errors" ? "errors.txt"
+          : mode === "visit" ? "visit.txt"
+            : "previous-visit.txt";
+    addFile(files, name, bucket);
+    if (mode === "environment") files.push(...states.splice(0));
+    bucket = [];
+  };
+
+  for (let index = 0; index < rest.length; index += 1) {
+    const line = rest[index] ?? "";
+    const section = sectionOf(line);
+    if (section && sectionRank(section) > sectionRank(mode)) {
+      flush();
+      mode = section;
+      bucket = [line];
+      continue;
+    }
+    if (mode === "environment") {
+      const state = takeState(rest, index, gpuAt >= 0 && index > gpuAt);
+      if (state) {
+        addFile(states, state.name, state.lines);
+        index = state.next - 1;
+        continue;
+      }
+    }
+    bucket.push(line);
+  }
+  flush();
+  return files;
+}
+
+function buildNeedles(files: readonly IssueFile[]): IssueNeedle[] {
+  const failure = files.find(file => file.name === "failure.txt");
+  const lines = failure?.text.split("\n") ?? [];
+  const needles: IssueNeedle[] = [];
+  const explicit = lines.findIndex(line => /\b\w*Error:/.test(line));
+  const message = explicit >= 0 ? explicit : lines.findIndex(line => /\bFailed\b|\bis not one of\b|\bCould not\b/i.test(line));
+  const errors = files.find(file => file.name === "errors.txt");
+  const errorLines = errors?.text.split("\n") ?? [];
+  const errorAt = errorLines.findIndex(line => line.trim().length > 0 && !line.startsWith("Errors nothing handled:"));
+  const title = lines.findIndex(line => /^Title: \S/.test(line));
+  const first = lines.findIndex(line => line.trim().length > 0 && !/^(?:Bug report for |Title:\s*$|What happened:$|Activity report:$)/.test(line));
+  const chosen = message >= 0 ? message : errorAt >= 0 ? -1 : title >= 0 ? title : first;
+  if (failure && chosen >= 0) {
+    needles.push({ file: "failure.txt", line: chosen + 1, why: "the failure", text: lines[chosen] ?? "" });
+  } else if (errors && errorAt >= 0) {
+    needles.push({ file: errors.name, line: errorAt + 1, why: "the failure", text: errorLines[errorAt] ?? "" });
+  }
+  const stack = lines.findIndex(line => /^\s+at \S/.test(line));
+  if (failure && stack >= 0) {
+    needles.push({ file: "failure.txt", line: stack + 1, why: "first stack frame", text: lines[stack] ?? "" });
+  }
+  const quoted = /"([^"\n]{1,80})"/.exec(lines[chosen] ?? "");
+  if (quoted) {
+    const token = quoted[1] ?? "";
+    const settings = files.find(file => file.name === "settings.txt");
+    const hit = settings?.text.split("\n").findIndex(line => line.includes(token)) ?? -1;
+    if (settings && hit >= 0) {
+      needles.push({
+        file: "settings.txt",
+        line: hit + 1,
+        why: `line containing ${token}`,
+        text: settings.text.split("\n")[hit] ?? "",
+      });
+    }
+  }
+  if (!needles.length) {
+    const previous = files.find(file => file.name === "previous-visit.txt");
+    const previousLines = previous?.text.split("\n") ?? [];
+    const stopped = previousLines.findIndex(line => line.includes("stopped without being closed"));
+    if (previous && stopped >= 0) needles.push({ file: previous.name, line: stopped + 1, why: "the previous visit stopped unexpectedly", text: previousLines[stopped]! });
+  }
+  return needles;
+}
+
+/** Extend the existing report string with a portable file index, without making another report. */
+export function splitIssueReport(raw: string): IssueBundle {
+  const content = contentFiles(raw);
+  const needles = buildNeedles(content);
+  const listed = [
+    { name: "index.txt", lines: 0 }, { name: "index.json", lines: 0 },
+    ...content.map(file => ({ name: file.name, lines: file.text.split("\n").length })),
+  ];
+  const dynamicImport = /failed to fetch dynamically imported module|error loading dynamically imported module|importing a module script failed|failed dynamic import/i.test(raw);
+  const instruction = "Read index.txt and stop. It names and quotes the failure. Open another file only at a needle or search hit; never read a long file from the top.";
+  const makeIndex = () => [
+    instruction,
+    "index.json contains the same facts as plain text JSON.",
+    "",
+    ...(needles.length ? needles.map(needle => `${needle.why}: ${needle.file}:${needle.line}\n> ${needle.text}`) : ["the failure: no failure recorded in this report."]),
+    ...(dynamicImport ? ["", "A dev-server log is not inside this report. For this failed dynamic import, consult the dev-server terminal separately."] : []),
+    "",
+    "Files:",
+    ...listed.map(file => `- ${file.name}  ${file.lines} ${file.lines === 1 ? "line" : "lines"}  ${file.lines > 24 ? "search or open one line" : "short"}`),
+  ].join("\n");
+  const makeJson = () => JSON.stringify({
+    instruction,
+    failure: needles[0] ?? null,
+    needles,
+    files: listed,
+  }, null, 2);
+  // Line counts include both indexes. The number of lines is independent of
+  // the count's digits, so a second rendering contains the final counts.
+  listed[0]!.lines = makeIndex().split("\n").length;
+  listed[1]!.lines = makeJson().split("\n").length;
+  return {
+    needles,
+    files: [
+      { name: "index.txt", text: makeIndex() },
+      { name: "index.json", text: makeJson() },
+      ...content,
+    ],
+  };
+}
+
+function crc32(bytes: Uint8Array): number {
+  let crc = 0xffffffff;
+  for (const byte of bytes) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit += 1) crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1));
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+/** STORE-method zip of the report files. Text is already small, so method 0 keeps each file readable. */
+export function issueReportZip(bundle: IssueBundle): Uint8Array {
+  const encoder = new TextEncoder();
+  const entries = bundle.files.map(file => {
+    const name = encoder.encode(file.name);
+    const bytes = encoder.encode(file.text);
+    return { name, bytes, crc: crc32(bytes) };
+  });
+  const localSize = entries.reduce((sum, entry) => sum + 30 + entry.name.length + entry.bytes.length, 0);
+  const centralSize = entries.reduce((sum, entry) => sum + 46 + entry.name.length, 0);
+  const out = new Uint8Array(localSize + centralSize + 22);
+  const view = new DataView(out.buffer);
+  let offset = 0;
+  const locals: number[] = [];
+  for (const entry of entries) {
+    locals.push(offset);
+    view.setUint32(offset, 0x04034b50, true);
+    view.setUint16(offset + 4, 20, true);
+    view.setUint16(offset + 6, 0x0800, true);
+    view.setUint16(offset + 12, 0x0021, true); // 1980-01-01, the ZIP epoch
+    view.setUint32(offset + 14, entry.crc, true);
+    view.setUint32(offset + 18, entry.bytes.length, true);
+    view.setUint32(offset + 22, entry.bytes.length, true);
+    view.setUint16(offset + 26, entry.name.length, true);
+    out.set(entry.name, offset + 30);
+    out.set(entry.bytes, offset + 30 + entry.name.length);
+    offset += 30 + entry.name.length + entry.bytes.length;
+  }
+  const centralStart = offset;
+  entries.forEach((entry, index) => {
+    view.setUint32(offset, 0x02014b50, true);
+    view.setUint16(offset + 4, 20, true);
+    view.setUint16(offset + 6, 20, true);
+    view.setUint16(offset + 8, 0x0800, true);
+    view.setUint16(offset + 14, 0x0021, true);
+    view.setUint32(offset + 16, entry.crc, true);
+    view.setUint32(offset + 20, entry.bytes.length, true);
+    view.setUint32(offset + 24, entry.bytes.length, true);
+    view.setUint16(offset + 28, entry.name.length, true);
+    view.setUint32(offset + 42, locals[index] ?? 0, true);
+    out.set(entry.name, offset + 46);
+    offset += 46 + entry.name.length;
+  });
+  view.setUint32(offset, 0x06054b50, true);
+  view.setUint16(offset + 8, entries.length, true);
+  view.setUint16(offset + 10, entries.length, true);
+  view.setUint32(offset + 12, centralSize, true);
+  view.setUint32(offset + 16, centralStart, true);
+  return out;
 }

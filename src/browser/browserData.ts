@@ -3,7 +3,9 @@
  *
  * This file stays free of imports. The Vite plugin inlines it into each HTML
  * page, so the review can run when the application bundle never loads.
- * `foss-earth.settings.v1` is `SETTINGS_STORAGE_KEY` in the settings registry,
+ * `foss-earth.settings.v1` is `SETTINGS_STORAGE_KEY` in the settings registry.
+ * `foss-earth.auth` is the account sign-in (`AUTH_STORAGE_KEY`). Clearing the
+ * site removes it and does not write it back, even when API keys are kept.
  * `foss-earth.visit ` is `TRAIL_KEY_PREFIX` in diagnostics/sessionTrail.ts, and
  * `foss-earth-boot` and `__fossEarthBoot` are the boot terminal's
  * (bootTerminal.ts), which shows a start's failure and this review's offer.

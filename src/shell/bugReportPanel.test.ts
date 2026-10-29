@@ -1,286 +1,164 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createBugReportPanel as createInjectedBugReportPanel, type BugReportPanelHandle } from "./bugReportPanel.js";
+import { createBugReportPanel, type BugReportPanelHandle } from "./bugReportPanel.js";
 
-const settle = async (): Promise<void> => { for (let turn = 0; turn < 8; turn++) await Promise.resolve(); };
+const settle = async (): Promise<void> => { for (let turn = 0; turn < 10; turn++) await Promise.resolve(); };
 let section: BugReportPanelHandle | null = null;
-afterEach(() => { section?.destroy(); section = null; vi.restoreAllMocks(); vi.unstubAllGlobals(); });
-
+afterEach(() => { section?.destroy(); section = null; vi.restoreAllMocks(); });
 const reporter = { repository: "UMN-VR/UMN-VR.github.io", appName: "Campus tour" };
-const rawReport = "Browser: Android Firefox Mobile\nBuild: abc123\nRenderer: webgl2\nGPU: Adreno 740\nThis visit, oldest first:\n1.0 s FULL_ACTIVITY_MARKER\n2.0 s Failed with opaque-settings-key\n";
+const rawReport = [
+  "TypeError: Failed to fetch dynamically imported module: /aircraft.js",
+  "Campus tour report, 2026-10-28T00:00:00.000Z",
+  "Browser: Android Firefox Mobile", "Build: abc123", "Renderer: webgl2", "GPU: Adreno 740",
+  "Settings (all effective values):", ...Array.from({ length: 60 }, (_, n) => `setting.${n} = VALUE_${n}`),
+  "Errors nothing handled: none.", "This visit, oldest first:", "1.0 s FULL_ACTIVITY_MARKER", "2.0 s Failed with opaque-settings-key",
+  "The visit before: no trail of one on this device.", "",
+].join("\n");
 
 function action<T extends HTMLElement = HTMLButtonElement>(name: string): T {
   return [...section!.element.querySelectorAll("button, a")].find(element => element.textContent === name || element.getAttribute("aria-label") === name) as T;
 }
-
-function fields(): { title: HTMLInputElement; description: HTMLTextAreaElement; report: HTMLTextAreaElement } {
+function fields() {
   return {
-    title: section!.element.querySelector('input[name="title"]')!,
-    description: section!.element.querySelector('textarea[name="description"]')!,
-    report: section!.element.querySelector('textarea[name="report"]')!,
+    title: section!.element.querySelector<HTMLInputElement>('input[name="title"]')!,
+    description: section!.element.querySelector<HTMLTextAreaElement>('textarea[name="description"]')!,
   };
 }
-
 function describeBug(title = "The panorama goes black", description = "I opened the mall panorama."): void {
-  const inputs = fields();
-  inputs.title.value = title;
-  inputs.description.value = description;
-  inputs.description.dispatchEvent(new Event("input", { bubbles: true }));
+  fields().title.value = title;
+  fields().description.value = description;
+  fields().description.dispatchEvent(new Event("input", { bubbles: true }));
 }
-
-function localDownloads(): { blobs: Map<string, Blob>; create: ReturnType<typeof vi.fn<(blob: Blob) => string>>; revoke: ReturnType<typeof vi.fn<(url: string) => void>> } {
+function downloads() {
   const blobs = new Map<string, Blob>();
-  let next = 0;
-  const create = vi.fn((blob: Blob): string => {
-    const url = `blob:report-${++next}`;
-    blobs.set(url, blob);
-    return url;
-  });
+  const create = vi.fn((blob: Blob): string => { const url = `blob:report-${blobs.size + 1}`; blobs.set(url, blob); return url; });
   const revoke = vi.fn((url: string): void => { blobs.delete(url); });
-  vi.stubGlobal("URL", class extends URL {
-    static createObjectURL = create;
-    static revokeObjectURL = revoke;
-  });
   return { blobs, create, revoke };
 }
-
-function blobText(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (): void => resolve(reader.result as string);
-    reader.onerror = (): void => reject(reader.error);
-    reader.readAsText(blob);
-  });
+function create(source: Parameters<typeof createBugReportPanel>[0], options: Partial<Parameters<typeof createBugReportPanel>[1]> = {}) {
+  return createBugReportPanel(source, { now: () => new Date("2026-10-28T00:00:00.000Z"), downloads: downloads(), ...options });
 }
-
-/** Exercise our click handler while keeping jsdom from trying to save or navigate. */
-function activateLink(link: HTMLAnchorElement): void {
+function activate(link: HTMLAnchorElement): void {
   link.addEventListener("click", event => event.preventDefault(), { once: true });
   link.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
 }
-
-describe("static GitHub bug reporting", () => {
-  it("keeps the issue gate closed when the reviewed-report copy fails", async () => {
-    const downloads = localDownloads(); downloads.create.mockImplementation(() => { throw new Error("No downloads"); });
-    const copy = vi.fn<() => Promise<void>>().mockRejectedValue(new Error("Denied"));
-    section = createBugReportPanel({ report: async () => rawReport, previous: async () => null, copy }, { issueReporter: reporter });
-    section.show(); await settle(); describeBug();
-    action("Copy reviewed report").click(); await settle();
-    expect(copy).toHaveBeenCalledOnce();
-    expect(action<HTMLAnchorElement>("Open GitHub issue").hasAttribute("href")).toBe(false);
-    expect(section.element.textContent).toContain("The browser did not allow copying");
-    expect(action("Copy reviewed report").hasAttribute("disabled")).toBe(false);
-  });
-  it("collects only when opened and still downloads when a repository is missing or invalid", async () => {
-    localDownloads();
-    const report = vi.fn(async () => rawReport);
-    section = createBugReportPanel({ report, previous: async () => null });
-    expect(section.element.textContent).toContain("GitHub issue repository is not configured");
-    expect(report).not.toHaveBeenCalled();
-    section.show();
-    await settle();
-    describeBug();
-    expect(action<HTMLAnchorElement>("Download report").download).toMatch(/^app-bug-report-/);
-    expect(action<HTMLAnchorElement>("Open GitHub issue").hasAttribute("href")).toBe(false);
-    section.destroy();
-    section = createBugReportPanel({ report, previous: async () => null }, { issueReporter: { repository: "org/app?body=evil" } });
-    expect(section.element.textContent).toContain("owner/name");
-    expect(report).toHaveBeenCalledTimes(1);
-    section.show();
-    await settle();
-    describeBug();
-    expect(action<HTMLAnchorElement>("Download report").download).toMatch(/^app-bug-report-/);
-  });
-
-  it("prepares a local editable preview, then saves the complete report and opens only a summary draft", async () => {
-    const downloads = localDownloads();
-    const fetch = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Unexpected network"));
-    const openWindow = vi.spyOn(window, "open").mockReturnValue(null);
-    const report = vi.fn(async () => rawReport);
-    section = createBugReportPanel({ report, previous: async () => null, reportSecrets: () => ["opaque-settings-key"] }, { issueReporter: reporter });
-    document.body.append(section.element);
-    expect(report).not.toHaveBeenCalled();
-    expect(section.element.getAttribute("aria-label")).toBe("Bug report");
-    section.show();
-    section.show();
-    const inputs = fields();
-    const download = action<HTMLAnchorElement>("Download report");
-    const open = action<HTMLAnchorElement>("Open GitHub issue");
-    expect(download.hasAttribute("href")).toBe(false);
-    expect(open.hasAttribute("href")).toBe(false);
-    await settle();
-    expect(report).toHaveBeenCalledTimes(1);
-    expect(inputs.report.readOnly).toBe(false);
-    expect(inputs.report.value).toContain("FULL_ACTIVITY_MARKER");
-    expect(inputs.report.value).not.toContain("opaque-settings-key");
-    expect(download.hasAttribute("href")).toBe(false);
-    describeBug("Problem with opaque-settings-key", "Reproduced using opaque-settings-key");
-    expect(inputs.title.value).toBe("Problem with [redacted]");
-    expect(inputs.description.value).toBe("Reproduced using [redacted]");
-    const url = download.getAttribute("href")!;
-    expect(url).toBe("blob:report-1");
-    expect(download.download).toMatch(/^UMN-VR\.github\.io-bug-report-\d{4}-\d{2}-\d{2}T.*Z\.txt$/);
-    const contents = await blobText(downloads.blobs.get(url)!);
-    expect(contents).toContain("Title: Problem with [redacted]");
-    expect(contents).toContain(inputs.description.value);
-    expect(contents).toContain(inputs.report.value);
-    expect(contents).not.toContain("opaque-settings-key");
-    expect(open.hasAttribute("href")).toBe(false);
-    expect(fetch).not.toHaveBeenCalled();
-    expect(openWindow).not.toHaveBeenCalled();
-    activateLink(download);
-    expect(downloads.revoke).not.toHaveBeenCalled();
-    const draft = new URL(open.href);
-    expect(draft.origin).toBe("https://github.com");
-    expect(draft.pathname).toBe("/UMN-VR/UMN-VR.github.io/issues/new");
-    expect(draft.searchParams.get("body")).toContain("Android Firefox Mobile");
-    expect(draft.searchParams.get("body")).toContain("webgl2");
-    expect(draft.searchParams.get("body")).toContain(download.download);
-    expect(draft.href).not.toContain("FULL_ACTIVITY_MARKER");
-    expect(draft.href).not.toContain("opaque-settings-key");
-    expect(open.target).toBe("_blank");
-    expect(open.rel).toBe("noopener noreferrer");
-    expect(section.element.textContent).toContain("GitHub attachments become public when uploaded");
-  });
-
-  it("updates the file and draft after edits, and releases only replaced or closed downloads", async () => {
-    const downloads = localDownloads();
-    section = createBugReportPanel({ report: async () => rawReport, previous: async () => null }, { issueReporter: reporter });
-    section.show();
-    await settle();
-    describeBug();
-    const download = action<HTMLAnchorElement>("Download report");
-    const open = action<HTMLAnchorElement>("Open GitHub issue");
-    activateLink(download);
-    // jsdom freezes its parsed blob href; the content attribute is the updated
-    // native download target, and the Blob below proves which report it holds.
-    const firstUrl = download.getAttribute("href")!;
-    fields().report.value = "Browser: Android Firefox Mobile\nBuild: changed-build\nRenderer: webgl2\nEDITED_ACTIVITY_MARKER\n";
-    fields().report.dispatchEvent(new Event("input", { bubbles: true }));
-    expect(downloads.revoke).toHaveBeenCalledWith(firstUrl);
-    expect(download.getAttribute("href")).not.toBe(firstUrl);
-    expect(open.hasAttribute("href")).toBe(false);
-    expect(section.element.textContent).toContain("The report changed");
-    const edited = await blobText(downloads.blobs.get(download.getAttribute("href")!)!);
-    expect(edited).toContain("EDITED_ACTIVITY_MARKER");
-    expect(edited).not.toContain("FULL_ACTIVITY_MARKER");
-    activateLink(download);
-    expect(new URL(open.href).searchParams.get("body")).toContain("changed-build");
-    const finalUrl = download.getAttribute("href")!;
-    section.destroy();
-    expect(downloads.revoke).toHaveBeenCalledWith(finalUrl);
-    expect(fields().report.value).toBe("");
-    expect(download.hasAttribute("href")).toBe(false);
-    expect(open.hasAttribute("href")).toBe(false);
-  });
-
-  it("preserves edits when the tab opens again and collects fresh activity only on Refresh", async () => {
-    const downloads = localDownloads();
-    const report = vi.fn<() => Promise<string>>().mockResolvedValueOnce(rawReport).mockResolvedValue("Browser: Android Firefox\nRenderer: webgl2\nFRESH_ACTIVITY\n");
-    section = createBugReportPanel({ report, previous: async () => null }, { issueReporter: reporter });
-    section.show();
-    await settle();
-    describeBug();
-    fields().report.value = "REVIEWED_EDIT\n";
-    fields().report.dispatchEvent(new Event("input", { bubbles: true }));
-    const oldUrl = action<HTMLAnchorElement>("Download report").getAttribute("href")!;
-    section.show();
-    await settle();
-    expect(report).toHaveBeenCalledTimes(1);
-    expect(fields().report.value).toBe("REVIEWED_EDIT\n");
-    action("Refresh report").click();
-    await settle();
-    expect(report).toHaveBeenCalledTimes(2);
-    expect(fields().title.value).toBe("The panorama goes black");
-    expect(fields().description.value).toBe("I opened the mall panorama.");
-    expect(fields().report.value).toContain("FRESH_ACTIVITY");
-    expect(downloads.revoke).toHaveBeenCalledWith(oldUrl);
-    expect(action<HTMLAnchorElement>("Open GitHub issue").hasAttribute("href")).toBe(false);
-  });
-
-  it("ignores a destroyed panel's report and clears pending work on destroy", async () => {
-    const downloads = localDownloads();
-    let first!: (value: string) => void;
-    let second!: (value: string) => void;
-    const report = vi.fn<() => Promise<string>>()
-      .mockImplementationOnce(() => new Promise(resolve => { first = resolve; }))
-      .mockImplementationOnce(() => new Promise(resolve => { second = resolve; }));
-    section = createBugReportPanel({ report, previous: async () => null }, { issueReporter: reporter });
-    section.show();
-    await settle();
-    const originalReportField = fields().report;
-    section.destroy();
-    section = createBugReportPanel({ report, previous: async () => null }, { issueReporter: reporter });
-    section.show();
-    describeBug();
-    await settle();
-    second("Browser: Android Firefox\nRenderer: webgl2\nNEW_ACTIVITY\n");
-    await settle();
-    expect(fields().report.value).toContain("NEW_ACTIVITY");
-    first("Browser: old-browser\nSTALE_ACTIVITY\n");
-    await settle();
-    expect(fields().report.value).not.toContain("STALE_ACTIVITY");
-    expect(originalReportField.value).toBe("");
-    expect(downloads.create).toHaveBeenCalledTimes(1);
-    let pending!: (value: string) => void;
-    report.mockImplementationOnce(() => new Promise(resolve => { pending = resolve; }));
-    action("Refresh report").click();
-    await settle();
-    section.destroy();
-    pending(rawReport);
-    await settle();
-    expect(fields().report.value).toBe("");
-    expect(downloads.create).toHaveBeenCalledTimes(1);
-  });
-
-  it("lets a failed report be retried with an actionable message", async () => {
-    localDownloads();
-    const report = vi.fn<() => Promise<string>>().mockRejectedValueOnce(new Error("Storage unavailable")).mockResolvedValue(rawReport);
-    section = createBugReportPanel({ report, previous: async () => null }, { issueReporter: reporter });
-    section.show();
-    await settle();
-    expect(section.element.textContent).toContain("The activity report could not be prepared");
-    expect(action("Try report again").hasAttribute("disabled")).toBe(false);
-    describeBug();
-    action("Try report again").click();
-    await settle();
-    expect(report).toHaveBeenCalledTimes(2);
-    expect(action<HTMLAnchorElement>("Download report").href).toBe("blob:report-1");
-    expect(action("Refresh report").hasAttribute("disabled")).toBe(false);
-  });
-
-  it("offers a copy fallback without downloads and ignores a destroyed panel's pending copy", async () => {
-    const downloads = localDownloads();
-    downloads.create.mockImplementation(() => { throw new Error("Unavailable"); });
-    let copied!: () => void;
-    const copy = vi.fn<() => Promise<void>>().mockImplementationOnce(() => new Promise(resolve => { copied = resolve; })).mockResolvedValue(undefined);
-    section = createBugReportPanel({ report: async () => rawReport, previous: async () => null, copy }, { issueReporter: reporter });
-    section.show();
-    await settle();
-    describeBug();
-    expect(action("Copy reviewed report").hidden).toBe(false);
-    expect(section.element.textContent).toContain("File downloads are unavailable");
-    action("Copy reviewed report").click();
-    await settle();
-    expect(action("Copy reviewed report").hasAttribute("disabled")).toBe(true);
-    section.destroy();
-    section = createBugReportPanel({ report: async () => rawReport, previous: async () => null, copy }, { issueReporter: reporter });
-    section.show();
-    await settle();
-    describeBug();
-    expect(action("Copy reviewed report").hasAttribute("disabled")).toBe(false);
-    copied();
-    await settle();
-    expect(action<HTMLAnchorElement>("Open GitHub issue").hasAttribute("href")).toBe(false);
-    action("Copy reviewed report").click();
-    await settle();
-    expect(action<HTMLAnchorElement>("Open GitHub issue").href).toContain("https://github.com/");
-    expect(copy).toHaveBeenCalledTimes(2);
-  });
-});
-
-function createBugReportPanel(source: Parameters<typeof createInjectedBugReportPanel>[0], options: Omit<Parameters<typeof createInjectedBugReportPanel>[1], "now" | "downloads"> = {}): BugReportPanelHandle {
-  return createInjectedBugReportPanel({ ...source, copy: source.copy ?? (text => navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject(new Error("No clipboard"))) }, {
-    ...options, now: () => new Date(), downloads: { create: blob => URL.createObjectURL(blob), revoke: url => URL.revokeObjectURL(url) },
+function blobText(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader(); reader.onload = (): void => resolve(reader.result as string); reader.onerror = (): void => reject(reader.error); reader.readAsText(blob);
   });
 }
+
+describe("Bug report shared diagnostics caller", () => {
+  it("collects lazily and uses shared file tabs, line search, and plain downloads", async () => {
+    const local = downloads();
+    const report = vi.fn(async () => rawReport);
+    const fetch = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Unexpected network"));
+    section = create({ report, previous: async () => null, reportSecrets: () => ["opaque-settings-key"] }, { downloads: local, issueReporter: reporter });
+    document.body.append(section.element);
+    expect(report).not.toHaveBeenCalled();
+    section.show(); section.show(); await settle();
+    expect(report).toHaveBeenCalledOnce();
+    expect(section.element.querySelector('textarea[name="report"]')).toBeNull();
+    expect(section.element.querySelector('[role=tablist][aria-label="Error report files"]')).not.toBeNull();
+    action("settings.txt").click();
+    expect(section.element.querySelector("pre")).toBeNull();
+    const search = section.element.querySelector<HTMLInputElement>('input[aria-label="Find a line in the error report"]')!;
+    search.value = "VALUE_49"; search.dispatchEvent(new Event("input", { bubbles: true }));
+    const hit = [...section.element.querySelectorAll("button")].find(button => button.textContent?.startsWith("settings.txt:51"))!;
+    hit.click();
+    expect(section.element.querySelector("pre")?.textContent).toContain("setting.49 = VALUE_49");
+    expect(section.element.querySelector("pre")?.textContent).not.toContain("setting.0 =");
+    activate(action<HTMLAnchorElement>("Download this file"));
+    expect(action<HTMLAnchorElement>("Download this file").download).toBe("settings.txt");
+    expect(await blobText([...local.blobs.values()][0]!)).toContain("setting.0 = VALUE_0");
+    expect(action<HTMLAnchorElement>("Open GitHub issue").hasAttribute("href")).toBe(false);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("redacts metadata and full activity, and opens only a short draft after a zip download", async () => {
+    const local = downloads();
+    section = create({ report: async () => rawReport, previous: async () => null, reportSecrets: () => ["opaque-settings-key"] }, { downloads: local, issueReporter: reporter });
+    section.show(); await settle();
+    describeBug("Problem with opaque-settings-key", "Reproduced using opaque-settings-key");
+    expect(fields().title.value).toBe("Problem with [redacted]");
+    expect(fields().description.value).toBe("Reproduced using [redacted]");
+    const open = action<HTMLAnchorElement>("Open GitHub issue");
+    const zip = action<HTMLAnchorElement>("Download all");
+    expect(open.hasAttribute("href")).toBe(false);
+    activate(zip);
+    expect(zip.download).toMatch(/^UMN-VR\.github\.io-bug-report-.*\.zip$/);
+    const contents = await blobText(local.blobs.get(zip.getAttribute("href")!)!);
+    expect(contents.startsWith("PK")).toBe(true);
+    expect(contents).toContain("index.txt"); expect(contents).toContain("index.json");
+    expect(contents).toContain("Title: Problem with [redacted]");
+    expect(contents).toContain("FULL_ACTIVITY_MARKER"); expect(contents).not.toContain("opaque-settings-key");
+    const draft = new URL(open.href);
+    expect(draft.pathname).toBe("/UMN-VR/UMN-VR.github.io/issues/new");
+    expect(draft.searchParams.get("body")).toContain("Android Firefox Mobile");
+    expect(draft.searchParams.get("body")).toContain(zip.download);
+    expect(draft.href).not.toContain("FULL_ACTIVITY_MARKER");
+    expect(open.target).toBe("_blank"); expect(open.rel).toBe("noopener noreferrer");
+  });
+
+  it("downloads without a configured repository and handles invalid configuration", async () => {
+    const report = vi.fn(async () => rawReport);
+    section = create({ report, previous: async () => null });
+    expect(section.element.textContent).toContain("GitHub issue repository is not configured");
+    section.show(); await settle();
+    activate(action<HTMLAnchorElement>("Download all"));
+    expect(action<HTMLAnchorElement>("Download all").download).toMatch(/^app-bug-report-.*\.zip$/);
+    expect(action<HTMLAnchorElement>("Open GitHub issue").hasAttribute("href")).toBe(false);
+    section.destroy();
+    section = create({ report, previous: async () => null }, { issueReporter: { repository: "org/app?body=evil" } });
+    expect(section.element.textContent).toContain("owner/name");
+  });
+
+  it("invalidates the download after edits and preserves metadata until Refresh", async () => {
+    const local = downloads();
+    const report = vi.fn<() => Promise<string>>().mockResolvedValueOnce(rawReport).mockResolvedValue(rawReport.replace("FULL_ACTIVITY_MARKER", "FRESH_ACTIVITY"));
+    section = create({ report, previous: async () => null }, { downloads: local, issueReporter: reporter });
+    section.show(); await settle(); describeBug();
+    activate(action<HTMLAnchorElement>("Download all"));
+    const first = action<HTMLAnchorElement>("Download all").getAttribute("href")!;
+    describeBug("Edited title");
+    expect(local.revoke).toHaveBeenCalledWith(first);
+    expect(action<HTMLAnchorElement>("Open GitHub issue").hasAttribute("href")).toBe(false);
+    expect(section.element.textContent).toContain("The report changed");
+    section.show(); await settle(); expect(report).toHaveBeenCalledOnce();
+    expect(fields().title.value).toBe("Edited title");
+    action("Refresh report").click(); await settle();
+    expect(report).toHaveBeenCalledTimes(2); expect(fields().title.value).toBe("Edited title");
+    activate(action<HTMLAnchorElement>("Download all"));
+    const zip = action<HTMLAnchorElement>("Download all");
+    expect(await blobText(local.blobs.get(zip.getAttribute("href")!)!)).toContain("FRESH_ACTIVITY");
+    const final = zip.getAttribute("href")!;
+    section.destroy(); expect(local.revoke).toHaveBeenCalledWith(final);
+  });
+
+  it("ignores stale reports after destroy and offers a report preparation retry", async () => {
+    let finish!: (text: string) => void;
+    section = create({ report: () => new Promise(resolve => { finish = resolve; }), previous: async () => null });
+    section.show(); await settle();
+    const previous = section.element;
+    section.destroy(); finish(rawReport); await settle();
+    expect(previous.querySelector('[role=tablist]')).toBeNull();
+    const report = vi.fn<() => Promise<string>>().mockRejectedValueOnce(new Error("No storage")).mockResolvedValue(rawReport);
+    section = create({ report, previous: async () => null });
+    section.show(); await settle();
+    expect(section.element.textContent).toContain("The activity report could not be prepared");
+    action("Try report again").click(); await settle();
+    expect(section.element.querySelector('[role=tablist]')).not.toBeNull();
+  });
+
+  it("keeps the draft closed when text copy fails and supports a local plain-text fallback", async () => {
+    const copy = vi.fn<(text: string) => Promise<void>>().mockRejectedValueOnce(new Error("Denied")).mockResolvedValue(undefined);
+    section = create({ report: async () => rawReport, previous: async () => null, copy }, { issueReporter: reporter });
+    section.show(); await settle(); describeBug();
+    action("Copy reviewed report").click(); await settle();
+    expect(action<HTMLAnchorElement>("Open GitHub issue").hasAttribute("href")).toBe(false);
+    expect(section.element.textContent).toContain("The browser did not allow copying");
+    action("Copy reviewed report").click(); await settle();
+    expect(copy.mock.calls[1]![0]).toContain("FULL_ACTIVITY_MARKER");
+    expect(action<HTMLAnchorElement>("Open GitHub issue").href).toContain("https://github.com/");
+  });
+});

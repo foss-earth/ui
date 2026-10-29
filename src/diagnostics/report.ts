@@ -42,7 +42,7 @@ export interface ReportParts {
     lost: number;
     capabilities?: readonly string[];
   };
-  /** One line each, as the host words them: the app's kept files, the scene, what is saved. */
+  /** One state blob each, possibly multiline, as the host words it: scene, kept files, execution. */
   state: readonly string[];
   /** Every parameter that is not at its default. */
   settings: readonly ReportSetting[];

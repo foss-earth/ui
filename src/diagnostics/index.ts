@@ -1,4 +1,5 @@
 export * from "./issueReport.js";
+export * from "./issueReportView.js";
 export * from "./errorCapture.js";
 export * from "./report.js";
 export * from "./sessionTrail.js";

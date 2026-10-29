@@ -1,5 +1,7 @@
+import { crc32 } from "node:zlib";
 import { describe, expect, it } from "vitest";
-import { createIssueDraft, ISSUE_DRAFT_URL_LIMIT, issueReportAttachment, issueReportFilename, redactIssueReport, validateIssueReporterConfig } from "./issueReport.js";
+import { buildReport } from "./report.js";
+import { createIssueDraft, ISSUE_DRAFT_URL_LIMIT, issueReportAttachment, issueReportFilename, redactIssueReport, validateIssueReporterConfig, splitIssueReport, issueReportZip, type IssueBundle } from "./issueReport.js";
 
 describe("issue reporter configuration", () => {
   it("accepts the three apps' GitHub repositories", () => {
@@ -124,7 +126,7 @@ describe("local report attachment and GitHub draft", () => {
 
   it("uses a filesystem-safe UTC filename and keeps the full reviewed input in the file", () => {
     expect(issueReportFilename(config, new Date("2026-10-08T14:15:16.123Z")))
-      .toBe("UMN-VR.github.io-bug-report-2026-10-08T14-15-16-123Z.txt");
+      .toBe("UMN-VR.github.io-bug-report-2026-10-08T14-15-16-123Z.zip");
     const attachment = issueReportAttachment(config, input);
     expect(attachment).toContain(`Title: ${input.title}`);
     expect(attachment).toContain(input.description);
@@ -143,6 +145,10 @@ describe("local report attachment and GitHub draft", () => {
     expect(draft.url).not.toContain("PRIVATE_ACTIVITY_MARKER");
     expect(draft.body).not.toContain("Loaded panorama mall");
     expect(draft.url.length).toBeLessThanOrEqual(ISSUE_DRAFT_URL_LIMIT);
+  });
+
+  it.each(["tour-report.zip", "tour-report.txt"])("accepts a portable %s attachment in a draft", filename => {
+    expect(createIssueDraft(config, { ...input, filename }).body).toContain(filename);
   });
 
   it("bounds the encoded URL with huge Unicode text without shortening the downloaded report", () => {
@@ -168,5 +174,223 @@ describe("local report attachment and GitHub draft", () => {
     expect(draft.body).not.toContain("secret-value");
     expect(() => createIssueDraft(config, { ...input, filename: "../secret.txt" })).toThrow("filename");
     expect(() => createIssueDraft(config, { ...input, filename: `${"x".repeat(1_000)}.txt` })).toThrow("filename");
+  });
+});
+
+const flightState = [
+  ["loading.txt", `Loading diagnostics:\n${JSON.stringify({ tasks: ["name } with { braces", "Settings (all effective values):"], message: 'escaped "quote"' }, null, 2)}`],
+  ["component-execution.txt", 'Component execution: [{"name":"earth","backend":"worker"}]'],
+  ["compute-scheduling.txt", 'Compute scheduling: {"workers":2}'],
+  ["isolation.txt", "Isolation: cross-origin isolated; shared memory available"],
+  ["aircraft.txt", "Aircraft: C172; model loaded"],
+  ["flight.txt", "Flight: paused; view third"],
+  ["flight-progress.txt", 'Flight progress: {"ticks":42}'],
+  ["jsbsim.txt", 'JSBSim: {"state":"ready"}'],
+  ["console.txt", `Console diagnostics: ${JSON.stringify({ count: 1, messages: [{ text: 'escaped "quote", } braces {, line\nnext', level: "error" }] })}`],
+  ["scene.txt", "Scene: Earth"],
+  ["build-components.txt", "Build components:\n  renderer abc123\n  engine def456"],
+  ["render-health.txt", "Render health: ready"],
+  ["app-files.txt", "App files: 3 kept files"],
+  ["published.txt", "Published: local development"],
+  ["cache-state.txt", "Cache state: empty\n  no entries"],
+] as const;
+
+function fullReport(prefix = "", errorLines = "Errors nothing handled: none."): string {
+  return `${prefix}${[
+    "0SFS report, 2026-10-28T12:00:00.000Z", "Page: https://localhost:7470/fly/", "Build: local", "Browser: test browser", "Screen: 1440 × 900",
+    "Renderer: webgpu (asked for webgpu)", "GPU: example device", "Graphics capability textures: available",
+    ...flightState.map(([, text]) => text),
+    "", "Settings (all effective values):", '  aircraft.selection = "C172" (saved; default "SF-50")',
+    ...Array.from({ length: 60 }, (_, n) => `  setting.${n} = ${n}`),
+    "", errorLines, "", "This visit, oldest first:", "  0.0 s App opened", "  1.0 s Aircraft change requested", "",
+    "The visit before, opened 2026-10-27T12:00:00.000Z, was closed. 0SFS", "  3.0 s Last step", "",
+  ].join("\n")}`;
+}
+function file(bundle: IssueBundle, name: string): string {
+  const found = bundle.files.find(item => item.name === name);
+  expect(found, name).toBeDefined();
+  return found!.text;
+}
+function indexData(bundle: IssueBundle): {
+  failure: { file: string; line: number; text: string } | null;
+  needles: { file: string; line: number; text: string }[];
+  files: { name: string; lines: number }[];
+} {
+  return JSON.parse(file(bundle, "index.json"));
+}
+
+describe("one portable report split into indexed text files", () => {
+  it("extends buildReport directly while preserving its environment, states and section order", () => {
+    const report = buildReport({
+      appName: "0SFS", at: new Date("2026-10-28T12:00:00.000Z"), page: "https://localhost:7470/fly/",
+      build: "local", source: "source-id", bundle: "main.js", userAgent: "test browser",
+      screen: { width: 800, height: 600, devicePixelRatio: 1, touch: false }, device: { cores: 8, memoryGiB: null },
+      environment: ["Browser environment: secure"],
+      renderer: { asked: "webgpu", mode: "webgpu", driver: "test GPU", maxTextureSize: 4096, fallbackReason: null, lost: 0,
+        capabilities: ["Graphics capability textureFloatRender: true"] },
+      state: flightState.map(([, text]) => text),
+      settings: [{ id: "aircraft.selection", value: "C172", defaultValue: "SF-50", from: "saved" }], settingsComplete: true,
+      errors: [{ kind: "error", message: "TypeError: component failed", count: 1 }],
+      steps: [{ ms: 0, text: "first step" }, { ms: 1000, text: "second step" }], previous: null,
+    });
+    const headings = ["0SFS report, ", "Browser environment:", "Renderer:", "GPU:", "Graphics capability ",
+      ...flightState.map(([, text]) => text.split("\n")[0]!), "Settings (all effective values):", "Errors nothing handled:", "This visit, oldest first:", "The visit before"];
+    const positions = headings.map((heading, index) => index === 0 ? 0 : report.indexOf(`\n${heading}`));
+    expect(positions.every(position => position >= 0)).toBe(true);
+    expect(positions).toEqual([...positions].sort((a, b) => a - b));
+    const bundle = splitIssueReport(report);
+    for (const [name, text] of flightState) expect(file(bundle, name)).toBe(text);
+    expect(file(bundle, "environment.txt")).toContain("Graphics capability textureFloatRender: true");
+    expect(file(bundle, "settings.txt")).toBe("Settings (all effective values):\n  aircraft.selection = C172 (saved; default SF-50)");
+    expect(indexData(bundle).failure).toMatchObject({ file: "errors.txt", line: 2, text: "  TypeError: component failed" });
+    expect(file(bundle, "visit.txt").indexOf("first step")).toBeLessThan(file(bundle, "visit.txt").indexOf("second step"));
+  });
+
+  it("follows buildReport section order, extracting every flight and FOSS Earth state blob", () => {
+    const bundle = splitIssueReport(fullReport("Aircraft change failed.\nTypeError: Could not apply C172\n"));
+    expect(bundle.files.map(item => item.name)).toEqual([
+      "index.txt", "index.json", "failure.txt", "environment.txt", "renderer.txt", "gpu.txt",
+      ...flightState.map(([name]) => name), "settings.txt", "errors.txt", "visit.txt", "previous-visit.txt",
+    ]);
+    expect(file(bundle, "failure.txt")).toBe("Aircraft change failed.\nTypeError: Could not apply C172");
+    expect(file(bundle, "environment.txt")).toBe([
+      "0SFS report, 2026-10-28T12:00:00.000Z", "Page: https://localhost:7470/fly/", "Build: local", "Browser: test browser", "Screen: 1440 × 900", "Graphics capability textures: available",
+    ].join("\n"));
+    for (const [name, text] of flightState) expect(file(bundle, name), name).toBe(text);
+    expect(file(bundle, "console.txt").split("\n")).toHaveLength(1);
+    expect(JSON.parse(file(bundle, "console.txt").slice("Console diagnostics: ".length))).toEqual({ count: 1, messages: [{ text: 'escaped "quote", } braces {, line\nnext', level: "error" }] });
+    expect(file(bundle, "settings.txt")).toContain('aircraft.selection = "C172"');
+    expect(file(bundle, "errors.txt")).toBe("Errors nothing handled: none.");
+    expect(file(bundle, "visit.txt")).toBe("This visit, oldest first:\n  0.0 s App opened\n  1.0 s Aircraft change requested");
+    expect(file(bundle, "previous-visit.txt")).toContain("  3.0 s Last step");
+  });
+
+  it("quotes the exact explicit failure line and names only lines that exist", () => {
+    const failureLine = `  TypeError: Aircraft "C172" rejected ${"an exact quoted diagnostic ".repeat(15)}`;
+    const prefix = ["Aircraft change failed.", "Saved aircraft.selection = C172", "", failureLine, "    at applyAircraft (aircraft.ts:42:3)", ""].join("\n");
+    const bundle = splitIssueReport(fullReport(prefix));
+    const index = indexData(bundle);
+    expect(file(bundle, "failure.txt")).toBe(prefix.replace(/\n+$/, ""));
+    expect(index.failure).toMatchObject({ file: "failure.txt", line: 4, text: failureLine });
+    expect(file(bundle, "index.txt")).toContain(`the failure: failure.txt:4\n> ${failureLine}`);
+    expect(index.needles).toEqual(expect.arrayContaining([
+      expect.objectContaining({ file: "failure.txt", line: 5, text: "    at applyAircraft (aircraft.ts:42:3)" }),
+      expect.objectContaining({ file: "settings.txt", line: 2, text: '  aircraft.selection = "C172" (saved; default "SF-50")' }),
+    ]));
+    for (const needle of index.needles) expect(file(bundle, needle.file).split("\n")[needle.line - 1]).toBe(needle.text);
+  });
+
+  it("uses captured errors when the original report has no failure prefix", () => {
+    const error = "  RangeError: sample state is out of range at runtime.ts:52";
+    const bundle = splitIssueReport(fullReport("", `Errors nothing handled:\n${error}\n      at update (runtime.ts:52:4)`));
+    expect(bundle.files.some(item => item.name === "failure.txt")).toBe(false);
+    expect(indexData(bundle).failure).toMatchObject({ file: "errors.txt", line: 2, text: error });
+    expect(file(bundle, "index.txt")).toContain(`errors.txt:2\n> ${error}`);
+  });
+
+  it("records no invented failure when a report has no prefix or captured errors", () => {
+    const bundle = splitIssueReport(fullReport());
+    expect(indexData(bundle).failure).toBeNull();
+    expect(bundle.needles).toEqual([]);
+    expect(file(bundle, "index.txt")).toContain("no failure recorded");
+  });
+
+  it("names an unexpectedly stopped previous visit when it is the only failure evidence", () => {
+    const stopped = "The visit before, opened 2026-10-27T16:00:00.000Z, stopped without being closed, while shown. FOSS Earth";
+    const bundle = splitIssueReport(fullReport().replace(/^The visit before[^\n]*/m, stopped));
+    expect(indexData(bundle).failure).toMatchObject({ file: "previous-visit.txt", line: 1, text: stopped });
+    expect(file(bundle, "index.txt")).toContain(`previous-visit.txt:1\n> ${stopped}`);
+  });
+
+  it("uses a supplied bug title and never calls an empty bug form a failure", () => {
+    const config = { repository: "foss-earth/app" };
+    const input = { title: "", description: "", report: fullReport(), filename: "report.zip" };
+    expect(indexData(splitIssueReport(issueReportAttachment(config, input))).failure).toBeNull();
+    expect(indexData(splitIssueReport(issueReportAttachment(config, { ...input, title: "The view went black" }))).failure)
+      .toMatchObject({ file: "failure.txt", line: 2, text: "Title: The view went black" });
+  });
+
+  it("lists the actual line count of every file, including both indexes", () => {
+    const bundle = splitIssueReport(fullReport("Error: Example failure\n"));
+    const index = indexData(bundle);
+    expect(index.files.map(entry => entry.name)).toEqual(bundle.files.map(entry => entry.name));
+    for (const entry of index.files) {
+      expect(entry.lines, entry.name).toBe(file(bundle, entry.name).split("\n").length);
+      expect(file(bundle, "index.txt")).toContain(`- ${entry.name}  ${entry.lines} `);
+    }
+    expect(file(bundle, "index.txt").split("\n")[0]).toContain("Read index.txt and stop");
+  });
+
+  it("gives repeated state headings unique filenames without losing either body", () => {
+    const raw = fullReport().replace("Scene: Earth", "Scene: Earth\nScene: second scene\nBuild components:\n  first duplicate build");
+    const bundle = splitIssueReport(raw);
+    expect(new Set(bundle.files.map(item => item.name)).size).toBe(bundle.files.length);
+    expect(file(bundle, "scene.txt")).toBe("Scene: Earth");
+    expect(file(bundle, "scene-2.txt")).toBe("Scene: second scene");
+    expect(file(bundle, "build-components.txt")).toBe("Build components:\n  first duplicate build");
+    expect(file(bundle, "build-components-2.txt")).toBe("Build components:\n  renderer abc123\n  engine def456");
+  });
+
+  it.each([
+    "TypeError: Failed to fetch dynamically imported module: https://localhost:7470/aircraft.js",
+    "TypeError: error loading dynamically imported module",
+    "TypeError: Importing a module script failed.",
+  ])("points outside the report for a dev-server log: %s", failure => {
+    const bundle = splitIssueReport(fullReport(`${failure}\n`));
+    expect(file(bundle, "index.txt")).toContain("A dev-server log is not inside this report.");
+    expect(bundle.files.some(item => /dev-server|server-log/.test(item.name))).toBe(false);
+  });
+
+  it("preserves a failure-only string when there is no report marker", () => {
+    const raw = "Aircraft change failed.\nTypeError: missing package\n    at load (aircraft.ts:8:2)\n";
+    const bundle = splitIssueReport(raw);
+    expect(bundle.files.map(item => item.name)).toEqual(["index.txt", "index.json", "failure.txt"]);
+    expect(file(bundle, "failure.txt")).toBe(raw.trimEnd());
+    expect(indexData(bundle).failure).toMatchObject({ file: "failure.txt", line: 2, text: "TypeError: missing package" });
+  });
+});
+
+describe("standard STORE zip report download", () => {
+  it("has valid local entries, central offsets, exact UTF-8 contents and independent CRCs", () => {
+    const bundle = splitIssueReport(fullReport('TypeError: Failed to load "C172" 🌎\n'));
+    const zip = issueReportZip(bundle);
+    const view = new DataView(zip.buffer, zip.byteOffset, zip.byteLength);
+    const decoder = new TextDecoder();
+    const encoder = new TextEncoder();
+    const end = zip.length - 22;
+    expect(view.getUint32(end, true)).toBe(0x06054b50);
+    expect(view.getUint16(end + 8, true)).toBe(bundle.files.length);
+    expect(view.getUint16(end + 10, true)).toBe(bundle.files.length);
+    const centralStart = view.getUint32(end + 16, true);
+    expect(view.getUint32(end + 12, true)).toBe(end - centralStart);
+    let central = centralStart;
+    let nextLocal = 0;
+    for (const expected of bundle.files) {
+      expect(view.getUint32(central, true)).toBe(0x02014b50);
+      expect(view.getUint16(central + 10, true)).toBe(0); // STORE, no compression.
+      const local = view.getUint32(central + 42, true);
+      expect(local).toBe(nextLocal);
+      expect(view.getUint32(local, true)).toBe(0x04034b50);
+      expect(view.getUint16(local + 8, true)).toBe(0);
+      expect(view.getUint16(local + 6, true) & 0x0800).toBe(0x0800); // UTF-8.
+      const nameLength = view.getUint16(local + 26, true);
+      const extraLength = view.getUint16(local + 28, true);
+      const name = decoder.decode(zip.subarray(local + 30, local + 30 + nameLength));
+      expect(name).toBe(expected.name);
+      expect(decoder.decode(zip.subarray(central + 46, central + 46 + view.getUint16(central + 28, true)))).toBe(name);
+      const size = view.getUint32(local + 22, true);
+      expect(size).toBe(encoder.encode(expected.text).length);
+      expect(view.getUint32(local + 18, true)).toBe(size);
+      expect(view.getUint32(central + 20, true)).toBe(size);
+      expect(view.getUint32(central + 24, true)).toBe(size);
+      const data = zip.subarray(local + 30 + nameLength + extraLength, local + 30 + nameLength + extraLength + size);
+      expect(decoder.decode(data), name).toBe(expected.text);
+      expect(view.getUint32(local + 14, true)).toBe(crc32(data));
+      expect(view.getUint32(central + 16, true)).toBe(crc32(data));
+      nextLocal = local + 30 + nameLength + extraLength + size;
+      central += 46 + view.getUint16(central + 28, true) + view.getUint16(central + 30, true) + view.getUint16(central + 32, true);
+    }
+    expect(nextLocal).toBe(centralStart);
+    expect(central).toBe(end);
   });
 });

@@ -97,3 +97,48 @@
 .foss-earth-browser-data {
   align-items: flex-start;
 }
+
+.foss-earth-issue-report {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  border-radius: 8px;
+  font-size: 12px;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.foss-earth-issue-report [hidden] { display: none; }
+.foss-earth-issue-report p { margin: 0; overflow-wrap: anywhere; }
+.foss-earth-issue-report__tools { min-width: 0; }
+.foss-earth-issue-report__tools input { max-width: 100%; }
+.foss-earth-issue-report__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  border-radius: 8px;
+}
+.foss-earth-issue-report__tabs > button { border-color: transparent; border-radius: 5px; }
+.foss-earth-issue-report__tabs [aria-selected="true"] {
+  background: rgba(56, 189, 248, 0.25);
+  box-shadow: inset 0 0 0 1px var(--globe-accent, #60a5fa);
+}
+.foss-earth-issue-report__panel { min-width: 0; }
+.foss-earth-issue-report__text {
+  max-height: 26em;
+  margin: 0;
+  padding: 6px;
+  overflow: auto;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 6px;
+  font: 11px/1.4 ui-monospace, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.foss-earth-issue-report__hits ul { display: grid; gap: 3px; max-height: 16em; overflow: auto; margin: 0; padding: 0; list-style: none; }
+.foss-earth-issue-report__hits button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; text-align: left; }
