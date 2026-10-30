@@ -339,6 +339,18 @@ describe("settings registry", () => {
     expect(settings.inspect("test.mode")).toMatchObject({ value: "b", provenance: "url" });
   });
 
+  it("reads a parameter's short URL names, its old values renamed, after ?set.<id>=", () => {
+    const named = { ...mode, id: "test.craft", choices: [{ id: "mini2", label: "Mini 2" }, { id: "air2s", label: "Air 2S" }], default: "mini2",
+      urlNames: ["craft", "vehicle"], legacyValues: [{ value: "air-2s", replacement: "air2s" }] };
+    const short = createSettingsRegistry({ storage: null, searchParams: new URLSearchParams("vehicle=air-2s") });
+    short.register([named]);
+    expect(short.inspect("test.craft")).toMatchObject({ value: "air2s", provenance: "url" });
+    const both = createSettingsRegistry({ storage: null, searchParams: new URLSearchParams("craft=air2s&set.test.craft=mini2") });
+    both.register([named]);
+    expect(both.get("test.craft")).toBe("mini2");
+    expect(() => both.register([{ ...named, id: "test.other" }])).toThrow(/URL name "craft"/);
+  });
+
   it("never saves a session parameter", () => {
     const storage = memoryStorage();
     const settings = registry(storage);
@@ -356,6 +368,18 @@ describe("settings registry", () => {
     expect(settings.inspect("test.focus").note).toMatch(/not available/);
     settings.setChoices("test.focus", [{ id: "target", label: "Orbit target" }, { id: "aircraft", label: "Aircraft" }]);
     expect(settings.inspect("test.focus")).toMatchObject({ value: "aircraft", provenance: "user", note: null });
+  });
+
+  it("holds a URL's dynamic choice until its option exists, keeping only what applies now", () => {
+    const storage = memoryStorage();
+    const settings = createSettingsRegistry({ storage, searchParams: new URLSearchParams("set.test.focus=drone") });
+    settings.register([{ ...mode, id: "test.focus", choices: [{ id: "target", label: "Orbit target" }], dynamicChoices: true, default: "target" }]);
+    expect(settings.get("test.focus")).toBe("target");
+    expect(settings.inspect("test.focus").note).toMatch(/URL's choice "drone" is not available yet/);
+    expect(settings.keepSessionValues()).toEqual({ ok: true });
+    expect(record(storage)?.values ?? {}).toEqual({});
+    settings.setChoices("test.focus", [{ id: "target", label: "Orbit target" }, { id: "drone", label: "Drone" }]);
+    expect(settings.inspect("test.focus")).toMatchObject({ value: "drone", provenance: "url", note: null });
   });
 
   it("keeps values for parameters a host registers later", () => {

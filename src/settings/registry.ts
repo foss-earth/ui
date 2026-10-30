@@ -416,6 +416,7 @@ export function createSettingsRegistry(options: SettingsRegistryOptions = {}): S
     if (saved !== undefined && !usable(saved) && spec.kind === "choice") {
       noteParts.push(`The saved choice "${saved}" is not available now.`);
     }
+    if (url !== undefined && !usable(url)) noteParts.push(`The URL's choice "${url}" is not available yet.`);
     const limited = clampToBounds(spec, value, bounds);
     if (!sameValue(limited, value)) {
       noteParts.push(`${formatValue(spec, value, specChoices)} is limited to ${formatValue(spec, limited, specChoices)}${bounds?.reason ? `: ${bounds.reason}` : "."}`);
@@ -589,10 +590,19 @@ export function createSettingsRegistry(options: SettingsRegistryOptions = {}): S
     return changed;
   }
 
+  /** The value under the first of a spec's short query names that the page's query has. */
+  function urlNameText(spec: ParameterSpec): string | undefined {
+    for (const name of spec.urlNames ?? []) {
+      const value = options.searchParams?.get(name);
+      if (value !== null && value !== undefined) return value;
+    }
+    return undefined;
+  }
+
   /** Checks saved and URL values of newly registered parameters. */
   function adopt(spec: ParameterSpec): boolean {
     const changed = adoptStored(spec);
-    const text = urlText.get(spec.id);
+    const text = urlText.get(spec.id) ?? urlNameText(spec);
     if (text !== undefined) {
       let parsed = parseValue(spec, text);
       // Old boolean URLs accepted true/false, 1/0 and yes/no, as well as on/off.
@@ -602,7 +612,9 @@ export function createSettingsRegistry(options: SettingsRegistryOptions = {}): S
       if (legacyBoolean) parsed = legacyBoolean.replacement;
       else if (parsed !== null) parsed = migrateValue(spec, parsed) as ParameterValue;
       const problem = parsed === null ? "it could not be read." : checkWritable(spec, parsed);
-      if (parsed !== null && !problem) urlValues.set(spec.id, parsed);
+      // A dynamic choice waits for its option, as a saved one does: a mod may add it later.
+      const waits = problem !== null && !spec.readOnly && spec.kind === "choice" && spec.dynamicChoices === true && typeof parsed === "string";
+      if (parsed !== null && (!problem || waits)) urlValues.set(spec.id, parsed);
       else urlNotes.set(spec.id, `The URL value "${text}" was ignored: ${problem}`);
     }
     return changed;
@@ -667,8 +679,14 @@ export function createSettingsRegistry(options: SettingsRegistryOptions = {}): S
 
   const registry: SettingsRegistry = {
     register(newSpecs) {
+      const urlNames = new Map([...specs.values()].flatMap(spec => (spec.urlNames ?? []).map(name => [name, spec.id] as const)));
       for (const spec of newSpecs) {
         if (specs.has(spec.id)) throw new Error(`Parameter "${spec.id}" is already registered.`);
+        for (const name of spec.urlNames ?? []) {
+          const owner = urlNames.get(name);
+          if (owner !== undefined && owner !== spec.id) throw new Error(`The URL name "${name}" of "${spec.id}" is already that of "${owner}".`);
+          urlNames.set(name, spec.id);
+        }
       }
       let migrated = false;
       for (const spec of newSpecs) {
@@ -794,7 +812,8 @@ export function createSettingsRegistry(options: SettingsRegistryOptions = {}): S
     },
     sessionValueIds: () => [...urlValues.keys()],
     keepSessionValues() {
-      const values = Object.fromEntries(urlValues);
+      // A choice still waiting for its option stays in the address until it arrives.
+      const values = Object.fromEntries([...urlValues].filter(([id, value]) => checkWritable(requireSpec(id), value) === null));
       return setMany(values);
     },
     export(filter) {

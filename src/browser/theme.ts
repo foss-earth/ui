@@ -92,14 +92,20 @@ export function createThemeController(settings: SettingsRegistry, ports: ThemePo
   };
   apply();
   if (!saved && initial.layers.saved) persist(readChoice());
-  const stop = settings.watch(id, () => {
-    if (disposed) return;
+  // Any change to the setting, not only to its value: choosing Auto while
+  // the device's appearance is already the default leaves the value as it was,
+  // and that choice is still shared.
+  let last = readChoice();
+  const stop = settings.subscribe(changed => {
+    if (disposed || !changed.has(id)) return;
     const choice = readChoice();
     const theme = apply();
     if (!applyingSystem) {
       if (choice !== "auto") followingSystem = false;
       persist(choice);
     }
+    if (choice === last) return;
+    last = choice;
     notify(theme);
   });
   const set = (theme: GlobeTheme): void => {

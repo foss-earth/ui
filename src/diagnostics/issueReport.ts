@@ -322,15 +322,18 @@ function buildNeedles(files: readonly IssueFile[]): IssueNeedle[] {
 }
 
 /** Extend the existing report string with a portable file index, without making another report. */
-export function splitIssueReport(raw: string): IssueBundle {
+export function splitIssueReport(raw: string, additionalFiles: readonly IssueFile[] = []): IssueBundle {
   const content = contentFiles(raw);
+  for (const file of additionalFiles) {
+    if (/^[a-z0-9][a-z0-9.-]*\.txt$/i.test(file.name) && !["index.txt", "index.json"].includes(file.name)) addFile(content, file.name, file.text.split("\n"));
+  }
   const needles = buildNeedles(content);
   const listed = [
     { name: "index.txt", lines: 0 }, { name: "index.json", lines: 0 },
     ...content.map(file => ({ name: file.name, lines: file.text.split("\n").length })),
   ];
   const dynamicImport = /failed to fetch dynamically imported module|error loading dynamically imported module|importing a module script failed|failed dynamic import/i.test(raw);
-  const instruction = "Read index.txt and stop. It names and quotes the failure. Open another file only at a needle or search hit; never read a long file from the top.";
+  const instruction = "Start with index.txt for failure references. Read any file using its tab and page controls, or search for a line.";
   const makeIndex = () => [
     instruction,
     "index.json contains the same facts as plain text JSON.",
@@ -339,7 +342,7 @@ export function splitIssueReport(raw: string): IssueBundle {
     ...(dynamicImport ? ["", "A dev-server log is not inside this report. For this failed dynamic import, consult the dev-server terminal separately."] : []),
     "",
     "Files:",
-    ...listed.map(file => `- ${file.name}  ${file.lines} ${file.lines === 1 ? "line" : "lines"}  ${file.lines > 24 ? "search or open one line" : "short"}`),
+    ...listed.map(file => `- ${file.name}  ${file.lines} ${file.lines === 1 ? "line" : "lines"}  ${file.lines > 100 ? "paged" : "short"}`),
   ].join("\n");
   const makeJson = () => JSON.stringify({
     instruction,

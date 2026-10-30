@@ -129,7 +129,9 @@ export function installBootTerminal(view: Window & typeof globalThis, graph: Boo
   // ─── The download ────────────────────────────────────────────────
   // The lazy modules the page waits for come now, not a round trip after the modules that import them have run.
   // A page about to reload so its worker isolates it does not ask: the reload would drop them halfway.
-  if ((view as unknown as Record<string, { state?: unknown } | undefined>)[ISOLATION_GLOBAL]?.state !== "pending") {
+  const parameters = new URL(view.location.href).searchParams;
+  if (!parameters.has("report") && parameters.get("resetBrowserData") !== "1"
+    && (view as unknown as Record<string, { state?: unknown } | undefined>)[ISOLATION_GLOBAL]?.state !== "pending") {
     for (const file of graph?.preload ?? []) {
       const link = document.createElement("link");
       link.setAttribute("rel", file.endsWith(".css") ? "preload" : "modulepreload");

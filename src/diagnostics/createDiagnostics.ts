@@ -15,6 +15,7 @@ export interface DiagnosticsRuntime {
   onDeviceRestored(listener: () => void): () => void;
 }
 export interface DiagnosticsOptions {
+  checkpoint?(name: string, text: string, urgent?: boolean): void;
   settings: SettingsRegistry;
   log: GameLog;
   /** Host supplies identity, browser/device/renderer snapshot, clock and feature state. */
@@ -82,6 +83,7 @@ export function createDiagnostics(options: DiagnosticsOptions) {
   let consoleCount = 0, droppedConsoleMessages = 0;
   if (options.page) stops.push(captureErrors(options.page, error => {
     if (disposed) return;
+    options.checkpoint?.("errors.txt", JSON.stringify(error, null, 2), true);
     const key = `${error.message} ${error.where ?? ""}`;
     trail.trouble(`Unhandled ${error.kind}: ${error.message}${error.where ? ` at ${error.where}` : ""}`);
     const errorText = (count: number): string => `The app met an error it did not handle${count > 1 ? `, ${count} times` : ""}: ${error.message}${error.where ? ` (${error.where})` : ""}. Settings → Diagnostics has a report to copy.`;
@@ -93,6 +95,7 @@ export function createDiagnostics(options: DiagnosticsOptions) {
     if (disposed) return;
     trail.trouble(`console.${level}: ${text}`);
     consoleCount++;
+    options.checkpoint?.("console.txt", JSON.stringify({ count: consoleCount, recent: [...consoleMessages, { level, text: text.slice(0, 16_384) }] }, null, 2));
     const now = options.trailEnvironment.elapsed();
     const bounded = text.slice(0, 16_384);
     const seen = consoleMessages.find(entry => entry.level === level && entry.text === bounded);

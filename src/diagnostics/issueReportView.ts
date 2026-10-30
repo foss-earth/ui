@@ -3,6 +3,7 @@ import { issueReportZip, splitIssueReport, type IssueFile } from "./issueReport.
 
 export interface IssueReportViewOptions {
   document?: Document;
+  additionalFiles?(): readonly IssueFile[];
   downloads?: { create(blob: Blob): string; revoke(url: string): void };
   zipFilename?: string;
   copy?(text: string): Promise<void>;
@@ -16,10 +17,10 @@ export interface IssueReportViewHandle {
 }
 
 let nextView = 0;
-const SHORT_LINES = 24;
+const PAGE_LINES = 100;
 const MAX_HITS = 40;
 
-/** One report viewer for every host. Long files open only at a named line. */
+/** One paged report viewer for every host, including browsers without downloads. */
 export function createIssueReportView(report: string, options: IssueReportViewOptions = {}): IssueReportViewHandle {
   const document = options.document ?? globalThis.document;
   const id = `foss-earth-issue-report-${++nextView}`;
@@ -37,9 +38,10 @@ export function createIssueReportView(report: string, options: IssueReportViewOp
   });
   const zipFilename = options.zipFilename ?? "error-report.zip";
   let raw = report;
-  let bundle = splitIssueReport(raw);
+  let bundle = splitIssueReport(raw, options.additionalFiles?.());
   let active = "index.txt";
   let focusLine: number | null = null;
+  const positions = new Map<string, number>();
   let disposed = false;
   const urls = new Map<string, string>();
   const element = document.createElement("div");
@@ -52,6 +54,8 @@ export function createIssueReportView(report: string, options: IssueReportViewOp
   search.placeholder = "Find a line";
   search.setAttribute("aria-label", "Find a line in the error report");
   const copyIndex = createIconButton(document, { icon: "copy", label: "Copy index" });
+  const copyFile = createIconButton(document, { icon: "copy", label: "Copy this file" });
+  const copyAll = createIconButton(document, { icon: "copy", label: "Copy all" });
   const downloadFile = createIconButton(document, { icon: "download", label: "Download this file", tag: "a" });
   const downloadAll = document.createElement("a");
   downloadAll.className = "foss-earth-choice foss-earth-parameter__action";
@@ -59,7 +63,7 @@ export function createIssueReportView(report: string, options: IssueReportViewOp
   downloadAll.title = "Download all report files as a zip";
   downloadAll.download = zipFilename;
   downloadAll.href = "#";
-  tools.append(search, copyIndex, downloadFile, downloadAll);
+  tools.append(search, copyIndex, copyFile, copyAll, downloadFile, downloadAll);
   const status = document.createElement("p");
   status.setAttribute("role", "status");
   status.hidden = true;
@@ -76,7 +80,31 @@ export function createIssueReportView(report: string, options: IssueReportViewOp
   panel.id = `${id}-panel`;
   panel.className = "foss-earth-issue-report__panel";
   panel.setAttribute("role", "tabpanel");
-  element.append(tools, status, hits, tabs, needles, panel);
+  const paging = document.createElement("div");
+  paging.className = "foss-earth-issue-report__paging foss-earth-choices";
+  const previous = document.createElement("button");
+  previous.className = "foss-earth-choice foss-earth-parameter__action";
+  previous.type = "button"; previous.textContent = "Previous";
+  previous.setAttribute("aria-label", "Previous report page");
+  const next = document.createElement("button");
+  next.className = "foss-earth-choice foss-earth-parameter__action";
+  next.type = "button"; next.textContent = "Next";
+  next.setAttribute("aria-label", "Next report page");
+  const range = document.createElement("span");
+  range.setAttribute("role", "status");
+  const jumpLabel = document.createElement("label");
+  jumpLabel.textContent = "Go to line ";
+  const jump = document.createElement("input");
+  jump.className = "foss-earth-parameter__text";
+  jump.type = "number"; jump.min = "1"; jump.step = "1";
+  jump.setAttribute("aria-label", "Go to line");
+  jump.style.width = "6em";
+  const go = document.createElement("button");
+  go.className = "foss-earth-choice foss-earth-parameter__action";
+  go.type = "button"; go.textContent = "Go";
+  jumpLabel.append(jump);
+  paging.append(previous, range, next, jumpLabel, go);
+  element.append(tools, status, hits, tabs, needles, paging, panel);
 
   const message = (text: string): void => { status.textContent = text; status.hidden = !text; };
   const currentFile = (): IssueFile => bundle.files.find(file => file.name === active) ?? bundle.files[0]!;
@@ -90,6 +118,7 @@ export function createIssueReportView(report: string, options: IssueReportViewOp
   const openLine = (name: string, line: number): void => {
     active = name;
     focusLine = line;
+    positions.set(name, Math.floor((line - 1) / PAGE_LINES));
     renderFile();
     // Native focus scrolls the named line into view in a narrow host panel.
     panel.querySelector<HTMLElement>("pre")?.focus();
@@ -105,21 +134,25 @@ export function createIssueReportView(report: string, options: IssueReportViewOp
       if (selected) panel.setAttribute("aria-labelledby", tab.id);
     }
     panel.replaceChildren();
-    const short = lines.length <= SHORT_LINES || file.name === "index.txt";
-    if (short || focusLine !== null) {
-      const text = document.createElement("pre");
-      text.className = "foss-earth-issue-report__text";
-      text.tabIndex = 0;
-      text.setAttribute("aria-label", focusLine === null ? file.name : `${file.name}:${focusLine}`);
-      text.textContent = focusLine !== null
-        ? `${focusLine}> ${lines[focusLine - 1] ?? ""}`
-        : lines.map((line, index) => `${index + 1}  ${line}`).join("\n");
-      panel.append(text);
-    } else {
-      const closed = document.createElement("p");
-      closed.textContent = `${lines.length} lines in ${file.name}. Find a line, or open one from the index. The file stays closed until a line is named.`;
-      panel.append(closed);
+    const page = Math.max(0, Math.min(positions.get(active) ?? 0, Math.ceil(lines.length / PAGE_LINES) - 1));
+    positions.set(active, page);
+    const first = page * PAGE_LINES;
+    const end = Math.min(lines.length, first + PAGE_LINES);
+    range.textContent = `Lines ${first + 1}–${end} of ${lines.length}`;
+    previous.disabled = page === 0;
+    next.disabled = end === lines.length;
+    jump.max = String(lines.length);
+    jump.value = String(focusLine ?? first + 1);
+    const text = document.createElement("pre");
+    text.className = "foss-earth-issue-report__text";
+    text.tabIndex = 0;
+    text.setAttribute("aria-label", focusLine === null ? file.name : `${file.name}:${focusLine}`);
+    for (let index = first; index < end; index++) {
+      const row = document.createElement(index + 1 === focusLine ? "mark" : "span");
+      row.textContent = `${index + 1}  ${lines[index]}${index + 1 < end ? "\n" : ""}`;
+      text.append(row);
     }
+    panel.append(text);
     needles.hidden = active !== "index.txt" || bundle.needles.length === 0;
     downloadFile.download = file.name;
     downloadFile.href = "#";
@@ -197,11 +230,11 @@ export function createIssueReportView(report: string, options: IssueReportViewOp
       }
       link.href = url;
       link.download = name;
-      message(`Downloaded ${name}.`);
+      message(`Download requested for ${name}. If downloads are blocked, read the file here.`);
       options.onDownload?.(name);
     } catch {
       event.preventDefault();
-      message(`The browser could not download ${name}. Try Copy index or another browser.`);
+      message(`The browser could not download ${name}. Read the file here or use Copy this file.`);
     }
   };
   const onClick = (event: MouseEvent): void => {
@@ -224,16 +257,32 @@ export function createIssueReportView(report: string, options: IssueReportViewOp
     items[next]!.click();
     items[next]!.focus();
   };
-  const onCopy = (): void => {
-    if (disposed || copyIndex.disabled) return;
-    copyIndex.disabled = true;
-    const text = bundle.files.find(file => file.name === "index.txt")?.text ?? "";
-    void Promise.resolve().then(() => copy(text)).then(() => {
-      if (!disposed) message("Index copied.");
+  const copyText = (control: HTMLButtonElement, value: string, label: string): void => {
+    if (disposed || control.disabled) return;
+    control.disabled = true;
+    void Promise.resolve().then(() => copy(value)).then(() => {
+      if (!disposed) message(`${label} copied.`);
     }, () => {
-      if (!disposed) message("Copy failed. Download index.txt.");
-    }).finally(() => { if (!disposed) copyIndex.disabled = false; });
+      if (!disposed) message("Copy is unavailable. Every file can be read here using the file tabs and page controls.");
+    }).finally(() => { if (!disposed) control.disabled = false; });
   };
+  const onCopy = (): void => copyText(copyIndex, bundle.files.find(file => file.name === "index.txt")?.text ?? "", "Index");
+  const onCopyFile = (): void => copyText(copyFile, currentFile().text, currentFile().name);
+  const onCopyAll = (): void => copyText(copyAll, bundle.files.map(file => `=== ${file.name} ===\n${file.text}`).join("\n\n"), "All files");
+  const move = (offset: number): void => {
+    focusLine = null;
+    positions.set(active, (positions.get(active) ?? 0) + offset);
+    renderFile();
+    panel.querySelector<HTMLElement>("pre")?.focus();
+  };
+  const onPrevious = (): void => move(-1);
+  const onNext = (): void => move(1);
+  const onGo = (): void => {
+    const line = Number(jump.value);
+    if (Number.isInteger(line) && line >= 1 && line <= currentFile().text.split("\n").length) openLine(active, line);
+    else message(`Enter a line between 1 and ${jump.max}.`);
+  };
+  const onJumpKey = (event: KeyboardEvent): void => { if (event.key === "Enter") onGo(); };
   const onFile = (event: MouseEvent): void => prepareDownload(event, false);
   const onAll = (event: MouseEvent): void => prepareDownload(event, true);
   element.addEventListener("click", onClick);
@@ -242,6 +291,12 @@ export function createIssueReportView(report: string, options: IssueReportViewOp
   copyIndex.addEventListener("click", onCopy);
   downloadFile.addEventListener("click", onFile);
   downloadAll.addEventListener("click", onAll);
+  copyFile.addEventListener("click", onCopyFile);
+  copyAll.addEventListener("click", onCopyAll);
+  previous.addEventListener("click", onPrevious);
+  next.addEventListener("click", onNext);
+  go.addEventListener("click", onGo);
+  jump.addEventListener("keydown", onJumpKey);
   renderTabs();
   return {
     element,
@@ -249,9 +304,10 @@ export function createIssueReportView(report: string, options: IssueReportViewOp
       if (disposed || raw === next) return;
       release();
       raw = next;
-      bundle = splitIssueReport(raw);
+      bundle = splitIssueReport(raw, options.additionalFiles?.());
       active = "index.txt";
       focusLine = null;
+      positions.clear();
       message("");
       renderTabs();
       renderSearch();
@@ -263,6 +319,12 @@ export function createIssueReportView(report: string, options: IssueReportViewOp
       element.removeEventListener("click", onClick);
       tabs.removeEventListener("keydown", onKey);
       search.removeEventListener("input", renderSearch);
+      copyFile.removeEventListener("click", onCopyFile);
+      copyAll.removeEventListener("click", onCopyAll);
+      previous.removeEventListener("click", onPrevious);
+      next.removeEventListener("click", onNext);
+      go.removeEventListener("click", onGo);
+      jump.removeEventListener("keydown", onJumpKey);
       copyIndex.removeEventListener("click", onCopy);
       downloadFile.removeEventListener("click", onFile);
       downloadAll.removeEventListener("click", onAll);

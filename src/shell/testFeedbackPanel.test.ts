@@ -31,6 +31,28 @@ it("supports the complete Start → thoughts/result → Finish → reviewed JSON
   expect(revoke).toHaveBeenCalledWith("blob:feedback");
 });
 
+it("opens the checklist a short link's dev server put into the page, and explains a missing one", () => {
+  const options = { document, now: () => new Date(), providers: { diagnostics: () => "" }, downloads: { create: vi.fn(), revoke: vi.fn() } };
+  const element = document.createElement("script");
+  element.type = "application/json"; element.id = "foss-earth-test-plan"; element.dataset.name = "try";
+  element.textContent = JSON.stringify(plan).replace(/</g, "\\u003c");
+  document.head.append(element);
+  try {
+    panel = createTestFeedbackPanel({ ...options, href: "https://localhost:7470/fly/?renderer=webgl2&test=try" });
+    expect(panel!.element.querySelector("h3")!.textContent).toBe("Try dragging");
+    expect(panel!.session).not.toBeNull();
+    panel!.destroy();
+    // Another page's checklist is not this link's.
+    panel = createTestFeedbackPanel({ ...options, href: "https://localhost:7470/fly/?test=other" });
+    expect(panel!.element.textContent).toContain('No test checklist named "other"');
+    expect(panel!.element.textContent).toContain("build/test-plans/other.json");
+    expect(panel!.session).toBeNull();
+    panel!.destroy();
+    panel = createTestFeedbackPanel({ ...options, href: "https://localhost:7470/fly/?test=../other" });
+    expect(panel!.element.textContent).toContain("invalid");
+  } finally { element.remove(); }
+});
+
 it("leaves ordinary visits inactive and displays malformed test links as errors", () => {
   const options = { document, now: () => new Date(), providers: {}, downloads: { create: vi.fn(), revoke: vi.fn() } };
   expect(createTestFeedbackPanel({ ...options, href: "https://example.org/" })).toBeNull();

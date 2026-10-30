@@ -39,3 +39,4 @@ export * from "./browserData.js";
 export * from "./bootSteps.js";
 export * from "./domMirror.js";
 export * from "./domPointer.js";
+export * from "./startupCheckpoint.js";

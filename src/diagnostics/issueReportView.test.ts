@@ -48,29 +48,29 @@ function read(blob: Blob): Promise<ArrayBuffer> {
 afterEach(() => { for (const view of views.splice(0)) view.destroy(); document.body.replaceChildren(); });
 
 describe("shared issue report viewer", () => {
-  it("keeps long files closed and opens exactly the search result's line", () => {
+  it("opens every file and highlights search results with surrounding context", () => {
     const view = make();
     expect(view.element.querySelector("[role=tab][aria-selected=true]")?.textContent).toBe("index.txt");
     expect(view.element.querySelector("pre")?.textContent).toContain("failure.txt:2");
     tab(view, "settings.txt").click();
-    expect(view.element.querySelector("pre")).toBeNull();
-    expect(view.element.querySelector("[role=tabpanel]")?.textContent).toContain("81 lines");
+    expect(view.element.querySelector("pre")).not.toBeNull();
+    expect(view.element.textContent).toContain("Lines 1–81 of 81");
     find(view, "setting.66");
     const hit = view.element.querySelector<HTMLButtonElement>(".foss-earth-issue-report__hits button")!;
     expect(hit.textContent).toContain("settings.txt:68");
     hit.focus();
     hit.click();
-    expect(view.element.querySelector("pre")?.textContent).toBe("68>   setting.66 = 66");
+    expect(view.element.querySelector("mark")?.textContent).toContain("setting.66 = 66");
     expect(document.activeElement).toBe(view.element.querySelector("pre"));
-    expect(view.element.querySelector("pre")?.textContent).not.toContain("setting.0");
+    expect(view.element.querySelector("pre")?.textContent).toContain("setting.0");
     const settingsTab = tab(view, "settings.txt");
     settingsTab.focus();
     settingsTab.click();
-    expect(view.element.querySelector("pre")).toBeNull();
+    expect(view.element.querySelector("pre")).not.toBeNull();
     expect(document.activeElement).toBe(settingsTab);
     find(view, "settings.txt:42");
     view.element.querySelector<HTMLButtonElement>(".foss-earth-issue-report__hits button")!.click();
-    expect(view.element.querySelector("pre")?.textContent).toBe('42>   aircraft.id = "test-plane"');
+    expect(view.element.querySelector("mark")?.textContent).toContain('aircraft.id = "test-plane"');
   });
 
   it("opens the index needle directly and supports keyboard file tabs", () => {
@@ -79,14 +79,14 @@ describe("shared issue report viewer", () => {
       .find(item => item.textContent === "Open settings.txt:42")!;
     needle.focus();
     needle.click();
-    expect(view.element.querySelector("pre")?.textContent).toBe('42>   aircraft.id = "test-plane"');
+    expect(view.element.querySelector("mark")?.textContent).toContain('aircraft.id = "test-plane"');
     expect(document.activeElement).toBe(view.element.querySelector("pre"));
     const selected = tab(view, "settings.txt");
     selected.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true }));
     expect(document.activeElement).toBe(tab(view, "index.txt"));
     expect(tab(view, "index.txt").getAttribute("aria-selected")).toBe("true");
     tab(view, "index.json").click();
-    expect(view.element.querySelector("pre")).toBeNull();
+    expect(view.element.querySelector("pre")).not.toBeNull();
     find(view, "index.json:2");
     view.element.querySelector<HTMLButtonElement>(".foss-earth-issue-report__hits button")!.click();
     expect(view.element.querySelector("pre")?.getAttribute("aria-label")).toBe("index.json:2");
@@ -128,4 +128,25 @@ describe("shared issue report viewer", () => {
     view.element.querySelector<HTMLAnchorElement>('[aria-label="Download this file"]')!.click();
     expect(view.element.querySelector("[role=status]")?.textContent).toContain("could not download index.txt");
   });
+});
+
+it("pages through every line, remembers file positions, and stays readable with no transfer APIs", async () => {
+  const view = make({ copy: async () => { throw new Error("Blocked"); },
+    downloads: { create() { throw new Error("Blocked"); }, revoke() {} },
+    additionalFiles: () => [{ name: "latest-loading.txt", text: Array.from({ length: 250 }, (_, i) => `entry ${i + 1}`).join("\n") }],
+  });
+  tab(view, "latest-loading.txt").click();
+  expect(view.element.querySelector("pre")?.children).toHaveLength(100);
+  view.element.querySelector<HTMLButtonElement>('[aria-label="Next report page"]')!.click();
+  expect(view.element.querySelector("pre")?.textContent).toContain("entry 101");
+  tab(view, "index.txt").click(); tab(view, "latest-loading.txt").click();
+  expect(view.element.querySelector("pre")?.textContent).toContain("entry 101");
+  const jump = view.element.querySelector<HTMLInputElement>('[aria-label="Go to line"]')!;
+  jump.value = "249"; jump.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+  expect(view.element.querySelector("mark")?.textContent).toContain("entry 249");
+  expect(view.element.querySelector("pre")?.children).toHaveLength(50);
+  expect(view.element.querySelector<HTMLButtonElement>('[aria-label="Next report page"]')!.disabled).toBe(true);
+  view.element.querySelector<HTMLButtonElement>('[aria-label="Copy this file"]')!.click(); await settle();
+  expect(view.element.textContent).toContain("Every file can be read here");
+  expect(view.element.querySelector("pre")?.textContent).toContain("entry 250");
 });

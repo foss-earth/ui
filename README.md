@@ -1,7 +1,10 @@
 # @foss-earth/ui
 
-Custom test links use `createTestLink` / `createTestFeedbackSession` from
-`@foss-earth/ui/diagnostics` and `createTestFeedbackPanel` from
+Custom test links are short, such as `/fly/test/<name>`: a host's dev server
+adds `testPlans()` from `@foss-earth/ui/vite`, which opens that page's Test tab
+with `build/test-plans/<name>.json`. `createTestFeedbackSession` and the
+self-contained `createTestLink` (for builds without a dev server) are in
+`@foss-earth/ui/diagnostics`, and `createTestFeedbackPanel` in
 `@foss-earth/ui/browser`. The Test tab collects checklist results, notes and
 selected host diagnostics into a reviewed local JSON download. See the
 [cross-organization workflow](https://github.com/foss-earth/docs/blob/main/docs/test-feedback.md).

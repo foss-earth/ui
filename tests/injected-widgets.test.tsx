@@ -30,9 +30,14 @@ describe("optional widget host ports", () => {
   it("edits the supplied registry and persists Show all in injected presentation storage", () => {
     const panels = storage();
     const settings = createSettingsRegistry();
+    // Show all parameters is offered only when the section has a parameter beyond its main controls.
     settings.register([{
       id: "host.show", label: "Show", description: "Host-owned visibility.", unit: "none", kind: "boolean",
       default: false, defaultReason: "Off initially.", home: { tab: "host", section: "display", level: "main" },
+      appliesLive: true, source: "src/host.ts",
+    }, {
+      id: "host.detail", label: "Detail", description: "Host-owned extra.", unit: "none", kind: "boolean",
+      default: false, defaultReason: "Off initially.", home: { tab: "host", section: "display", level: "all" },
       appliesLive: true, source: "src/host.ts",
     }]);
     const section = createParameterSection(settings, { document, tab: "host", section: "display", panelStorage: panels, refresh: { subscribe: () => () => {} } });

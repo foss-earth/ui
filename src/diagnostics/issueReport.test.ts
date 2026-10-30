@@ -318,7 +318,7 @@ describe("one portable report split into indexed text files", () => {
       expect(entry.lines, entry.name).toBe(file(bundle, entry.name).split("\n").length);
       expect(file(bundle, "index.txt")).toContain(`- ${entry.name}  ${entry.lines} `);
     }
-    expect(file(bundle, "index.txt").split("\n")[0]).toContain("Read index.txt and stop");
+    expect(file(bundle, "index.txt").split("\n")[0]).toContain("Start with index.txt");
   });
 
   it("gives repeated state headings unique filenames without losing either body", () => {

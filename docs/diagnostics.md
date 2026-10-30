@@ -314,3 +314,37 @@ console, the network, and for Safari the page's memory. Neither was tried from t
 - **Firefox for Android.** On the phone, enable USB debugging in the developer options and
   Remote debugging via USB in Firefox's settings. On a computer, Firefox's `about:debugging`
   lists the phone and its tabs.
+
+
+## Startup checkpoints and browsers without downloads
+
+`createStartupCheckpointStore` accepts a storage adapter and clock. It keeps a
+versioned current and previous startup record per page path. Each serialized
+record is capped at 512 KiB (measured conservatively as UTF-16 storage bytes),
+including metadata. `omissions` names every shortened or omitted section.
+Reads never rotate, delete, or modify records. Consumers must redact free-form
+sections before passing them to the store.
+
+The boot plugin installs import-free capture before application modules run,
+except on report-only, browser-data review, and remote-controller visits. Early
+capture stores fixed boot labels, build stamps and memory observations. The
+application's `startBrowserStartupCheckpoint` attaches the registered-secret
+redactor, honors `diagnostics.trail`, coalesces progress, and exposes storage
+status. Use immediate saves before expensive work and at failures/completion.
+The FOSS Earth app supplies identity, settings, renderer, console and error
+observations; hosts supply their loading state through `AppDiagnostics.checkpoint`.
+
+A process kill need not run any JavaScript handler. A saved unfinished attempt
+has an unknown termination reason and may predate the last operation. Heap and
+WASM metrics are partial observations; browser process memory and sandbox limits
+are marked unavailable.
+
+`DiagnosticsSource.files` optionally supplies additional retained text files.
+Both shared viewers redact those files and include them in the generated index
+and ZIP. All files can be read directly with 100-line pages, Previous/Next,
+Go to line, and contextual search highlighting. File tabs remember their page.
+Copy this file and Copy all supplement downloads. Neither transfer API is needed
+for browsing. Report-only visits suppress lazy-module preloading.
+
+Report-only test links can show a Test tab with the standard checklist and
+feedback JSON preview. Finish leaves feedback readable when downloads are blocked.

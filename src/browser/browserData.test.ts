@@ -238,8 +238,8 @@ describe("browser data review", () => {
     install();
     reportBrowserAppFailure(document, "TypeError: boom at https://example.org/app/?key=private-key&gkey=private-gkey\n  with apiKey=private-key");
     const offer = document.querySelector(".foss-earth-browser-recovery-offer")!;
-    expect([...offer.querySelectorAll("a")].map(link => link.textContent)).toEqual(["Download crash log", "Clear browser data"]);
-    expect(offer.textContent).toContain("Download the crash log");
+    expect([...offer.querySelectorAll("a")].map(link => link.textContent)).toEqual(["Read retained report", "Download crash log", "Clear browser data"]);
+    expect(offer.textContent).toContain("Read the retained report");
     expect(offer.textContent).not.toContain("private-key");
     const download = crashLogLink();
     expect(download.download).toMatch(/^foss-earth-crash-log-[\dT-]+Z\.txt$/);

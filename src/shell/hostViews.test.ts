@@ -27,7 +27,9 @@ describe("host-owned Settings and report views", () => {
     expect(view.element.querySelector<HTMLAnchorElement>("a")!.href).toBe("https://host.test/?dev=1#anchor");
     expect(report).not.toHaveBeenCalled(); view.show();
     for (let turn = 0; turn < 8; turn++) await Promise.resolve();
-    expect(report).toHaveBeenCalledTimes(2); expect(copy).toHaveBeenCalledWith("Host report");
+    // Diagnostics opens the report to review and the bug report prepares it; nothing is copied without a click.
+    expect(report).toHaveBeenCalledTimes(2); expect(copy).not.toHaveBeenCalled();
+    expect(view.element.textContent).toContain("Review the report files below.");
     view.destroy(); view.show();
     expect(view.element.isConnected).toBe(false); expect(report).toHaveBeenCalledTimes(2);
   });

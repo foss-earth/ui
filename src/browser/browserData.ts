@@ -820,12 +820,17 @@ export function installBrowserRecovery(document: Document, options: BrowserRecov
       offer.className = "foss-earth-browser-recovery-offer";
       offer.setAttribute("role", "region");
       offer.setAttribute("aria-label", "Browser data recovery");
-      const text = paragraph(document, `This page has not finished starting repeatedly.${reported ? " The last start reported a failure." : ""} Download the crash log to keep what happened, then review clearing this site's browser data, which deletes it. Nothing is deleted until you confirm.`);
+      const text = paragraph(document, `This page has not finished starting repeatedly.${reported ? " The last start reported a failure." : ""} Read the retained report to keep what happened, then review clearing this site's browser data, which deletes it. Nothing is deleted until you confirm.`);
       const action = document.createElement("a");
       const href = recoveryHref(view.location.href, true);
       if (href) action.href = href;
       action.textContent = "Clear browser data";
-      offer.append(text, crashLogLink(document, view, appId), action);
+      const report = document.createElement("a");
+      const reportAddress = new URL(view.location.href);
+      reportAddress.search = "?report"; reportAddress.hash = "";
+      report.href = reportAddress.href;
+      report.textContent = "Read retained report";
+      offer.append(text, report, crashLogLink(document, view, appId), action);
       // While the boot terminal shows, the offer is its last lines; the terminal hands it to the page when it goes.
       const terminal = document.getElementById(BOOT_TERMINAL_ID);
       if (terminal && !terminal.hasAttribute("data-done")) terminal.append(offer);

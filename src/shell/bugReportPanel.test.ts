@@ -61,13 +61,13 @@ describe("Bug report shared diagnostics caller", () => {
     expect(section.element.querySelector('textarea[name="report"]')).toBeNull();
     expect(section.element.querySelector('[role=tablist][aria-label="Error report files"]')).not.toBeNull();
     action("settings.txt").click();
-    expect(section.element.querySelector("pre")).toBeNull();
+    expect(section.element.querySelector("pre")).not.toBeNull();
     const search = section.element.querySelector<HTMLInputElement>('input[aria-label="Find a line in the error report"]')!;
     search.value = "VALUE_49"; search.dispatchEvent(new Event("input", { bubbles: true }));
     const hit = [...section.element.querySelectorAll("button")].find(button => button.textContent?.startsWith("settings.txt:51"))!;
     hit.click();
     expect(section.element.querySelector("pre")?.textContent).toContain("setting.49 = VALUE_49");
-    expect(section.element.querySelector("pre")?.textContent).not.toContain("setting.0 =");
+    expect(section.element.querySelector("pre")?.textContent).toContain("setting.0 =");
     activate(action<HTMLAnchorElement>("Download this file"));
     expect(action<HTMLAnchorElement>("Download this file").download).toBe("settings.txt");
     expect(await blobText([...local.blobs.values()][0]!)).toContain("setting.0 = VALUE_0");

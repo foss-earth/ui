@@ -74,3 +74,16 @@ export interface WarmPagesPlugin {
   };
 }
 export function warmPages(options: WarmPagesPluginOptions): WarmPagesPlugin;
+export interface TestPlansPluginOptions {
+  /** Where `<name>.json` checklists live, relative to the Vite root. Default "build/test-plans". */
+  dir?: string;
+}
+export interface TestPlansPlugin {
+  name: string;
+  apply: "serve";
+  configResolved(config: { root?: string }): void;
+  configureServer(server: { middlewares: { use(handler: (req: { url?: string; method?: string; headers: Record<string, string | string[] | undefined> }, res: { statusCode: number; setHeader(name: string, value: string): unknown; end(body?: string): unknown }, next: () => void) => void): unknown } }): void;
+  transformIndexHtml(html: string, ctx: { path?: string; originalUrl?: string }): { tag: "script"; attrs: { type: "application/json"; id: string; "data-name": string }; children: string; injectTo: "head" }[] | undefined;
+}
+/** `npm run dev` only: `<page>test/<name>` opens that page's Test tab with `build/test-plans/<name>.json`. */
+export function testPlans(options?: TestPlansPluginOptions): TestPlansPlugin;

@@ -9,3 +9,4 @@ export * from "./appFiles.js";
 export * from "./reportAddress.js";
 export * from "./createDiagnostics.js";
 export * from "./testFeedback.js";
+export * from "./startupCheckpoint.js";

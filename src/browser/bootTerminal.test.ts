@@ -31,8 +31,8 @@ afterEach(() => {
 });
 
 /** A page with the terminal, on a clock and a network the test moves. */
-function page(graph: BootGraph | null, options: { reducedMotion?: boolean; isolation?: string } = {}) {
-  window.history.replaceState(null, "", "/tour/minneapolis/");
+function page(graph: BootGraph | null, options: { reducedMotion?: boolean; isolation?: string; report?: boolean } = {}) {
+  window.history.replaceState(null, "", "/tour/minneapolis/" + (options.report ? "?report" : ""));
   document.body.innerHTML = MARKUP;
   let time = 0;
   const resources: Resource[] = [];
@@ -314,4 +314,9 @@ describe("boot steps", () => {
     expect(boot.fail).toHaveBeenCalledWith("The app could not start.");
     expect(boot.done).toHaveBeenCalledOnce();
   });
+});
+
+it("does not preload simulator code on a report-only visit", () => {
+  page({ base: "/fly/", files: [["flight.js", 500000]], preload: ["flight.js"] }, { report: true });
+  expect(document.querySelector('link[rel="modulepreload"]')).toBeNull();
 });

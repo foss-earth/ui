@@ -76,6 +76,21 @@ export function readTestPlan(href: string): TestPlan | null {
   return validateTestPlan(JSON.parse(decodeURIComponent(hash.slice(6))));
 }
 
+/**
+ * A short test link, `<page>test/<name>`, arrives as `<page>?test=<name>`; the
+ * dev server puts `build/test-plans/<name>.json` into the page in this element
+ * (vite/index.mjs, testPlans).
+ */
+export const TEST_PLAN_ELEMENT_ID = "foss-earth-test-plan";
+export const TEST_PLAN_NAME = /^[a-z\d][a-z\d_-]{0,99}$/i;
+/** The checklist a short link names, or null when the address names none. */
+export function readTestPlanName(href: string): string | null {
+  const name = new URL(href).searchParams.get("test");
+  if (name === null) return null;
+  if (!TEST_PLAN_NAME.test(name)) throw new Error("Invalid test link name");
+  return name;
+}
+
 export interface TestFeedbackOptions {
   plan: TestPlan;
   page: string;

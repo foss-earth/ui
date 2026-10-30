@@ -1,5 +1,5 @@
 import { createIssueReportView } from "../diagnostics/issueReportView.js";
-import { redactIssueReport } from "../diagnostics/issueReport.js";
+import { redactIssueReport, type IssueFile } from "../diagnostics/issueReport.js";
 import { describePreviousVisit, type PreviousVisit } from "../diagnostics/sessionTrail.js";
 import { createExternalLinkIcon } from "./externalLinkIcon.js";
 import { createHelpTooltip } from "./helpTooltip.js";
@@ -12,6 +12,7 @@ export interface DiagnosticsSectionHandle {
 export interface DiagnosticsSource {
   /** The report as text (src/diagnostics/report.ts). */
   report(): Promise<string>;
+  files?(): readonly IssueFile[];
   previous(): Promise<PreviousVisit | null>;
   /** Puts text on the clipboard; rejects where the browser does not allow it. */
   copy?(text: string): Promise<void>;
@@ -95,7 +96,7 @@ export function createDiagnosticsSection(source: DiagnosticsSource, options: { r
       const report = redactIssueReport(raw, source.reportSecrets?.());
       if (viewer) viewer.setReport(report);
       else {
-        viewer = createIssueReportView(report, { document, downloads: options.downloads, copy });
+        viewer = createIssueReportView(report, { document, downloads: options.downloads, copy, additionalFiles: () => (source.files?.() ?? []).map(file => ({ ...file, text: redactIssueReport(file.text, source.reportSecrets?.()) })) });
         reportHost.append(viewer.element);
       }
       status.textContent = "Review the report files below.";

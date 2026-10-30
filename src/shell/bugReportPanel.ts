@@ -155,6 +155,7 @@ export function createBugReportPanel(source: DiagnosticsSource, options: BugRepo
       updateLinks();
       viewer = createIssueReportView(attachment, {
         document, downloads: options.downloads, zipFilename: filename, copy,
+        additionalFiles: () => (source.files?.() ?? []).map(file => ({ ...file, text: redactIssueReport(file.text, source.reportSecrets?.()) })),
         onDownload(name) {
           if (disposed || name !== filename) return;
           downloadedAttachment = attachment;

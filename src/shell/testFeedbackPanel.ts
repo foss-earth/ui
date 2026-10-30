@@ -1,4 +1,4 @@
-import { createTestFeedbackSession, readTestPlan, type TestFeedbackOptions, type TestFeedbackSession, type TestOutcome } from "../diagnostics/testFeedback.js";
+import { createTestFeedbackSession, readTestPlan, readTestPlanName, TEST_PLAN_ELEMENT_ID, validateTestPlan, type TestFeedbackOptions, type TestFeedbackSession, type TestOutcome } from "../diagnostics/testFeedback.js";
 import { redactIssueReport } from "../diagnostics/issueReport.js";
 import { createChoiceGroup, checkChoice } from "./choiceGroup.js";
 import { createHelpTooltip } from "./helpTooltip.js";
@@ -19,7 +19,15 @@ export function createTestFeedbackPanel(options: TestFeedbackPanelOptions): Test
   const { document } = options;
   let plan;
   let failure = "";
-  try { plan = readTestPlan(options.href); }
+  try {
+    plan = readTestPlan(options.href);
+    const name = plan ? null : readTestPlanName(options.href);
+    if (name !== null) {
+      const embedded = document.getElementById(TEST_PLAN_ELEMENT_ID);
+      if (embedded?.getAttribute("data-name") === name) plan = validateTestPlan(JSON.parse(embedded.textContent ?? ""));
+      else failure = `No test checklist named "${name}" came with this page. Short test links need the app's own dev server (npm run dev) and its build/test-plans/${name}.json. Ask the agent for a new link.`;
+    }
+  }
   catch { failure = "This test link is invalid. Ask the agent for a new link."; }
   if (!plan && !failure) return null;
   const element = document.createElement("div");
@@ -108,7 +116,7 @@ export function createTestFeedbackPanel(options: TestFeedbackPanelOptions): Test
       JSON.parse(preview.value);
       objectUrl = options.downloads.create(new Blob([preview.value], { type: "application/json;charset=utf-8" }));
       download.href = objectUrl; download.download = `test-${plan.id}-feedback.json`; download.hidden = false;
-    } catch { status.textContent = "The file must contain valid JSON before it can be downloaded. Correct the review text or finish again."; }
+    } catch { status.textContent = "Feedback remains readable in Review file. Download is unavailable, or the review text is not valid JSON."; }
   };
   listen(finish, "click", () => {
     if (!finished) {

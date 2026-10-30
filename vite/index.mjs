@@ -1,7 +1,7 @@
 /** Node-only Vite helpers. No Git roots, stamps, network, or work at import time. */
-import { readFileSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { dirname, join, posix } from "node:path";
+import { dirname, join, posix, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 import typescript from "typescript";
@@ -152,6 +152,57 @@ export function browserRecovery(options = {}) {
   };
 }
 
+const TEST_PLAN_NAME = /^[a-z\d][a-z\d_-]{0,99}$/i;
+const TEST_LINK = /^(\/(?:[^/]+\/)*)test\/([^/]+)\/?$/;
+/**
+ * Short test links for `npm run dev`: `<page>test/<name>` opens
+ * `<page>?test=<name>`, and that page carries `build/test-plans/<name>.json`
+ * for its Test tab (ui/src/shell/testFeedbackPanel.ts). Plans stay in the
+ * ignored build directory, are read on every request, and never reach a build.
+ */
+export function testPlans(options = {}) {
+  let dir = resolve(options.dir ?? "build/test-plans");
+  const planText = name => {
+    try { return readFileSync(join(dir, `${name}.json`), "utf8"); } catch { return null; }
+  };
+  return {
+    name: "foss-earth-test-plans",
+    apply: "serve",
+    configResolved(config) {
+      dir = resolve(config.root ?? process.cwd(), options.dir ?? "build/test-plans");
+    },
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const url = new URL(req.url ?? "/", "http://dev.invalid");
+        const match = url.pathname.match(TEST_LINK);
+        // Only a page visit is a link; a module or file under a test/ directory is not.
+        if (!match || !TEST_PLAN_NAME.test(match[2]) || (req.method !== "GET" && req.method !== "HEAD") || !(req.headers.accept ?? "").includes("text/html")) { next(); return; }
+        const [, page, name] = match;
+        res.setHeader("cache-control", "no-store");
+        if (planText(name) === null) {
+          let available = [];
+          try { available = readdirSync(dir).filter(file => file.endsWith(".json")).map(file => file.slice(0, -5)).sort(); } catch { /* no plans yet */ }
+          res.statusCode = 404;
+          res.setHeader("content-type", "text/plain; charset=utf-8");
+          res.end(`No test checklist named "${name}" in ${dir}.\n${available.length ? `Available: ${available.map(plan => `${page}test/${plan}`).join(", ")}` : "There are no checklists yet."}\n`);
+          return;
+        }
+        url.searchParams.set("test", name);
+        res.statusCode = 302;
+        res.setHeader("location", `${page}${url.search}`);
+        res.end();
+      });
+    },
+    transformIndexHtml(_html, ctx) {
+      const name = new URL(ctx.originalUrl ?? ctx.path ?? "/", "http://dev.invalid").searchParams.get("test");
+      const text = name !== null && TEST_PLAN_NAME.test(name) ? planText(name) : null;
+      if (text === null) return;
+      // Data, not script: the Test tab parses and validates it. "<" cannot close the element.
+      return [{ tag: "script", attrs: { type: "application/json", id: "foss-earth-test-plan", "data-name": name }, children: text.replace(/</g, "\\u003c"), injectTo: "head" }];
+    },
+  };
+}
+
 /**
  * Runs first in <head>: marks when the HTML began to run, and gives the
  * terminal the theme the app will start in (ui/src/browser/theme.ts), where
@@ -256,7 +307,7 @@ export function bootTerminal(options = {}) {
           const own = new Set(bootGraph(ctx.bundle, ctx.chunk, [], root).map(([file]) => file));
           graph.preload = graph.files.filter(([file]) => !own.has(file)).sort((a, b) => b[1] - a[1]).map(([file]) => file);
         }
-        const runtime = `"use strict";(()=>{\n${inlineRuntime("bootTerminal.ts", "The boot terminal's runtime")}\ninstallBootTerminal(window, ${JSON.stringify(graph).replace(/</g, "\\u003c")});\n})();`;
+        const runtime = `"use strict";(()=>{\n${inlineRuntime("../diagnostics/startupCheckpoint.ts", "Startup checkpoint runtime")}\ninstallEarlyStartupCheckpoint(window);\n${inlineRuntime("bootTerminal.ts", "The boot terminal's runtime")}\ninstallBootTerminal(window, ${JSON.stringify(graph).replace(/</g, "\\u003c")});\n})();`;
         if (/<\/script|<!--/i.test(runtime)) throw new Error("The boot terminal's runtime cannot hold </script or <!--.");
         const markup = `<div id="foss-earth-boot"><p class="fe-boot__title">${title}</p>`
           + `<ol role="log" aria-label="Loading" aria-relevant="additions"><li data-id="download" data-tone="info">Downloading the app…</li></ol>`

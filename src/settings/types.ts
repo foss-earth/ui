@@ -179,6 +179,8 @@ export interface ParameterSpec<T extends ParameterValue = ParameterValue> {
   persistDefault?: boolean;
   /** Accepted old values when loading or importing settings; live edits use the current kind. */
   legacyValues?: readonly { value: ParameterValue; replacement: ParameterValue }[];
+  /** Short query names read like `?set.<id>=`, such as `aircraft` for `?aircraft=`; `?set.<id>=` wins over them. */
+  urlNames?: readonly string[];
   home: ParameterHome;
   /** Show this control only while another parameter has this value; saved values remain active. */
   visibleWhen?: { id: string; value: ParameterValue };
