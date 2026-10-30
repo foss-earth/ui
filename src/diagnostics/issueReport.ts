@@ -235,6 +235,10 @@ function contentFiles(raw: string): IssueFile[] {
   const reportAt = lines.findIndex(line => / report, /.test(line));
   const files: IssueFile[] = [];
   const failure = reportAt < 0 ? lines : lines.slice(0, reportAt);
+  // The attachment heads the activity report that follows; split up, that report is the other files.
+  let last = failure.length - 1;
+  while (last >= 0 && !failure[last]!.trim()) last--;
+  if (reportAt >= 0 && failure[last] === "Activity report:") failure[last] = "Activity report: the other files; index.txt lists them.";
   if (failure.some(line => line.trim())) addFile(files, "failure.txt", failure);
   if (reportAt < 0) return files;
 
@@ -287,7 +291,7 @@ function buildNeedles(files: readonly IssueFile[]): IssueNeedle[] {
   const errorLines = errors?.text.split("\n") ?? [];
   const errorAt = errorLines.findIndex(line => line.trim().length > 0 && !line.startsWith("Errors nothing handled:"));
   const title = lines.findIndex(line => /^Title: \S/.test(line));
-  const first = lines.findIndex(line => line.trim().length > 0 && !/^(?:Bug report for |Title:\s*$|What happened:$|Activity report:$)/.test(line));
+  const first = lines.findIndex(line => line.trim().length > 0 && !/^(?:Bug report for |Title:\s*$|What happened:$|Activity report:)/.test(line));
   const chosen = message >= 0 ? message : errorAt >= 0 ? -1 : title >= 0 ? title : first;
   if (failure && chosen >= 0) {
     needles.push({ file: "failure.txt", line: chosen + 1, why: "the failure", text: lines[chosen] ?? "" });

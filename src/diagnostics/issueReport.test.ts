@@ -310,6 +310,13 @@ describe("one portable report split into indexed text files", () => {
       .toMatchObject({ file: "failure.txt", line: 2, text: "Title: The view went black" });
   });
 
+  it("points the attachment's activity report heading at the other files, not at nothing", () => {
+    const config = { repository: "foss-earth/app" };
+    const input = { title: "Stuck", description: "It kept pausing.", report: fullReport(), filename: "report.zip" };
+    const failure = file(splitIssueReport(issueReportAttachment(config, input)), "failure.txt").split("\n");
+    expect(failure.slice(-3)).toEqual(["It kept pausing.", "", "Activity report: the other files; index.txt lists them."]);
+  });
+
   it("lists the actual line count of every file, including both indexes", () => {
     const bundle = splitIssueReport(fullReport("Error: Example failure\n"));
     const index = indexData(bundle);
