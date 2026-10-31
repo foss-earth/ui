@@ -74,3 +74,36 @@ it.each(["pointercancel", "lostpointercapture", "unmount"])("ends an interrupted
   if (interruption !== "unmount") await act(async () => root.unmount());
   expect(onResizeEnd).toHaveBeenCalledTimes(1);
 });
+
+it.each([0.5, 0.8, 1, 1.25, 1.5].flatMap(scale => (["left", "right"] as const).map(side => ({ scale, side }))))("keeps the $side corner under the pointer at $scale× CSS zoom", async ({ scale, side }) => {
+  const host = document.createElement("div");
+  // Zoom can come from nested host layers, not the panel itself.
+  host.style.zoom = String(scale * 2);
+  const outer = document.createElement("div");
+  outer.style.zoom = "0.5";
+  outer.append(host);
+  document.body.append(outer);
+  const root = createRoot(host);
+  const onWidthChange = vi.fn();
+  const onCollapsedChange = vi.fn();
+  await act(async () => root.render(<DockPanel side={side} width={320} maxWidth={1000}
+    initialHeight={300} onWidthChange={onWidthChange} collapsed={false} onCollapsedChange={onCollapsedChange} />));
+  const panel = host.querySelector<HTMLElement>(".foss-earth-dock-panel")!;
+  panel.getBoundingClientRect = () => ({ left: 0, top: 0, width: 320 * scale, height: 300 * scale,
+    right: 320 * scale, bottom: 300 * scale, x: 0, y: 0, toJSON() {} });
+  const handle = host.querySelector<HTMLElement>(".foss-earth-dock-panel-resize-handle")!;
+  const point = async (type: string, dx: number, dy: number) => act(async () => {
+    handle.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerId: 1, button: 0,
+      clientX: 320 * scale + (side === "right" ? -dx : dx), clientY: 300 * scale + dy }));
+  });
+  await point("pointerdown", 0, 0);
+  await point("pointermove", 0, 0);
+  expect(onWidthChange).toHaveBeenLastCalledWith(320);
+  expect(Number.parseFloat(panel.style.height)).toBeCloseTo(300);
+  await point("pointermove", 40, 24);
+  expect(onWidthChange).toHaveBeenLastCalledWith(320 + 40 / scale);
+  expect(Number.parseFloat(panel.style.height)).toBeCloseTo(300 + 24 / scale);
+  await point("pointerup", 40, 24);
+  expect(onCollapsedChange).not.toHaveBeenCalled();
+  await act(async () => root.unmount());
+});

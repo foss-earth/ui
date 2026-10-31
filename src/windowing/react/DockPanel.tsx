@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type DragEventHandler, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { panelHeightLimit } from "./panelHeight.js";
+import { elementZoom } from "./elementZoom.js";
 import { resizePanelAcrossSides } from "./panelWidth.js";
 import { usePresentationHold } from "./presentationHold.js";
 
@@ -9,6 +10,7 @@ function cx(...parts: Array<string | null | undefined | false>): string {
 }
 
 interface ResizeDragState {
+  scale: number;
   startX: number;
   startY: number;
   startW: number;
@@ -293,11 +295,14 @@ export function DockPanel(props: DockPanelProps) {
     if (!panelElement) return;
 
     const rect = panelElement.getBoundingClientRect();
+    // Rects and pointer positions include ancestor zoom; React's sizes do not.
+    const scale = elementZoom(panelElement);
     dragRef.current = {
+      scale,
       startX: event.clientX,
       startY: event.clientY,
-      startW: rect.width,
-      startH: rect.height,
+      startW: rect.width / scale,
+      startH: rect.height / scale,
       startSide: side,
       startMaxWidth: Math.max(minWidth, maxWidth),
       view: panelElement.ownerDocument.defaultView,
@@ -329,7 +334,7 @@ export function DockPanel(props: DockPanelProps) {
 
     let anchoredResize: { side: "left" | "right"; width: number } | null = null;
     if (resizeAxes === "both") {
-      const deltaX = event.clientX - drag.startX;
+      const deltaX = (event.clientX - drag.startX) / drag.scale;
       const resized = onResizeSideChange
         ? resizePanelAcrossSides(drag.startSide, drag.startW, drag.startMaxWidth, deltaX)
         : { side, width: drag.startW + (isRightPanel ? -deltaX : deltaX) };
@@ -346,7 +351,7 @@ export function DockPanel(props: DockPanelProps) {
     }
 
     const maxH = heightLimit();
-    const resizedHeight = Math.max(minHeight, Math.min(maxH, drag.startH + (event.clientY - drag.startY)));
+    const resizedHeight = Math.max(minHeight, Math.min(maxH, drag.startH + (event.clientY - drag.startY) / drag.scale));
     const resizeFitKey = drag.fitKey;
     if (resizeFitKey !== null) {
       if (drag.moved) setFitState(current => ({
