@@ -546,6 +546,32 @@ describe("settings registry", () => {
     expect(settings.get("test.mode")).toBe("b");
   });
 
+  it("keeps a parameter's state when its note is set again as it is", () => {
+    const settings = registry();
+    const listener = vi.fn(), watcher = vi.fn();
+    settings.subscribe(listener);
+    settings.watch("test.mode", watcher);
+    const none = settings.inspect("test.mode");
+    // A host clearing a note each frame, as the sky does the date's, builds nothing again.
+    for (const note of [null, "", null]) settings.setNote("test.mode", note);
+    expect(settings.inspect("test.mode")).toBe(none);
+    settings.setNote("test.mode", "Waiting for the renderer.");
+    const noted = settings.inspect("test.mode");
+    expect(noted.note).toBe("Waiting for the renderer.");
+    settings.setNote("test.mode", "Waiting for the renderer.");
+    expect(settings.inspect("test.mode")).toBe(noted);
+    settings.setNote("test.mode", "Still waiting.");
+    expect(settings.inspect("test.mode").note).toBe("Still waiting.");
+    settings.setNote("test.mode", "");
+    expect(settings.inspect("test.mode").note).toBeNull();
+    expect(listener.mock.calls).toEqual([[new Set(["test.mode"])], [new Set(["test.mode"])], [new Set(["test.mode"])]]);
+    expect(watcher).not.toHaveBeenCalled();
+    // A note for a parameter registered later is not kept for it.
+    settings.setNote("test.later", "Too early.");
+    settings.register([{ ...budget, id: "test.later" }]);
+    expect(settings.inspect("test.later").note).toBeNull();
+  });
+
   it("lists parameters and sections in registration order", () => {
     const settings = registry();
     expect(settings.sections("map")).toEqual(["loading", "detail", "source"]);

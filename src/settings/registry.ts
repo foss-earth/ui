@@ -781,7 +781,9 @@ export function createSettingsRegistry(options: SettingsRegistryOptions = {}): S
       mutate([id], () => { choices.set(id, [...next]); });
     },
     setNote(id, note) {
-      if (!specs.has(id)) return;
+      // The note it has already: a state is built again only in `mutate`, after a layer changes, so the
+      // cached one is current, and building it again, as a host clearing a note each frame would, changes nothing.
+      if (!specs.has(id) || notes.get(id) === (note || undefined)) return;
       mutate([id], () => {
         if (note) notes.set(id, note); else notes.delete(id);
       });
