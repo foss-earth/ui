@@ -55,6 +55,15 @@ function install(worker, manifest) {
   }
 
   worker.addEventListener("install", event => {
+    // The fetch handler below answers no other site's request. Where the browser can route without the worker
+    // (static routing), the build's named hosts go straight to the network, so tile loads do not wake it. Never this
+    // worker's own host. A browser that refuses the rules still installs the worker, which passes those requests by.
+    const hosts = (manifest.networkHosts ?? []).filter(hostname => hostname !== worker.location.hostname);
+    if (hosts.length && typeof event.addRoutes === "function" && typeof worker.URLPattern === "function") {
+      event.waitUntil(Promise.resolve()
+        .then(() => event.addRoutes(hosts.map(hostname => ({ condition: { urlPattern: new worker.URLPattern({ hostname }) }, source: "network" }))))
+        .catch(() => {}));
+    }
     // Nothing is fetched ahead: files are kept as the app asks for them. The new list takes over at once.
     event.waitUntil(worker.skipWaiting());
   });

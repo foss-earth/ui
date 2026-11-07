@@ -7,12 +7,18 @@ export interface KeptFilesProducerOptions {
   isolation?: "off" | "report-only" | "enforce";
   /** False for a worker that only isolates, for an app that keeps none of its files on the device. Default true. */
   keepFiles?: boolean;
+  /**
+   * Other sites the worker never answers for, such as an app's tile hosts: lowercase hostnames, at most 64. Where the
+   * browser has static routing (`InstallEvent.addRoutes`), their requests go to the network without waking the worker.
+   * Default none.
+   */
+  networkHosts?: readonly string[];
   extraFiles?: readonly KeptFilePin[]; retainedFiles?: readonly KeptFilePin[];
 }
 export interface KeptFilesWorkerResult {
   source: string; kept: string[]; unhashed: string[];
   manifest: { schemaVersion: 1; base: string; scope: string; workerFile: string; cacheNamespace: string; identity: string | null;
-    retention: "retain-older" | "current-only"; isolation: "off" | "report-only" | "enforce"; keepFiles: boolean; files: readonly { url: string; sha256?: string; sizeBytes?: number }[]; retainedFiles: readonly KeptFilePin[] };
+    retention: "retain-older" | "current-only"; isolation: "off" | "report-only" | "enforce"; keepFiles: boolean; networkHosts: readonly string[]; files: readonly { url: string; sha256?: string; sizeBytes?: number }[]; retainedFiles: readonly KeptFilePin[] };
   receipt: { state: "PRODUCED_NOT_QUALIFIED"; schemaVersion: 1; templateSha256: string; manifestSha256: string; workerSha256: string; workerSizeBytes: number };
 }
 export const APP_FILES_WORKER: "foss-earth-sw.js";

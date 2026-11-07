@@ -44,6 +44,14 @@ network-first; missing current/retained files fetch on demand. Unknown same-orig
 files are not acquired or retained as new resources. Opt-out and deployment
 identity are honored. No eager content/media download is introduced.
 
+`networkHosts` names other sites the worker never answers for, such as an
+app's tile hosts: lowercase hostnames, at most 64. The worker answers no
+request to another site in any case. At install, where the browser has static
+routing (`InstallEvent.addRoutes` and `URLPattern`), it adds one rule per host,
+with `source: "network"`, so those requests go to the network without waking
+the worker. The worker's own host is never routed. A browser without the API,
+or one that refuses the rules, installs the worker as before.
+
 A produced result contains `source`, `kept`, `unhashed`, `manifest` and
 `receipt`. The receipt binds template SHA256, manifest SHA256, worker SHA256 and
 worker byte size, with **`state: "PRODUCED_NOT_QUALIFIED"`**. Static/retained pins

@@ -31,6 +31,13 @@ function isolationMode(value) {
   if (!ISOLATION_MODES.includes(mode)) throw new TypeError(`Worker isolation must be one of ${ISOLATION_MODES.join(", ")}.`);
   return mode;
 }
+/** Hosts whose requests skip the worker (`networkHosts`): lowercase DNS names, at most 64. */
+const HOSTNAME = /^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$/;
+function networkHostnames(value) {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length > 64 || value.some(host => typeof host !== "string" || !HOSTNAME.test(host))) throw new TypeError("networkHosts must be at most 64 lowercase hostnames, without scheme, port or path.");
+  return [...new Set(value)];
+}
 export function appFilesWorker(fileNames, options = {}) {
   if (!Array.isArray(fileNames) || fileNames.length > 32768) throw new RangeError("Worker file manifest must be a finite array of at most 32768 files.");
   if (fileNames.some(name => typeof name !== "string" || !name)) throw new TypeError("Every worker bundle filename must be a nonempty string.");
@@ -46,6 +53,7 @@ export function appFilesWorker(fileNames, options = {}) {
   const isolation = isolationMode(options.isolation);
   const keepFiles = options.keepFiles ?? true;
   if (typeof keepFiles !== "boolean") throw new TypeError("keepFiles must be true or false.");
+  const networkHosts = networkHostnames(options.networkHosts);
   const candidates = fileNames.filter(name => typeof name === "string" && !name.endsWith(".html") && !name.endsWith(".map") && filePath(name, base) !== workerPath);
   const kept = [...new Set(candidates.filter(name => HASHED.test(name)))].sort();
   const unhashed = [...new Set(candidates.filter(name => !HASHED.test(name)))].sort();
@@ -67,7 +75,7 @@ export function appFilesWorker(fileNames, options = {}) {
   }
   if (options.identity != null && (typeof options.identity !== "string" || !options.identity.trim())) throw new TypeError("Deployment identity must be a nonempty string.");
   const manifest = { schemaVersion: 1, base, scope, workerFile, cacheNamespace, identity: options.identity ?? null,
-    retention, isolation, keepFiles, files: [...seen.values()].sort((a,b) => a.url.localeCompare(b.url)), retainedFiles: [...retained.values()].sort((a,b) => a.url.localeCompare(b.url)) };
+    retention, isolation, keepFiles, networkHosts, files: [...seen.values()].sort((a,b) => a.url.localeCompare(b.url)), retainedFiles: [...retained.values()].sort((a,b) => a.url.localeCompare(b.url)) };
   const template = readFileSync(new URL("./appFilesWorker.js", import.meta.url), "utf8");
   const source = `"use strict";\n${template}\ninstall(self, ${JSON.stringify(manifest)});\n`;
   const manifestBytes = JSON.stringify(manifest) + "\n";
