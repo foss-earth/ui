@@ -1,6 +1,6 @@
 # A note set again as it is — 7 November 2026
 
-P-128 in the performance ledger. Ui `COMMIT`; baseline ui `fb69a89`. Not an
+P-128 in the performance ledger. Ui `703ebdc`; baseline ui `fb69a89`. Not an
 item of the performance limits audit. It came from a CPU profile of the
 0SFS flight app at a phone's viewport (sky P-127).
 
