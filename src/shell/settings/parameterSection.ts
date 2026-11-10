@@ -204,7 +204,11 @@ export function createParameterSection(settings: SettingsRegistry, options: Para
     let touched = changed.size === 0;
     for (const id of changed) {
       const spec = settings.spec(id);
-      if (!spec || spec.home.tab !== tab || spec.home.section !== section) continue;
+      const inSection = spec !== undefined && (
+        (spec.home.tab === tab && spec.home.section === section)
+        || Boolean(spec.alsoIn?.some(home => home.tab === tab && home.section === section))
+      );
+      if (!inSection) continue;
       touched = true;
       const control = controls.get(id);
       if (control) control.update();
@@ -360,7 +364,10 @@ export function appendHostSections(settings: SettingsRegistry, tab: string, sect
   };
   sync();
   const unsubscribe = settings.subscribe(changed => {
-    if ([...changed].some(id => settings.spec(id)?.home.tab === tab)) sync();
+    if ([...changed].some(id => {
+      const spec = settings.spec(id);
+      return spec?.home.tab === tab || Boolean(spec?.alsoIn?.some(home => home.tab === tab));
+    })) sync();
   });
   return {
     destroy() {

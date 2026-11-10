@@ -4,6 +4,7 @@ import type {
   LegacyMigration,
   ParameterBounds,
   ParameterChoice,
+  ParameterHome,
   ParameterLayers,
   ParameterProvenance,
   ParameterSpec,
@@ -216,13 +217,18 @@ function isPreset(value: unknown): value is SettingsPreset {
     && (value.reset === undefined || (Array.isArray(value.reset) && value.reset.every(entry => typeof entry === "string")));
 }
 
+function homeMatches(home: ParameterHome, filter: SettingsFilter): boolean {
+  if (filter.tab !== undefined && home.tab !== filter.tab) return false;
+  if (filter.section !== undefined && home.section !== filter.section) return false;
+  if (filter.level !== undefined && home.level !== filter.level) return false;
+  return true;
+}
+
 function matches(spec: ParameterSpec, filter: SettingsFilter | undefined): boolean {
   if (!filter) return true;
-  if (filter.tab !== undefined && spec.home.tab !== filter.tab) return false;
-  if (filter.section !== undefined && spec.home.section !== filter.section) return false;
   if (filter.prefix !== undefined && !spec.id.startsWith(filter.prefix)) return false;
-  if (filter.level !== undefined && spec.home.level !== filter.level) return false;
-  return true;
+  if (homeMatches(spec.home, filter)) return true;
+  return Boolean(spec.alsoIn?.some(home => homeMatches(home, filter)));
 }
 
 function clampToBounds(spec: ParameterSpec, value: ParameterValue, bounds: ParameterBounds | null): ParameterValue {
@@ -709,7 +715,9 @@ export function createSettingsRegistry(options: SettingsRegistryOptions = {}): S
     sections(tab) {
       const result: string[] = [];
       for (const spec of specs.values()) {
-        if (spec.home.tab === tab && !result.includes(spec.home.section)) result.push(spec.home.section);
+        for (const home of [spec.home, ...(spec.alsoIn ?? [])]) {
+          if (home.tab === tab && !result.includes(home.section)) result.push(home.section);
+        }
       }
       return result;
     },

@@ -182,6 +182,8 @@ export interface ParameterSpec<T extends ParameterValue = ParameterValue> {
   /** Short query names read like `?set.<id>=`, such as `aircraft` for `?aircraft=`; `?set.<id>=` wins over them. */
   urlNames?: readonly string[];
   home: ParameterHome;
+  /** Additional tab/section homes where this same parameter is also shown and edited. */
+  alsoIn?: readonly ParameterHome[];
   /** Show this control only while another parameter has this value; saved values remain active. */
   visibleWhen?: { id: string; value: ParameterValue };
   /** Mount this control at the left of another parameter's control row instead of a separate row. */
